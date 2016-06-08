@@ -1,0 +1,3 @@
+[submodule "modules/intsem.fx"]
+	path = modules/intsem.fx
+	url = https://github.com/letuananh/intsem.fx
