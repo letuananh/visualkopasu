@@ -1,0 +1,133 @@
+body{
+	font-family: "Trebuchet MS", sans-serif;
+	font-size: 0.8em;
+	margin: 20px;
+}
+
+a:link {
+	font-size: 12px;
+	text-decoration: none;
+	color: #0066CC;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:visited {
+	color: #0066CC;
+}
+
+
+.demoHeaders {
+	margin-top: 2em;
+}
+#dialog-link {
+	padding: .4em 1em .4em 20px;
+	text-decoration: none;
+	position: relative;
+}
+#dialog-link span.ui-icon {
+	margin: 0 5px 0 0;
+	position: absolute;
+	left: .2em;
+	top: 50%;
+	margin-top: -8px;
+}
+#icons {
+	margin: 0;
+	padding: 0;
+}
+#icons li {
+	margin: 2px;
+	position: relative;
+	padding: 4px 0;
+	cursor: pointer;
+	float: left;
+	list-style: none;
+}
+#icons span.ui-icon {
+	float: left;
+	margin: 0 4px;
+}
+
+#toolbar {
+	/* T-R-B-L */
+	margin: 5px 5px 5px 0px;
+	padding: 4px;
+	display: inline-block;
+	background-color: #333333;
+}
+/* support: IE7 */
+*+html #toolbar {
+	display: inline;
+}
+
+#banner {
+	/* T-R-B-L */
+	margin: 5px;
+	padding: 20px;
+	text-align: center;
+	font-family: monospace;
+	font-size: 40px;
+	color: #333333;
+}
+
+/** Toolbar **/
+
+.toolbar_label{
+	font-size: 1.1em;
+	color: white;
+	font-weight: bold;
+}
+
+/** Corpus & documents **/
+
+.sentence_list{
+	font-size: 1.4em;	
+}
+
+/** DMRS visualisation **/
+
+.dmrs_sentence_text{
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.sentence_text_normal{
+	font-family: monospace, 'Courier New';
+	font-size: 14px;
+	color: black;
+}
+
+.sentence_text_highlight{
+	font-family: monospace, 'Courier New';
+	font-size: 14px;
+	color: #FFFFFF;
+	padding: 3px;
+	font-weight: bold;
+	background-color: #FF3300;
+}
+
+.original_xml_box{
+	border: 1px solid #AAAAAA;
+	padding: 5px;
+	font-family: monospace, 'Courier New';
+	font-size: 14px;
+}
+
+/** Basket style **/
+.basket_sentence{
+	background-color: #CCCCCC;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	padding: 3px;
+}
+
+/** Search **/
+.search_statistics {
+	color: #666666;
+	margin-top: 10px;
+	margin-bottom: 15px;
+	border-bottom: 1px solid #666666;
+}

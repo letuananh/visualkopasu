@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+        <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/raphael-min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/testutil.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/shinchan.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/visualisation_v2.js' %}"></script>
+        <script type="text/javascript">
+        
+            var console;
+            {% autoescape off %}
+            {% endautoescape %}
+
+            $(document).ready(function() {
+                // Console init
+                //console = new Console("console");
+                //console.writeline(sentence_text);
+                //console.setEnable(false);
+                initialise();
+            });
+            
+            function initialise(){
+                {% for item in content %}       
+                    $("#xml_code_block{{forloop.counter}}").hover(
+                        function(){
+                            $("#xml_code_block{{forloop.counter}}").css("background-color","#DDDDDD");
+                        }
+                        , function(){
+                            $("#xml_code_block{{forloop.counter}}").css("background-color","white");
+                        }
+                    );
+                {% endfor %}
+                
+                $("#btnShowAll").button().click(function(){
+                    window.location = '{% url "original_display" docID sentenceID %}';
+                });
+            }
+            
+        </script>
+    </head>
+
+    <body>
+        <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
+
+        <div id="toolbar" class="ui-corner-all">
+            <button type="button" id="btnShowAll" name="btnShowAll">Show All Representations</button>
+        </div>
+
+        <div style="height:20px;"/>
+        <div id="holder"/>
+        
+        {% for item in content %}
+        <div id="xml_code_block{{forloop.counter}}"  class="original_xml_box">
+        <pre>{{item}}</pre>
+        </div>
+        {% endfor %}
+        <!--<div id="console"></div>-->
+        <!--
+            <div id="sentence_holder"></div>
+            <hr/>
+        -->
+        
+        {% autoescape off %}
+        <!--{{debug_info}}-->
+        {% endautoescape %}   
+
+    </body>
+</html>
