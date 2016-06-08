@@ -409,7 +409,7 @@ class SQLiteDocumentDAO():
             sentence_ident = row['sentence_ident']
             text = row['text']
             documentID = row['documentID']
-            if sentenceID not in sentences_by_id:
+            if sentenceID in sentences_by_id:
                 # update representation
                 a_representation = Representation(ID=representationID)
                 # self.getRepresentation(a_representation)

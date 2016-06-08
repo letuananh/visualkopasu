@@ -181,7 +181,9 @@ def home(request):
     # dao = vkconfig.getDAO()
     corpora = []
     for dao in vkconfig.SQLDAOs:
-        corpora += dao.getCorpora()
+        all_corpora = dao.getCorpora()
+        if all_corpora:
+            corpora += all_corpora
 
         for corpus in corpora:
             corpus.set_property("dbname", dao.config['dbname'])
@@ -192,7 +194,7 @@ def home(request):
     
     c = Context({
          'title'  : 'Home Page'
-        ,'header' : 'Visualisation module'
+        ,'header' : 'Visual Corpora'
         ,'corpora' : corpora
     })
     c.update(csrf(request))
@@ -243,6 +245,75 @@ def search(request):
     })
     c.update(csrf(request))
     return render(request, "search/index.html", c)
+
+def isf_parse(request):
+    sentence = request.POST.get('sentence', None)
+    from coolisf.main import txt2dmrs, PredSense
+    results = txt2dmrs(sentence)
+    mrses = None
+    if results and results.mrs:
+        print(results.mrs[0].preds())
+        mrses = [ PredSense.tag_sentence(mrs).replace('\n', '<br/>\n') for mrs in results.mrs ]
+    c = Context({
+        'sentence' : sentence
+        ,'mrses' : mrses
+    })
+    print(results.mrs)
+    c.update(csrf(request))   
+    return render(request, 'coolisf/index.html', c)
+
+def dmrs_search_display(request, search_id):
+    search_id = int(search_id)
+    search_count = None
+    try:
+        database = request.GET.get('db', None)
+    except:
+        return redirect("/dmrs/1")
+        sentence_id = 1
+    
+    dao = vkconfig.getDAO(database)
+    
+    prev_search = False
+    next_search = False
+    if search_id >= 0:
+        search_item = request.session['dmrs_search_results'][search_id]
+        sentence_id = search_item['sentence'] 
+        representation_id = search_item['representation']
+        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
+        if(search_id > 0):
+            prev_search = str(search_id - 1)
+        else:
+            prev_search = False
+        
+        search_count = len(request.session['dmrs_search_results'])
+        if search_id < search_count - 1:
+            next_search = str(search_id + 1)
+        else:
+            next_search = False
+    elif not representation_id:
+        sentence = dao.getSentence(sentence_id,mode='active')
+    else:
+        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
+
+    if (not sentence) or len(sentence.representations) == 0:
+        return redirect("/dmrs/?id=1")
+    
+    js_sentence = sentence_to_javascript(sentence, dao)     
+    sentence_representations = dao.getSentence(sentence_id, skip_details=True).representations
+    
+    c = Context({'title' : sentence.text
+    ,'header': 'DMRS'
+    ,'sentence_info' : js_sentence
+    ,'representations' : sentence_representations
+    ,'prev_search' : prev_search
+    ,'next_search' : next_search
+    ,'search_id' : search_id+1
+    ,'search_count' : search_count
+    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.representation.ID)
+    ,'basket_size' : DMRSBasket.instance(request).count()
+    })
+    return render(request, "dmrs_display/index.html", c)
+    
 
 def dmrs_display(request, sentence_id):
     search_count = None

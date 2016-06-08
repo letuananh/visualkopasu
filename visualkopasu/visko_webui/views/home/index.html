@@ -79,5 +79,17 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             </li>
         {% endfor %}
         </ol>
+        
+        <h1>Integrated Semantic Framework</h1>
+        <form id="form_isf" action="{% url 'isf_parse' %}" method="POST">
+        {% csrf_token %}
+            <div id="toolbar" class="ui-corner-all">
+                <span id="effect" class="toolbar_label">Sentence</span>
+                <input id="sentence" name="sentence" />
+                <button type="submit" id="btnSearch" name="btnSearch">Parse</button>
+            </div>
+        </form>
+        
+                
     </body>
 </html>

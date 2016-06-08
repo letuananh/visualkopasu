@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+
+{% load staticfiles %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>Cool ISF - Sentence: {{ sentence }}</title>
+        <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+        <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/raphael-min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/testutil.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/shinchan.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/visualisation_v2.js' %}"></script>        
+    </head>
+
+    <body>
+        <div id="banner" class="ui-widget-header ui-corner-all">Sentence: {{sentence}}</div>
+
+        {% if mrses %}
+        {% for mrs in mrses %}
+        <code>
+          {% autoescape off %}
+          {{ mrs }}
+          {% endautoescape %}
+        </code>
+        {% endfor %}
+        {% else %}
+        Sentence cannot be parsed
+        {% endif %}
+        
+    </body>
+</html>

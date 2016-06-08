@@ -30,7 +30,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 			
 			function initialise(){
 				$("#btnShowCorpus").button().click(function(){
-					window.location = "/";			
+					window.location = "{% url 'home' %}";			
 					//return false;
 				});
 				$("#btnShowXML").button().click(function(){
@@ -52,7 +52,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 		{{header}}
 		</div>
 		
-		<form id="form_search" action="/search/" method="post">
+		<form id="form_search" action="{% url 'search' %}" method="post">
 		{% csrf_token %}
 			<div id="toolbar" class="ui-corner-all">
 				<button type="button" id="btnShowCorpus" name="btnShowCorpus">Show Corpus</button>
@@ -84,7 +84,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 			{{sentence.text}}<br/>
 				{% for representation in sentence.representations %}
 					{% if forloop.counter <= 10 %}
-					<a href="/dmrs/?search_id={{representation.search_ID}}" target="visualkopasu_searchresult">{{representation.ID}}</a>
+					<a href="{% url 'dmrs_search_display' representation.search_ID %}" target="visualkopasu_searchresult">{{representation.ID}}</a>
 					{% elif forloop.last %}
 					...
 					{% endif %}
