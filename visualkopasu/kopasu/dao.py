@@ -66,8 +66,8 @@ class VisualKopasuORMConfig:
         self.Corpus = ORMInfo('corpus', ['ID', 'name'], Corpus(), orm_manager=self.orm_manager)
         self.Document = ORMInfo('document', ['ID', 'name', 'corpusID'], Document(), orm_manager=self.orm_manager)
         self.Sentence = ORMInfo('sentence', [ 'ID', 'ident', 'text', 'documentID' ], Sentence(), orm_manager=self.orm_manager)
-        self.Representation = ORMInfo('representation',['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Representation(), orm_manager=self.orm_manager)
-        self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'representationID'], DMRS(), orm_manager=self.orm_manager)
+        self.Interpretation = ORMInfo('interpretation',['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
+        self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
         # Node related tables
         self.Node = ORMInfo('dmrs_node', ['ID', ['nodeID', 'nodeid'], 'cfrom', 'cto', 'surface', 'base', 'carg', 'dmrsID'], Node(), orm_manager=self.orm_manager)
         self.SortInfo = ORMInfo('dmrs_node_sortinfo'
@@ -220,14 +220,14 @@ class SQLiteDocumentDAO():
         
         if not a_sentence.ID:
             self.ORM.Sentence.save(a_sentence, context=context)
-            # save representations
-            for representation in a_sentence.representations:
+            # save interpretations
+            for interpretation in a_sentence.interpretations:
                 # Update sentenceID
-                representation.sentenceID = a_sentence.ID
-                self.ORM.Representation.save(representation,context=context)
+                interpretation.sentenceID = a_sentence.ID
+                self.ORM.Interpretation.save(interpretation,context=context)
                 # Save DMRS
-                for dmrs in representation.dmrs:
-                    dmrs.representationID = representation.ID
+                for dmrs in interpretation.dmrs:
+                    dmrs.interpretationID = interpretation.ID
                     self.ORM.DMRS.save(dmrs,context=context)
                     
                     # save nodes
@@ -298,16 +298,16 @@ class SQLiteDocumentDAO():
         # Select sentence
         return a_sentence
     
-    def searchRepresentations(self, mode=None, rargname=None, post=None, lemma=None, limit=50):
+    def searchInterpretations(self, mode=None, rargname=None, post=None, lemma=None, limit=50):
         query = '''
-        SELECT representation.ID as representationID, sentenceID as sentenceID, text FROM representation
+        SELECT interpretation.ID as interpretationID, sentenceID as sentenceID, text FROM interpretation
         LEFT JOIN sentence ON sentenceID = sentence.ID
         {condition}
         '''
         
         link_conditions_template = '''
-        representation.ID IN
-            (SELECT representationID from dmrs WHERE 
+        interpretation.ID IN
+            (SELECT interpretationID from dmrs WHERE 
             dmrs.ID IN ( SELECT dmrsID 
                     FROM dmrs_link 
                         LEFT JOIN dmrs_link_post ON dmrs_link_post.dmrs_linkID = dmrs_link.ID
@@ -316,24 +316,24 @@ class SQLiteDocumentDAO():
             )
         '''
         node_conditions_template = '''
-        representation.ID IN
-            (SELECT representationID from dmrs WHERE 
+        interpretation.ID IN
+            (SELECT interpretationID from dmrs WHERE 
             dmrs.ID IN ( SELECT dmrsID 
                     FROM dmrs_node_realpred AS "realpred" 
                         LEFT JOIN dmrs_node ON realpred.dmrs_nodeID = dmrs_node.ID 
                     {node_conditions} LIMIT ?)
             )
         '''
-        representation_condition = ''
+        interpretation_condition = ''
         link_conditions = ''
         node_conditions = ''
         conditions = []
         params = []
         
-        # Representation condition
+        # Interpretation condition
         if mode:
-            representation_condition += 'mode = ?'
-            conditions.append(representation_condition)
+            interpretation_condition += 'mode = ?'
+            conditions.append(interpretation_condition)
             params.append(mode)
         
         # Node condition
@@ -376,18 +376,18 @@ class SQLiteDocumentDAO():
         sentences = []
         sentences_by_id = { }
         for row in rows:
-            representationID = row['representationID']
+            interpretationID = row['interpretationID']
             sentenceID = row['sentenceID']
             if sentenceID not in sentences_by_id:
-                # update representation
-                a_representation = Representation(ID=representationID)
-                # self.getRepresentation(a_representation)
-                sentences_by_id[sentenceID].representations.append(a_representation)
+                # update interpretation
+                a_interpretation = Interpretation(ID=interpretationID)
+                # self.getInterpretation(a_interpretation)
+                sentences_by_id[sentenceID].interpretations.append(a_interpretation)
             else:
-                a_sentence = self.getSentence(sentenceID, representationIDs=[], skip_details=True)
-                a_sentence.representations = []
-                a_representation = Representation(ID=representationID)
-                a_sentence.representations.append(a_representation)
+                a_sentence = self.getSentence(sentenceID, interpretationIDs=[], skip_details=True)
+                a_sentence.interpretations = []
+                a_interpretation = Interpretation(ID=interpretationID)
+                a_sentence.interpretations.append(a_interpretation)
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
             #sentences.append(a_sentence)
@@ -404,25 +404,25 @@ class SQLiteDocumentDAO():
         sentences = []
         sentences_by_id = { }
         for row in rows:
-            representationID = row['representationID']
+            interpretationID = row['interpretationID']
             sentenceID = row['sentenceID']
             sentence_ident = row['sentence_ident']
             text = row['text']
             documentID = row['documentID']
             if sentenceID in sentences_by_id:
-                # update representation
-                a_representation = Representation(ID=representationID)
-                # self.getRepresentation(a_representation)
-                sentences_by_id[sentenceID].representations.append(a_representation)
+                # update interpretation
+                a_interpretation = Interpretation(ID=interpretationID)
+                # self.getInterpretation(a_interpretation)
+                sentences_by_id[sentenceID].interpretations.append(a_interpretation)
             else:
                 if no_more_query:
                     a_sentence=Sentence(ident=sentence_ident, text=text, documentID=documentID)
                     a_sentence.ID=sentenceID
                 else:
-                    a_sentence = self.getSentence(sentenceID, representationIDs=[], skip_details=True)
-                a_sentence.representations = []
-                a_representation = Representation(ID=representationID)
-                a_sentence.representations.append(a_representation)
+                    a_sentence = self.getSentence(sentenceID, interpretationIDs=[], skip_details=True)
+                a_sentence.interpretations = []
+                a_interpretation = Interpretation(ID=interpretationID)
+                a_sentence.interpretations.append(a_interpretation)
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
             #sentences.append(a_sentence)
@@ -446,12 +446,12 @@ class SQLiteDocumentDAO():
             lemmaID = lemma.ID
             
         query = '''
-            SELECT DISTINCT representation.sentenceID, dmrs.representationID, sentence.text
+            SELECT DISTINCT interpretation.sentenceID, dmrs.interpretationID, sentence.text
             FROM dmrs_node_realpred "realpred"
                 LEFT JOIN dmrs_node "node" ON node.ID = realpred.dmrs_nodeID
                 LEFT JOIN dmrs ON node.dmrsID = dmrs.ID
-                LEFT JOIN representation ON dmrs.representationID = representation.ID
-                LEFT JOIN sentence ON representation.sentenceID = sentence.ID
+                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
+                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
             WHERE realpred.lemmaID = ?
             LIMIT ?
         '''
@@ -464,11 +464,11 @@ class SQLiteDocumentDAO():
     
     def searchByCarg(self, carg, limit=1000):
         query ='''
-            SELECT DISTINCT representation.sentenceID,dmrs.representationID, sentence.text
+            SELECT DISTINCT interpretation.sentenceID,dmrs.interpretationID, sentence.text
             FROM dmrs_node "node"
                 LEFT JOIN dmrs ON node.dmrsID = dmrs.ID
-                LEFT JOIN representation ON dmrs.representationID = representation.ID
-                LEFT JOIN sentence ON representation.sentenceID = sentence.ID
+                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
+                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
             WHERE node.carg = ?
             LIMIT ?
         '''
@@ -479,10 +479,10 @@ class SQLiteDocumentDAO():
         rows = self.orm_manager.selectRows(query, params)
         return self.build_search_result(rows)
             
-    def getRepresentation(self, a_representation):
+    def getInterpretation(self, a_interpretation):
         # retrieve all DMRSes
-        self.ORM.DMRS.select('representationID=?', [a_representation.ID], a_representation.dmrs)
-        for a_dmrs in a_representation.dmrs:                
+        self.ORM.DMRS.select('interpretationID=?', [a_interpretation.ID], a_interpretation.dmrs)
+        for a_dmrs in a_interpretation.dmrs:                
             # retrieve all nodes
             self.ORM.Node.select('dmrsID=?', [a_dmrs.ID], a_dmrs.nodes)
             for a_node in a_dmrs.nodes:
@@ -517,26 +517,26 @@ class SQLiteDocumentDAO():
                 list_rargname = self.ORM.Rargname.select('dmrs_linkID=?', [a_link.ID])
                 if len(list_rargname) == 1:
                     a_link.rargname = list_rargname[0]
-        return a_representation
+        return a_interpretation
 
-    def getSentence(self, sentenceID, mode = None, representationIDs = None, skip_details=None):
+    def getSentence(self, sentenceID, mode = None, interpretationIDs = None, skip_details=None):
         a_sentence = self.ORM.Sentence.getByID(sentenceID)
         
         if a_sentence:
-            # retrieve all representations
+            # retrieve all interpretations
             conditions = 'sentenceID=?'
             params = [a_sentence.ID]
             if mode:
                 conditions += ' AND mode=?'
                 params.append(mode)
-            if representationIDs and len(representationIDs) > 0:
-                conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(representationIDs))))
-                params = params + representationIDs
+            if interpretationIDs and len(interpretationIDs) > 0:
+                conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
+                params = params + interpretationIDs
                 
-            self.ORM.Representation.select(conditions, params, a_sentence.representations)
-            for a_representation in a_sentence.representations:
+            self.ORM.Interpretation.select(conditions, params, a_sentence.interpretations)
+            for a_interpretation in a_sentence.interpretations:
                 if not skip_details:
-                    self.getRepresentation(a_representation)
+                    self.getInterpretation(a_interpretation)
         # Return
         return a_sentence   
 

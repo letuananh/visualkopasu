@@ -16,7 +16,7 @@ urlpatterns = [
     
     url(r'^original/(?P<document>\w+)/(?P<sentenceID>[0-9]+)/$', views.original_display, name='original_display'),
     url(r'^original/sentence/(?P<sentenceID>[0-9]+)/$', views.original_display, name='original_display'),
-    url(r'^original/(?P<document>\w+)/(?P<sentenceID>[0-9]+)/(?P<representationID>[0-9]+)/$', views.original_display, name='original_display'),
+    url(r'^original/(?P<document>\w+)/(?P<sentenceID>[0-9]+)/(?P<interpretationID>[0-9]+)/$', views.original_display, name='original_display'),
 
     url(r'^coolisf/$', views.isf_parse, name='isf_parse'),
 ]

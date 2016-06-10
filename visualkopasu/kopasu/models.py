@@ -33,7 +33,6 @@ class BaseConcept:
         pass
     
     def set_property(self, property, value):
-        # self.__dict__[property] = EncodingUtil.to_unicode(value)
         self.__dict__[property] = value
         return self
         
@@ -86,23 +85,23 @@ class Document(BaseConcept):
 class Sentence(BaseConcept):
     def __init__(self, ident = 0, text = '', documentID = None):
         self.ID = None
-        self.ident =  EncodingUtil.to_unicode(ident)
-        self.text = EncodingUtil.to_unicode(text)
+        self.ident =  ident
+        self.text = text
         self.documentID = documentID
-        self.representations = []
+        self.interpretations = []
         # self.dmrs = []
         # self.parseTrees = []
 
-    def getInactiveRepresentation(self):
-        return [repr for repr in self.representations if repr.mode == "inactive"]
-    def getActiveRepresentation(self):
-        return [repr for repr in self.representations if repr.mode == "active"]
+    def getInactiveInterpretation(self):
+        return [repr for repr in self.interpretations if repr.mode == "inactive"]
+    def getActiveInterpretation(self):
+        return [repr for repr in self.interpretations if repr.mode == "active"]
 
     def __str__(self):
         return "[ID=" + self.ident + "]" + self.text
         #return u"[ID=%s] %s" % (self.ident, self.text)
 
-class Representation(BaseConcept):   
+class Interpretation(BaseConcept):   
     
     INACTIVE = 0
     ACTIVE = 1 
@@ -116,7 +115,7 @@ class Representation(BaseConcept):
         self.sentenceID = None
         
     def __str__(self):
-        return u"Representation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
+        return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
 
 """
 Parse tree (synthetic tree)
@@ -148,7 +147,7 @@ class DMRS(BaseConcept):
         self.cfrom = cfrom
         self.cto = cto
         self.surface = surface
-        self.representationID = None
+        self.interpretationID = None
         
         # Nodes and links might be indexed for faster access
         self.nodes = []

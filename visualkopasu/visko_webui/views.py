@@ -32,6 +32,7 @@ from collections import namedtuple
 
 from django.core.context_processors import csrf
 from django.http import HttpResponse
+from django.http import Http404
 from django.template import Context
 # from django.template import loader
 from django.shortcuts import redirect
@@ -218,13 +219,13 @@ def search(request):
             # Store search result to session
             dmrs_search_results = [] 
             for sentence in sentences:
-                for representation in sentence.representations:
-                    representation.set_property("search_ID", len(dmrs_search_results))
-                    dmrs_search_results.append({ "sentence" : sentence.ID, "representation" : representation.ID })
+                for interpretation in sentence.interpretations:
+                    interpretation.set_property("search_ID", len(dmrs_search_results))
+                    dmrs_search_results.append({ "sentence" : sentence.ID, "interpretation" : interpretation.ID })
             request.session['dmrs_search_results'] = dmrs_search_results
             # Build statistics
             search_statistics = ('%d sentences' if len(search_results) > 1 else '%d sentence') % len(search_results)
-            search_statistics += (' - %d representations' if len(search_results) > 1 else '%d representation') % len(dmrs_search_results)
+            search_statistics += (' - %d interpretations' if len(search_results) > 1 else '%d interpretation') % len(dmrs_search_results)
             if len(dmrs_search_results) == DEFAULT_LIMIT:
                 search_statistics += " [MAX]"
     except Exception as e:
@@ -278,8 +279,8 @@ def dmrs_search_display(request, search_id):
     if search_id >= 0:
         search_item = request.session['dmrs_search_results'][search_id]
         sentence_id = search_item['sentence'] 
-        representation_id = search_item['representation']
-        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
+        interpretation_id = search_item['interpretation']
+        sentence = dao.getSentence(sentence_id, interpretationIDs=[interpretation_id])
         if(search_id > 0):
             prev_search = str(search_id - 1)
         else:
@@ -290,26 +291,21 @@ def dmrs_search_display(request, search_id):
             next_search = str(search_id + 1)
         else:
             next_search = False
-    elif not representation_id:
-        sentence = dao.getSentence(sentence_id,mode='active')
     else:
-        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
-
-    if (not sentence) or len(sentence.representations) == 0:
-        return redirect("/dmrs/?id=1")
-    
+        raise Http404
+     
     js_sentence = sentence_to_javascript(sentence, dao)     
-    sentence_representations = dao.getSentence(sentence_id, skip_details=True).representations
+    sentence_interpretations = dao.getSentence(sentence_id, skip_details=True).interpretations
     
     c = Context({'title' : sentence.text
     ,'header': 'DMRS'
     ,'sentence_info' : js_sentence
-    ,'representations' : sentence_representations
+    ,'interpretations' : sentence_interpretations
     ,'prev_search' : prev_search
     ,'next_search' : next_search
     ,'search_id' : search_id+1
     ,'search_count' : search_count
-    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.representation.ID)
+    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
     ,'basket_size' : DMRSBasket.instance(request).count()
     })
     return render(request, "dmrs_display/index.html", c)
@@ -320,53 +316,33 @@ def dmrs_display(request, sentence_id):
     try:
         database = request.GET.get('db', None)
         sentence_id = int(sentence_id)
-        representation_id = request.GET.get('r', '')
-        search_id = int(request.GET.get('search_id', '-1'))
+        interpretation_id = request.GET.get('r', '')
     except:
         return redirect("/dmrs/1")
         sentence_id = 1
     
     dao = vkconfig.getDAO(database)
     
-    # print('Fetching id=%s repre=%s' %(sentence_id, representation_id))
+    # print('Fetching id=%s repre=%s' %(sentence_id, interpretation_id))
     
     prev_search = False
     next_search = False
-    if search_id >= 0:
-        search_item = request.session['dmrs_search_results'][search_id]
-        sentence_id = search_item['sentence'] 
-        representation_id = search_item['representation']
-        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
-        if(search_id > 0):
-            prev_search = str(search_id - 1)
-        else:
-            prev_search = False
-        
-        search_count = len(request.session['dmrs_search_results'])
-        if search_id < search_count - 1:
-            next_search = str(search_id + 1)
-        else:
-            next_search = False
-    elif not representation_id:
+    if not interpretation_id:
         sentence = dao.getSentence(sentence_id,mode='active')
     else:
-        sentence = dao.getSentence(sentence_id, representationIDs=[representation_id])
+        sentence = dao.getSentence(sentence_id, interpretationIDs=[interpretation_id])
 
-    if (not sentence) or len(sentence.representations) == 0:
+    if (not sentence) or len(sentence.interpretations) == 0:
         return redirect("/dmrs/?id=1")
     
     js_sentence = sentence_to_javascript(sentence, dao)     
-    sentence_representations = dao.getSentence(sentence_id, skip_details=True).representations
+    sentence_interpretations = dao.getSentence(sentence_id, skip_details=True).interpretations
     
     c = Context({'title' : sentence.text
     ,'header': 'DMRS'
     ,'sentence_info' : js_sentence
-    ,'representations' : sentence_representations
-    ,'prev_search' : prev_search
-    ,'next_search' : next_search
-    ,'search_id' : search_id+1
-    ,'search_count' : search_count
-    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.representation.ID)
+    ,'interpretations' : sentence_interpretations
+    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
     ,'basket_size' : DMRSBasket.instance(request).count()
     })
     return render(request, "dmrs_display/index.html", c)
@@ -375,46 +351,46 @@ class DMRSItem:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-DMRSBasketItem=namedtuple('DMRSBasketItem', ['sentenceID', 'representationID'])
+DMRSBasketItem=namedtuple('DMRSBasketItem', ['sentenceID', 'interpretationID'])
 
 class DMRSBasket:
     def __init__(self, items=None):
         self.items = [] if items is None else items
     
-    def add(self, sentenceID, representationID):
+    def add(self, sentenceID, interpretationID):
         sentenceID = str(sentenceID)
-        representationID = str(representationID)
-        if not sentenceID or not representationID:
-            # print("Invalid sentenceID or representationID")
-            return # bad sentenceID or representationID 
+        interpretationID = str(interpretationID)
+        if not sentenceID or not interpretationID:
+            # print("Invalid sentenceID or interpretationID")
+            return # bad sentenceID or interpretationID 
         for item in self.items:
-            if item.sentenceID == sentenceID and item.representationID == representationID:
+            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
                 # print("Item exists!")
                 return # item exists
         # Item doesn't exists
-        self.items.append(DMRSBasketItem(sentenceID=sentenceID, representationID=representationID))
+        self.items.append(DMRSBasketItem(sentenceID=sentenceID, interpretationID=interpretationID))
         # print("Added, size = %s" % len(self.items))
     
     def count(self):
         return len(self.items)
     
-    def contains(self, sentenceID, representationID):
+    def contains(self, sentenceID, interpretationID):
         sentenceID = str(sentenceID)
-        representationID = str(representationID)
+        interpretationID = str(interpretationID)
         for item in self.items:
-            # print("Comparing: %s v.s %s --- %s v.s %s" %(item.sentenceID, sentenceID, item.representationID, representationID))
-            if item.sentenceID == sentenceID and item.representationID == representationID:
+            # print("Comparing: %s v.s %s --- %s v.s %s" %(item.sentenceID, sentenceID, item.interpretationID, interpretationID))
+            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
                 return True
         return False
     
-    def remove(self, sentenceID, representationID):
+    def remove(self, sentenceID, interpretationID):
         sentenceID = str(sentenceID)
-        representationID = str(representationID)
-        if sentenceID == '' and representationID == '':
+        interpretationID = str(interpretationID)
+        if sentenceID == '' and interpretationID == '':
             self.items = []
         else:
             for item in self.items:
-                if item.sentenceID == sentenceID and item.representationID == representationID:
+                if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
                     self.items.remove(item)
     
     def save(self, request):
@@ -435,12 +411,12 @@ class DMRSBasket:
         return basket
 
 '''
-Convert the first DMRS of the first representation to javascript
+Convert the first DMRS of the first interpretation to javascript
 '''
 def sentence_to_javascript(sentence, dao):
-    if sentence and len(sentence.representations) > 0:
+    if sentence and len(sentence.interpretations) > 0:
         # retrieved sentence, now convert DMRS to javascript code
-        dmrs = sentence.representations[0].dmrs[0]
+        dmrs = sentence.interpretations[0].dmrs[0]
         node_list = ''
         node_id_list = []
         link_list = ''
@@ -458,14 +434,14 @@ def sentence_to_javascript(sentence, dao):
             node_id_list.append( "node_" + str(a_node.ID) )
             
             
-        #print "ident = %s" % sentence.representations[0].ident
+        #print "ident = %s" % sentence.interpretations[0].ident
         return DMRSItem(sentence_text=sentence.text.replace('\'', '\\\'').replace('\r','').replace('\n', '')
                         ,node_list=node_list
                         ,node_id_list=', '.join(node_id_list)
                         ,link_list=link_list
                         ,link_id_list=', '.join(link_id_list)
                         ,sentence=sentence
-                        ,representation=sentence.representations[0]
+                        ,interpretation=sentence.interpretations[0]
                         ,document=dao.getDocument(sentence.documentID)
                         )
     else:
@@ -475,21 +451,21 @@ def basket(request):
     try:
         command = request.GET.get('action', 'view')
         sentenceID = request.GET.get('id', '')
-        representationID = request.GET.get('r', '')
+        interpretationID = request.GET.get('r', '')
     except:
         command = 'view'
     
     dao = vkconfig.getDAO()
     
     if command == 'remove':
-        print("Removing from basket: sentenceID=%s (representationID=%s)" % (sentenceID, representationID))
-        DMRSBasket.instance(request).remove(sentenceID, representationID)
+        print("Removing from basket: sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
+        DMRSBasket.instance(request).remove(sentenceID, interpretationID)
         DMRSBasket.instance(request).save(request)
         # redirect to view
         return redirect("/basket")      
     if command == 'add':
-        print("Adding sentenceID=%s (representationID=%s)" % (sentenceID, representationID))
-        DMRSBasket.instance(request).add(sentenceID, representationID)
+        print("Adding sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
+        DMRSBasket.instance(request).add(sentenceID, interpretationID)
         DMRSBasket.instance(request).save(request)
         # redirect to view
         return redirect("/basket")
@@ -499,8 +475,8 @@ def basket(request):
         dmrses = []
         print("Basket size: %s" % len(basket.items))
         for item in basket.items:
-            print("Adding sentenceID=%s (representationID=%s)" % (item.sentenceID, item.representationID))
-            sentence = dao.getSentence(item.sentenceID, representationIDs=[item.representationID])
+            print("Adding sentenceID=%s (interpretationID=%s)" % (item.sentenceID, item.interpretationID))
+            sentence = dao.getSentence(item.sentenceID, interpretationIDs=[item.interpretationID])
             dmrs = sentence_to_javascript(sentence, dao)
             if dmrs:
                 dmrses.append(dmrs)
@@ -512,24 +488,24 @@ def basket(request):
     })
     return render(request, "basket/index.html", c)  
 
-def original_display(request, document, sentenceID, representationID=''):
+def original_display(request, document, sentenceID, interpretationID=''):
     dao = vkconfig.getDAO()
     
     try:
         database = request.GET.get('db', None)
         #document = request.GET.get('doc', '')
         #sentenceID = request.GET.get('id', '')
-        #representationID = request.GET.get('r', '')
+        #interpretationID = request.GET.get('r', '')
         #dao = getTextDAO(document)
         dao = vkconfig.getTextDAO(database)
-        content = dao.getDMRSRaw(sentenceID, representationID, documentID=str(document))
+        content = dao.getDMRSRaw(sentenceID, interpretationID, documentID=str(document))
         # content = '--'
     except Exception as e:
         print("Error: {e}".format(e=e))
         content = []
         raise e
     
-    title = 'Original XML of %s:%s' % (sentenceID, representationID) if representationID else 'Original XML of %s' % (sentenceID,)
+    title = 'Original XML of %s:%s' % (sentenceID, interpretationID) if interpretationID else 'Original XML of %s' % (sentenceID,)
     c = Context({
          'title'  : title
         ,'header' : title

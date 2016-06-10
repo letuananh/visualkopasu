@@ -48,7 +48,7 @@ from collections import deque
 sim_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logger = logging.getLogger('acl_parser')
 
-REPRESENTATION_TOKEN     = chr(10) + chr(12) + chr(10)
+INTERPRETATION_TOKEN     = chr(10) + chr(12) + chr(10)
 DRMS_TREE_TOKEN          = chr(10) + chr(10) + chr(10)
 PARSE_TREE_TOKEN         = chr(10) + chr(10)    
 DEBUG_MODE               = False
@@ -102,9 +102,9 @@ def parse(dmrs_content_file, sentence_id, sentence_text, destination):
     xml_text_elem = SubElement(a_sentence, 'text')
     xml_text_elem.text = sentence_text.decode('utf-8')
     
-    a_representation = SubElement(a_sentence, 'representation')
-    a_representation.attrib['id'] = '1'
-    a_representation.attrib['mode'] = 'active'
+    a_interpretation = SubElement(a_sentence, 'interpretation')
+    a_interpretation.attrib['id'] = '1'
+    a_interpretation.attrib['mode'] = 'active'
     
     try:
         dmrs_node = ETree.fromstring(dmrs_content.encode('utf-8'))
@@ -112,7 +112,7 @@ def parse(dmrs_content_file, sentence_id, sentence_text, destination):
         logger.error("Invalid DMRS XML: %s" % (dmrs_content_file))
         logger.error("Exception: %s" % (e))
         return False
-    a_representation.append(dmrs_node)
+    a_interpretation.append(dmrs_node)
 
     with gzip.open(destination, 'wb') as output_file:
         # output_file.write(XMLFormatter.format(a_sentence))

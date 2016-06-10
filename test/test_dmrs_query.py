@@ -29,7 +29,7 @@ __status__ = "Prototype"
 
 import unittest
 
-from visualkopasu.dmrs_query import DMRSQueryParser
+from visualkopasu.kopasu.dmrs_search import DMRSQueryParser
 
 class TestQueryParser(unittest.TestCase):
 

@@ -14,137 +14,137 @@
  **/
 
 CREATE TABLE IF NOT EXISTS "corpus" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "name" text NOT NULL 
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "name" text NOT NULL 
 );
 
 CREATE TABLE IF NOT EXISTS "document" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "name" TEXT NOT NULL 
-	, "corpusID" INTEGER NOT NULL 
-	, FOREIGN KEY(corpusID) REFERENCES corpus(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "name" TEXT NOT NULL 
+    , "corpusID" INTEGER NOT NULL 
+    , FOREIGN KEY(corpusID) REFERENCES corpus(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "sentence" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "ident" VARCHAR
-	, "text" TEXT
-	, "documentID" INTEGER
-	, FOREIGN KEY(documentID) REFERENCES document(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "ident" VARCHAR
+    , "text" TEXT
+    , "documentID" INTEGER
+    , FOREIGN KEY(documentID) REFERENCES document(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "representation" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "ident" VARCHAR NOT NULL 
-	, "mode" VARCHAR
-	, "sentenceID" INTEGER NOT NULL 
-	, FOREIGN KEY(sentenceID) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
+CREATE TABLE IF NOT EXISTS "interpretation" (
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "ident" VARCHAR NOT NULL 
+    , "mode" VARCHAR
+    , "sentenceID" INTEGER NOT NULL 
+    , FOREIGN KEY(sentenceID) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs" (
-	"ID" INTEGER PRIMARY KEY  NOT NULL 
-	, "ident" VARCHAR NOT NULL 
-	, "cfrom" INTEGER NOT NULL  DEFAULT (-1) 
-	, "cto" INTEGER NOT NULL  DEFAULT (-1) 
-	, "surface" TEXT
-	, "representationID" INTEGER NOT NULL
-	, FOREIGN KEY(representationID) REFERENCES representation(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  NOT NULL 
+    , "ident" VARCHAR NOT NULL 
+    , "cfrom" INTEGER NOT NULL  DEFAULT (-1) 
+    , "cto" INTEGER NOT NULL  DEFAULT (-1) 
+    , "surface" TEXT
+    , "interpretationID" INTEGER NOT NULL
+    , FOREIGN KEY(interpretationID) REFERENCES interpretation(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "fromNodeID" INTEGER NOT NULL 
-	, "toNodeID" INTEGER NOT NULL
-	, "dmrsID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "fromNodeID" INTEGER NOT NULL 
+    , "toNodeID" INTEGER NOT NULL
+    , "dmrsID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link_post" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "value" TEXT NOT NULL 
-	, "dmrs_linkID" INTEGER NOT NULL 
-	, FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "value" TEXT NOT NULL 
+    , "dmrs_linkID" INTEGER NOT NULL 
+    , FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link_rargname" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "value" TEXT NOT NULL 
-	, "dmrs_linkID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "value" TEXT NOT NULL 
+    , "dmrs_linkID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 --
 -- DMRS NODE
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "nodeID" INTEGER NOT NULL 
-	, "cfrom" INTEGER NOT NULL  DEFAULT (-1)
-	, "cto" INTEGER NOT NULL  DEFAULT (-1)
-	, "surface" TEXT
-	, "base" VARCHAR
-	, "carg" VARCHAR
-	, "dmrsID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "nodeID" INTEGER NOT NULL 
+    , "cfrom" INTEGER NOT NULL  DEFAULT (-1)
+    , "cto" INTEGER NOT NULL  DEFAULT (-1)
+    , "surface" TEXT
+    , "base" VARCHAR
+    , "carg" VARCHAR
+    , "dmrsID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 --
 -- SORT INFORMATION
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node_sortinfo" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "cvarsort" VARCHAR
-	, "number" VARCHAR
-	, "person" VARCHAR
-	, "gender" VARCHAR
-	, "sentence_force" VARCHAR
-	, "tense" VARCHAR
-	, "mood" VARCHAR
-	, "pronoun_type" VARCHAR
-	, "progressive" VARCHAR
-	, "perfective_aspect" VARCHAR
-	, "ind" VARCHAR 
-	,"dmrs_nodeID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "cvarsort" VARCHAR
+    , "number" VARCHAR
+    , "person" VARCHAR
+    , "gender" VARCHAR
+    , "sentence_force" VARCHAR
+    , "tense" VARCHAR
+    , "mood" VARCHAR
+    , "pronoun_type" VARCHAR
+    , "progressive" VARCHAR
+    , "perfective_aspect" VARCHAR
+    , "ind" VARCHAR 
+    ,"dmrs_nodeID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 --
 -- REAL PREDICATE
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node_realpred" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-	, "lemmaID" INTEGER
-	, "pos" VARCHAR
-	, "sense" VARCHAR
-	,"dmrs_nodeID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE 
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    , "lemmaID" INTEGER
+    , "pos" VARCHAR
+    , "sense" VARCHAR
+    ,"dmrs_nodeID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE 
 );
 --
 -- REAL PREDICATE
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node_realpred_lemma" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
-	,"lemma" VARCHAR
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
+    ,"lemma" VARCHAR
 );
 
 --
 -- GRAMMAR PREDICATE
 -- 
 CREATE TABLE IF NOT EXISTS "dmrs_node_gpred" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
-	, gpred_valueID VARCHAR 
-	,"dmrs_nodeID" INTEGER NOT NULL
-	, FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
+    , gpred_valueID VARCHAR 
+    ,"dmrs_nodeID" INTEGER NOT NULL
+    , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_node_gpred_value" (
-	"ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
-	, "value" VARCHAR 
+    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
+    , "value" VARCHAR 
 );
 
 CREATE INDEX IF NOT EXISTS "sentence_|_documentID" ON "sentence" ("documentID" ASC);
-CREATE INDEX IF NOT EXISTS "representation_|_sentenceID" ON "representation" ("sentenceID" ASC);
-CREATE INDEX IF NOT EXISTS "dmrs_|_representationID" ON "dmrs" ("representationID" DESC);
+CREATE INDEX IF NOT EXISTS "interpretation_|_sentenceID" ON "interpretation" ("sentenceID" ASC);
+CREATE INDEX IF NOT EXISTS "dmrs_|_interpretationID" ON "dmrs" ("interpretationID" DESC);
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_dmrsID" ON "dmrs_node" ("dmrsID" ASC);
 
 -- DMRS_NODE_SORTINFO INDICES
@@ -194,58 +194,58 @@ CREATE INDEX IF NOT EXISTS "dmrs_link_rargname_|_dmrs_linkID" ON "dmrs_link_rarg
 
 -- INDEX TABLES -- CAN BE REMOVED IF WE FIND BETTER SOLUTION
 CREATE TABLE IF NOT EXISTS "dmrs_node_index" (
-	"nodeID" INTEGER NOT NULL
-	
-	-- Node information
-	, "carg" VARCHAR
-	
-	-- varsortinfo
-	/*
-	, "cvarsort" VARCHAR
-	, "number" VARCHAR
-	, "person" VARCHAR
-	, "gender" VARCHAR
-	, "sentence_force" VARCHAR
-	, "tense" VARCHAR
-	, "mood" VARCHAR
-	, "pronoun_type" VARCHAR
-	, "progressive" VARCHAR
-	, "perfective_aspect" VARCHAR
-	, "ind" VARCHAR 
-	*/
-	
-	-- realpred
-	, "lemmaID" INTEGER
-	, "pos" VARCHAR
-	, "sense" VARCHAR
-	
-	--gpred
-	, "gpred_valueID" VARCHAR
-		
-	-- others
-	, "dmrsID" INTEGER NOT NULL
-	--, "representationID" INTEGER NOT NULL
-	--, "sentenceID" INTEGER NOT NULL
-	, "documentID" INTEGER NOT NULL
-	--, "corpusID" INTEGER NOT NULL 
+    "nodeID" INTEGER NOT NULL
+    
+    -- Node information
+    , "carg" VARCHAR
+    
+    -- varsortinfo
+    /*
+    , "cvarsort" VARCHAR
+    , "number" VARCHAR
+    , "person" VARCHAR
+    , "gender" VARCHAR
+    , "sentence_force" VARCHAR
+    , "tense" VARCHAR
+    , "mood" VARCHAR
+    , "pronoun_type" VARCHAR
+    , "progressive" VARCHAR
+    , "perfective_aspect" VARCHAR
+    , "ind" VARCHAR 
+    */
+    
+    -- realpred
+    , "lemmaID" INTEGER
+    , "pos" VARCHAR
+    , "sense" VARCHAR
+    
+    --gpred
+    , "gpred_valueID" VARCHAR
+        
+    -- others
+    , "dmrsID" INTEGER NOT NULL
+    --, "interpretationID" INTEGER NOT NULL
+    --, "sentenceID" INTEGER NOT NULL
+    , "documentID" INTEGER NOT NULL
+    --, "corpusID" INTEGER NOT NULL 
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link_index" (
-	"linkID" INTEGER NOT NULL
-	, "fromNodeID" INTEGER NOT NULL 
-	, "toNodeID" INTEGER NOT NULL
+    "linkID" INTEGER NOT NULL
+    , "fromNodeID" INTEGER NOT NULL 
+    , "toNodeID" INTEGER NOT NULL
 
-	--post
-	, 'post' TEXT NOT NULL
-	-- rargname
-	, 'rargname' TEXT NOT NULL
-	
-	-- others
-	, "dmrsID" INTEGER NOT NULL
-	--, "representationID" INTEGER NOT NULL
-	--, "sentenceID" INTEGER NOT NULL
-	, "documentID" INTEGER NOT NULL
-	--, "corpusID" INTEGER NOT NULL 
+    --post
+    , 'post' TEXT NOT NULL
+    -- rargname
+    , 'rargname' TEXT NOT NULL
+    
+    -- others
+    , "dmrsID" INTEGER NOT NULL
+    --, "interpretationID" INTEGER NOT NULL
+    --, "sentenceID" INTEGER NOT NULL
+    , "documentID" INTEGER NOT NULL
+    --, "corpusID" INTEGER NOT NULL 
 );
 
 /**
@@ -278,7 +278,7 @@ CREATE INDEX IF NOT EXISTS "dmrs_node_index|_pos" ON "dmrs_node_index"("pos");
 
 /** OTHER INDICES **/
 CREATE INDEX IF NOT EXISTS "dmrs_node_index|dmrsID" ON "dmrs_node_index"("dmrsID");
---CREATE INDEX IF NOT EXISTS "dmrs_node_index|representationID" ON "dmrs_node_index"("representationID");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_index|interpretationID" ON "dmrs_node_index"("interpretationID");
 --CREATE INDEX IF NOT EXISTS "dmrs_node_index|sentenceID" ON "dmrs_node_index"("sentenceID");
 CREATE INDEX IF NOT EXISTS "dmrs_node_index|documentID" ON "dmrs_node_index"("documentID");
 --CREATE INDEX IF NOT EXISTS "dmrs_node_index|corpusID" ON "dmrs_node_index"("corpusID");
@@ -295,7 +295,7 @@ CREATE INDEX IF NOT EXISTS "dmrs_link_index|rargname" ON "dmrs_link_index"("rarg
 
 /** OTHER INDICES **/
 CREATE INDEX IF NOT EXISTS "dmrs_link_index|dmrsID" ON "dmrs_link_index"("dmrsID");
---CREATE INDEX IF NOT EXISTS "dmrs_link_index|representationID" ON "dmrs_link_index"("representationID");
+--CREATE INDEX IF NOT EXISTS "dmrs_link_index|interpretationID" ON "dmrs_link_index"("interpretationID");
 --CREATE INDEX IF NOT EXISTS "dmrs_link_index|sentenceID" ON "dmrs_link_index"("sentenceID");
 CREATE INDEX IF NOT EXISTS "dmrs_link_index|documentID" ON "dmrs_link_index"("documentID");
 --CREATE INDEX IF NOT EXISTS "dmrs_link_index|corpusID" ON "dmrs_link_index"("corpusID");

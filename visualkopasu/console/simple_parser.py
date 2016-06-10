@@ -37,7 +37,7 @@ import re
 import gzip
 from visualkopasu.config import VisualKopasuConfiguration as vkconfig
 
-REPRESENTATION_TOKEN     = chr(10) + chr(12) + chr(10)
+INTERPRETATION_TOKEN     = chr(10) + chr(12) + chr(10)
 DRMS_TREE_TOKEN          = chr(10) + chr(10) + chr(10)
 PARSE_TREE_TOKEN         = chr(10) + chr(10)    
 DEBUG_MODE               = False
@@ -61,44 +61,44 @@ def parse(source_file, destination, active_only=True):
     
     raw_text = gzip.open(source_file).read().decode('utf-8')
     #repres = []
-    repres_raw = raw_text.split(REPRESENTATION_TOKEN)
+    repres_raw = raw_text.split(INTERPRETATION_TOKEN)
     
     # store to XML
     a_sentence = Element('sentence')
     a_sentence.set('version', '1.0')
     
     for part in repres_raw:
-        if DEBUG_MODE: header("FOUND A REPRESENTATION", "H1")
+        if DEBUG_MODE: header("FOUND AN INTERPRETATION", "H1")
         #repre = { "dmrs": [], "trees": [] }
-        a_representation = None
+        a_interpretation = None
                 
         elems = part.split(DRMS_TREE_TOKEN)
         for elem in elems:
             if(elem.startswith("<dmrs ")):
-                if a_representation is None:
+                if a_interpretation is None:
                     break
                 if DEBUG_MODE: header('DMRS', 'H2', elem)
                 dmrs_node = ETree.fromstring(elem.encode('utf-8'))
-                a_representation.append(dmrs_node)
+                a_interpretation.append(dmrs_node)
             elif elem.startswith("["):
                 pieces = elem.split(PARSE_TREE_TOKEN)
                 for piece in pieces:
                     if piece.startswith("("):
-                        if a_representation is None:
+                        if a_interpretation is None:
                             break
                         if DEBUG_MODE: header('Syntactic tree', 'H2', piece)
                         # XXX: To XML
-                        syntree_node = SubElement(a_representation, 'parsetree')
+                        syntree_node = SubElement(a_interpretation, 'parsetree')
                         syntree_node.text = piece
                     elif piece.startswith("["):
                         if DEBUG_MODE: header('Header', 'H2', piece)
-                        if a_representation is None:
+                        if a_interpretation is None:
                             mt = re.match("\[(\d+):(\d+)\]\s\((active|inactive)\)", piece)
                             if active_only and mt.group(3) != 'active':
                                 break                           
-                            a_representation = SubElement(a_sentence, 'representation')
-                            a_representation.attrib['id'] = mt.group(2)
-                            a_representation.attrib['mode'] = mt.group(3)
+                            a_interpretation = SubElement(a_sentence, 'interpretation')
+                            a_interpretation.attrib['id'] = mt.group(2)
+                            a_interpretation.attrib['mode'] = mt.group(3)
             elif elem.startswith(";;;"):
                 # this will be a header
                 pieces = elem.split(PARSE_TREE_TOKEN)

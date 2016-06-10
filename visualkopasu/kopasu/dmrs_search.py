@@ -193,7 +193,7 @@ class DMRSQueryParser:
 
     @staticmethod
     def parse_raw(query_string):
-        if not isinstance(query_string, str) and not isinstance(query_string, unicode):
+        if not isinstance(query_string, str):
             return None
             
         query = DMRSTextQuery(query_string)
@@ -371,10 +371,10 @@ class LiteSearchEngine:
     def get_dmrs(self, dmrs_filter_query):
         query = SQLiteQuery(
             query = '''
-            SELECT sentence.ID AS 'sentenceID', dmrs.representationID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID
+            SELECT sentence.ID AS 'sentenceID', dmrs.interpretationID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID
             FROM dmrs
-                LEFT JOIN representation ON dmrs.representationID = representation.ID
-                LEFT JOIN sentence ON representation.sentenceID = sentence.ID
+                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
+                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
             WHERE dmrs.ID IN (%s)
             LIMIT ?
             ''' % dmrs_filter_query.query

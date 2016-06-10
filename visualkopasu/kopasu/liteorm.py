@@ -149,7 +149,7 @@ class LiteORM():
     '''
     Save a record to database
     '''
-    def store_record(self, mapping_info, record, update_back = False, context = None):
+    def store_record(self, mapping_info, record, update_back=False, context=None):
         last_id = None
         try:
             conn = context.conn if (context and context.conn) else self.getConnection()
@@ -160,10 +160,10 @@ class LiteORM():
             for attribute in mapping_info.mapping:
                 if type(attribute) == list:
                     fields.append(attribute[0])
-                    params.append(EncodingUtil.to_unicode(record.__dict__[attribute[1]]))
+                    params.append(record.__dict__[attribute[1]])
                 else:
                     fields.append(attribute)
-                    params.append(EncodingUtil.to_unicode(record.__dict__[attribute]))
+                    params.append(record.__dict__[attribute])
             
             query = 'INSERT INTO {table_name} ({fields}) VALUES ({args})'.format(
                     table_name = mapping_info.table_name

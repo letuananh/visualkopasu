@@ -19,5 +19,5 @@ INSERT INTO "corpus" (name) VALUES ("redwoods");
 -- CREATE document: the Cathedral and the Bazaar (name = cb)
 INSERT INTO "document" (name, corpusID) 
 VALUES ("cb",
-		(SELECT ID FROM "corpus" WHERE name = 'redwoods') 
+        (SELECT ID FROM "corpus" WHERE name = 'redwoods') 
 );

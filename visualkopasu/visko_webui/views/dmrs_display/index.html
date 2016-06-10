@@ -83,10 +83,10 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 window.location = "{% url 'doc_display' sentence_info.sentence.documentID %}";          
             });
             $("#btnShowXML").button().click(function(){
-                window.open("{% url 'original_display' sentence_info.document.name sentence_info.sentence.ident sentence_info.representation.rid %}");          
+                window.open("{% url 'original_display' sentence_info.document.name sentence_info.sentence.ident sentence_info.interpretation.rid %}");          
             });
-            $("#representations").change(function(){
-                url = "{% url 'dmrs_display' sentence_info.sentence.ID %}" + $("#representations").val()
+            $("#interpretations").change(function(){
+                url = "{% url 'dmrs_display' sentence_info.sentence.ID %}" + $("#interpretations").val()
                 //alert(url)
                 window.location = url
             });
@@ -95,7 +95,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             $("#btnFavourite").button({ text: false
                 , icons: { primary: "ui-icon-star"  }
                 }).click(function(){
-                window.open("/basket?action=add&id={{sentence_info.sentence.ID}}&r={{sentence_info.representation.ID}}", "visualkopasubasket"); 
+                window.open("/basket?action=add&id={{sentence_info.sentence.ID}}&r={{sentence_info.interpretation.ID}}", "visualkopasubasket"); 
                 }); 
             {% else %}
             $("#btnFavourite").button({ text: false
@@ -141,20 +141,20 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
         <div id="toolbar" class="ui-corner-all">
             <input type="button" id="btnShowDocument" name="btnShowDocument" value="Go to document"/>
-            <span id="effect" class="toolbar_label">Representations</span>
-            <select id="representations" class="ui-widget">
-            {% for representation in representations %}
-                <!-- HERE: {{representation.ID}}-->
-                <!--HERE: {{current_representation_id}}-->
-                {% if representation.ID = sentence_info.representation.ID %}
-                    <option value="{{representation.ID}}" selected="selected" >
+            <span id="effect" class="toolbar_label">Interpretations</span>
+            <select id="interpretations" class="ui-widget">
+            {% for interpretation in interpretations %}
+                <!-- HERE: {{interpretation.ID}}-->
+                <!--HERE: {{current_interpretation_id}}-->
+                {% if interpretation.ID = sentence_info.interpretation.ID %}
+                    <option value="{{interpretation.ID}}" selected="selected" >
                 {% else %}
-                    <option value="{{representation.ID}}">
+                    <option value="{{interpretation.ID}}">
                 {% endif %}
-                    {% if representation.mode = 'active' %}
+                    {% if interpretation.mode = 'active' %}
                         <span style='color: red'>[*]</span>
                     {% endif %}
-                    {{representation.ID}}
+                    {{interpretation.ID}}
                 </option>
             {% endfor %}
             </select>

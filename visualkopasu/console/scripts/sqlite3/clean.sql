@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS dmrs_node_sortinfo;
 DROP TABLE IF EXISTS dmrs_node_realpred;
 DROP TABLE IF EXISTS dmrs_node_gpred;
 DROP TABLE IF EXISTS dmrs;
-DROP TABLE IF EXISTS representation;
+DROP TABLE IF EXISTS interpretation;
 DROP TABLE IF EXISTS sentence;
 DROP TABLE IF EXISTS document;
 DROP TABLE IF EXISTS corpus;

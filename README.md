@@ -4,7 +4,16 @@ Prerequisite
 * Django version 1.9.6
 * Python 3.4.2
 * SQLite 3.11.0
-
+* beautifulsoup
+* numpy
+* lxml
+* pyDelphin (https://github.com/delph-in/pydelphin)
+* nltk (Use this version instead of NLTK's trunk: https://github.com/letuananh/nltk)
+  + WordNet data should be downloaded (nltk.download() => `book` package)
+* The Integrated Semantic Framework - CoolISF (https://github.com/letuananh/intsem.fx)
+  + lelesk library (requires WordNet data - see LeLesk README file for more information)
+* The LinGO English Resource Grammar (http://www.delph-in.net/erg/)
+  + Generate grammar file (erg.dat) and copy it to data folder
 Installation guide
 ===============
 

@@ -25,7 +25,7 @@ from gzip import GzipFile
 import io
 from xml.etree import ElementTree as ETree
 
-from .models import Sentence, Representation, DMRS
+from .models import Sentence, Interpretation, DMRS
 from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname
 """
 XML Document repository 
@@ -95,7 +95,7 @@ class ZippedXMLDocumentDAO():
                 pass
         return content
 
-    def getDMRSRaw(self, sentenceID, representationID, documentID=None, dmrs_only = True):
+    def getDMRSRaw(self, sentenceID, interpretationID, documentID=None, dmrs_only = True):
         # Read raw text
         content = self.getSentenceRaw(sentenceID, documentID)
         if content is None:
@@ -103,7 +103,7 @@ class ZippedXMLDocumentDAO():
         root = ETree.fromstring(content)
 
         result_set = []
-        q = "representation[@id='" + representationID + "']" if representationID else "representation"
+        q = "interpretation[@id='" + interpretationID + "']" if interpretationID else "interpretation"
         print(("Query = %s" % q))
         elements = root.findall(q)
         print(("Found element: %s" % len(elements)))
@@ -129,16 +129,16 @@ class ZippedXMLDocumentDAO():
         text = root.find('text').text
         sentence = Sentence(sid, text)
         
-        for representation_tag in root.findall('representation'):
-            representation = Representation()
-            representation.update_field("rid", "id", representation_tag.attrib)
-            representation.update_field("mode", "", representation_tag.attrib)
-            #representation.update_from(representation_tag.attrib)
-            sentence.representations.append(representation)
+        for interpretation_tag in root.findall('interpretation'):
+            interpretation = Interpretation()
+            interpretation.update_field("rid", "id", interpretation_tag.attrib)
+            interpretation.update_field("mode", "", interpretation_tag.attrib)
+            #interpretation.update_from(interpretation_tag.attrib)
+            sentence.interpretations.append(interpretation)
             # XXX: parse all synthetic trees
             
             # parse all DMRS
-            dmrs_list = representation_tag.findall('dmrs')
+            dmrs_list = interpretation_tag.findall('dmrs')
             for dmrs_tag in dmrs_list:
                 dmrs = DMRS()
                 dmrs.ident = dmrs_tag.attrib['ident'] if 'ident' in dmrs_tag else ''
@@ -195,8 +195,8 @@ class ZippedXMLDocumentDAO():
                         temp_link.rargname = rargname
                     # end for link_tag
                     dmrs.links.append(temp_link)
-                # finished, add dmrs object to representation
-            representation.dmrs.append(dmrs)
-            # add representation to Sentence
+                # finished, add dmrs object to interpretation
+            interpretation.dmrs.append(dmrs)
+            # add interpretation to Sentence
         # Return
         return sentence

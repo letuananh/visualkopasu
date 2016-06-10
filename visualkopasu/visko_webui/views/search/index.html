@@ -16,84 +16,84 @@ You should have received a copy of the GNU General Public License
 along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 {% endcomment %}
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-	<head>
-		<title>{{title}}</title>
-		<link rel="stylesheet" href="/static/css/redmond/jquery-ui-1.9.0.custom.min.css" />
-		<link rel="stylesheet" href="/static/css/visualkopasu.css" />
-		<script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"></script>
-		<script src="/static/js/jquery-ui-1.9.0.custom.min.js"></script>
-		
-		<script type="text/javascript">
-			$(document).ready(function() {
-		        initialise();
-			});
-			
-			function initialise(){
-				$("#btnShowCorpus").button().click(function(){
-					window.location = "{% url 'home' %}";			
-					//return false;
-				});
-				$("#btnShowXML").button().click(function(){
-					window.open("/original/?ident={{sentence_ident}}");			
-				});
-				$("#btnSearch").button();
-				$("#form_search").submit(function(){
-					if($("#user_query").val().length == 0){
-						alert("Please enter your query");
-						return false;						
-					}
-				});
-			}
-		</script>	
-	</head>
+    <head>
+        <title>{{title}}</title>
+        <link rel="stylesheet" href="/static/css/redmond/jquery-ui-1.9.0.custom.min.css" />
+        <link rel="stylesheet" href="/static/css/visualkopasu.css" />
+        <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"></script>
+        <script src="/static/js/jquery-ui-1.9.0.custom.min.js"></script>
+        
+        <script type="text/javascript">
+            $(document).ready(function() {
+                initialise();
+            });
+            
+            function initialise(){
+                $("#btnShowCorpus").button().click(function(){
+                    window.location = "{% url 'home' %}";           
+                    //return false;
+                });
+                $("#btnShowXML").button().click(function(){
+                    window.open("/original/?ident={{sentence_ident}}");         
+                });
+                $("#btnSearch").button();
+                $("#form_search").submit(function(){
+                    if($("#user_query").val().length == 0){
+                        alert("Please enter your query");
+                        return false;                       
+                    }
+                });
+            }
+        </script>   
+    </head>
 
-	<body>
-		<div id="banner" class="ui-widget-header ui-corner-all">
-		{{header}}
-		</div>
-		
-		<form id="form_search" action="{% url 'search' %}" method="post">
-		{% csrf_token %}
-			<div id="toolbar" class="ui-corner-all">
-				<button type="button" id="btnShowCorpus" name="btnShowCorpus">Show Corpus</button>
-				<span class="toolbar_label">Search</span>
-				<input id="user_query" name="user_query" {% if user_query %}value="{{user_query}}"{% endif %} style="width: 500px" />
-				<button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
-			</div>
-		</form>		
-		
-		
-		<div class="ui-widget">
-			<div class="ui-state-highlight ui-corner-all" style="margin-top: 10px; padding: 0 .7em;">
-				<p>
-				<span class="ui-icon ui-icon-info" style="float:left; margin-right:.3em;"> </span>
-				<strong>Search option:</strong>
-				C:[Carg] (e.g. C:Linus C:Bazaar) or L:[lemma] (e.g. L:subversive L:rose), G:gpred (G:named_rel)<br/>
-				([from_node] [LINK_POST]/[RARGNAME] [to_node])
-				</p>
-			</div>
-		</div>
+    <body>
+        <div id="banner" class="ui-widget-header ui-corner-all">
+        {{header}}
+        </div>
+        
+        <form id="form_search" action="{% url 'search' %}" method="post">
+        {% csrf_token %}
+            <div id="toolbar" class="ui-corner-all">
+                <button type="button" id="btnShowCorpus" name="btnShowCorpus">Show Corpus</button>
+                <span class="toolbar_label">Search</span>
+                <input id="user_query" name="user_query" {% if user_query %}value="{{user_query}}"{% endif %} style="width: 500px" />
+                <button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
+            </div>
+        </form>     
+        
+        
+        <div class="ui-widget">
+            <div class="ui-state-highlight ui-corner-all" style="margin-top: 10px; padding: 0 .7em;">
+                <p>
+                <span class="ui-icon ui-icon-info" style="float:left; margin-right:.3em;"> </span>
+                <strong>Search option:</strong>
+                C:[Carg] (e.g. C:Linus C:Bazaar) or L:[lemma] (e.g. L:subversive L:rose), G:gpred (G:named_rel)<br/>
+                ([from_node] [LINK_POST]/[RARGNAME] [to_node])
+                </p>
+            </div>
+        </div>
 
-		{% if search_results %}
-		<div class="search_statistics">
-			{{search_statistics}}
-		</div>
-		<ul>
-			{% for sentence in search_results %}
-			<li>
-			{{sentence.text}}<br/>
-				{% for representation in sentence.representations %}
-					{% if forloop.counter <= 10 %}
-					<a href="{% url 'dmrs_search_display' representation.search_ID %}" target="visualkopasu_searchresult">{{representation.ID}}</a>
-					{% elif forloop.last %}
-					...
-					{% endif %}
-				{% endfor %}
-			{% endfor %}
-			</li>
-		</ul>
-		{% elif user_query %}
-			No results.
-		{% endif %}
-	</body>
+        {% if search_results %}
+        <div class="search_statistics">
+            {{search_statistics}}
+        </div>
+        <ul>
+            {% for sentence in search_results %}
+            <li>
+            {{sentence.text}}<br/>
+                {% for interpretation in sentence.interpretations %}
+                    {% if forloop.counter <= 10 %}
+                    <a href="{% url 'dmrs_search_display' interpretation.search_ID %}" target="visualkopasu_searchresult">{{interpretation.ID}}</a>
+                    {% elif forloop.last %}
+                    ...
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </li>
+        </ul>
+        {% elif user_query %}
+            No results.
+        {% endif %}
+    </body>
 </html>

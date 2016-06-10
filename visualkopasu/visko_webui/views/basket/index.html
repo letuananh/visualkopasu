@@ -86,8 +86,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             $("#btnShowXML").button().click(function(){
                 window.open("{% url 'original_display' sentenceID=sentence_ident %}");         
             });
-            $("#representations").change(function(){
-                url = "{% url 'dmrs_display' sentence.ID%}" + $("#representations").val()
+            $("#interpretations").change(function(){
+                url = "{% url 'dmrs_display' sentence.ID%}" + $("#interpretations").val()
                 //alert(url)
                 window.location = url
             });
@@ -97,12 +97,12 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             $("#btnGoDMRS{{forloop.counter}}").button({ text: false
             , icons: { primary: "ui-icon-extlink"   }
             }).click(function(){
-                window.open("{% url 'dmrs_display' dmrs.sentence.ID dmrs.representation.ID %}");  
+                window.open("{% url 'dmrs_display' dmrs.sentence.ID dmrs.interpretation.ID %}");  
                 });
             $("#btnRemoveDMRS{{forloop.counter}}").button({ text: false
             , icons: { primary: "ui-icon-trash" }
             }).click(function(){
-                window.location = "/basket?action=remove&id={{dmrs.sentence.ID}}&r={{dmrs.representation.ID}}"; 
+                window.location = "/basket?action=remove&id={{dmrs.sentence.ID}}&r={{dmrs.interpretation.ID}}"; 
                 });
             {% endfor %}
             $("#btnClearAll").button({ text: false
@@ -143,8 +143,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         <div id="dmrs_canvas{{forloop.counter}}"></div>
         
         <div class="basket_sentence ui-corner-all">
-        <button type="button" id="btnGoDMRS{{forloop.counter}}" name="btnGoDMRS{{forloop.counter}}">View all representations</button>
-        <button type="button" id="btnRemoveDMRS{{forloop.counter}}" name="btnRemoveDMRS{{forloop.counter}}">Ignore this representation</button>
+        <button type="button" id="btnGoDMRS{{forloop.counter}}" name="btnGoDMRS{{forloop.counter}}">View all interpretations</button>
+        <button type="button" id="btnRemoveDMRS{{forloop.counter}}" name="btnRemoveDMRS{{forloop.counter}}">Ignore this interpretation</button>
         <span id="dmrs{{forloop.counter}}_text_holder" class="dmrs_sentence_text"></span>
         
         </div>
