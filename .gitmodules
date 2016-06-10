@@ -1,3 +1,9 @@
 [submodule "modules/intsem.fx"]
 	path = modules/intsem.fx
 	url = https://github.com/letuananh/intsem.fx
+[submodule "modules/chirptext"]
+	path = modules/chirptext
+	url = https://github.com/letuananh/chirptext
+[submodule "modules/puchikarui"]
+	path = modules/puchikarui
+	url = https://github.com/letuananh/puchikarui
