@@ -38,30 +38,10 @@ from .models import *
 from .liteorm import ORMInfo, LiteORM
 from .liteorm import DBContext
 
-class DocumentDAO:
-    XML = 1
-    SQLITE3 = 2
-    NEO4J = 3
-    
-    @staticmethod
-    def getDAO(daoType, config):
-        path = os.path.join(config['root'], config['dbname']) if 'dbname' in config and config['dbname'] is not None else os.path.join(config['root'], config['corpus'])
-        if daoType == DocumentDAO.XML:
-            if os.path.isfile(path):
-                # zipped
-                from .zippedxmldao import ZippedXMLDocumentDAO
-                return ZippedXMLDocumentDAO(config)
-            else:
-                # folder-based DAO
-                from .xmldao import XMLDocumentDAO
-                return XMLDocumentDAO(config)
-        elif daoType == DocumentDAO.SQLITE3:
-            return SQLiteDocumentDAO(config)
-        return None # only support XML at the momment
-
-class VisualKopasuORMConfig:
-    def __init__(self, orm_manager):
-        self.orm_manager = orm_manager
+class CorpusORMSchema(object):
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self.orm_manager = LiteORM(db_path)
         # 0: table column | 1: object property
         self.Corpus = ORMInfo('corpus', ['ID', 'name'], Corpus(), orm_manager=self.orm_manager)
         self.Document = ORMInfo('document', ['ID', 'name', 'corpusID'], Document(), orm_manager=self.orm_manager)
@@ -152,52 +132,52 @@ class ObjectCache():
             obj = self.orm_config.getByID(ID)
             self.cache(obj)
         return self.cacheMapByID[ID]
-                
-class SQLiteDocumentDAO():
+
+class SQLiteCorpusCollection:
+    def __init__(self, path):
+        self.path = path
+
+    def getCorpusDAO(self, collection_name, auto_fill=False):
+        collection_db_path = os.path.join(self.path, collection_name + '.db')
+        return SQLiteCorpusDAO(collection_db_path, collection_name, auto_fill)
     
-    def __init__(self, config):
-        self.config = config
-        # Set database path in LiteORM
-        if 'dbname' in config and config['dbname'] is not None and len(config['dbname']) > 0:
-            db_path = os.path.join(self.config['root'], self.config['dbname'] + ".db")
-        else:
-            self.config['dbname'] = self.config['corpus']
-            db_path = os.path.join(self.config['root'], self.config['corpus'] + ".db")
-        self.orm_manager = LiteORM(db_path) 
-        self.ORM = VisualKopasuORMConfig(self.orm_manager)
-        if 'fill_cache' in config:
-            self.lemmaCache = ObjectCache(self.orm_manager, self.ORM.Lemma, "lemma", auto_fill=config['fill_cache'])
-            self.gpredCache = ObjectCache(self.orm_manager, self.ORM.GpredValue, "value", auto_fill=config['fill_cache'])
-        else:
-            self.lemmaCache = ObjectCache(self.orm_manager, self.ORM.Lemma, "lemma")
-            self.gpredCache = ObjectCache(self.orm_manager, self.ORM.GpredValue, "value")
+class SQLiteCorpusDAO(CorpusORMSchema):
+    
+    def __init__(self, db_path, name, auto_fill):
+        super().__init__(db_path)
+        self.name = name
+        self.lemmaCache = ObjectCache(self.orm_manager, self.Lemma, "lemma", auto_fill=auto_fill)
+        self.gpredCache = ObjectCache(self.orm_manager, self.GpredValue, "value", auto_fill=auto_fill)
 
     def getCorpora(self):
-        return self.ORM.Corpus.select()
+        return self.Corpus.select()
 
     def getCorpus(self, corpus_name):
-        return self.ORM.Corpus.select('name=?', [corpus_name])
+        return self.Corpus.select('name=?', [corpus_name])
 
+    def getCorpusByID(self, corpusID):
+        return self.Corpus.select('ID=?', (corpusID,))[0]
+    
     def saveCorpus(self, a_corpus, context=None):
-        self.ORM.Corpus.save(a_corpus, context=context)
+        self.Corpus.save(a_corpus, context=context)
 
     def saveDocument(self, a_document, context=None):
-        self.ORM.Document.save(a_document, context=context)
+        self.Document.save(a_document, context=context)
 
     def getDocumentOfCorpus(self, corpusID):
-        return self.ORM.Document.select('corpusID=?', [corpusID])
+        return self.Document.select('corpusID=?', [corpusID])
 
     def getDocuments(self):
-        return self.ORM.Document.select()
+        return self.Document.select()
 
     def getDocument(self, docID):
-        return self.ORM.Document.getByID(docID)
+        return self.Document.getByID(docID)
 
     def getDocumentByName(self, doc_name):
-        return self.ORM.Document.select('name=?', [doc_name])
+        return self.Document.select('name=?', [doc_name])
     
     def getSentences(self, docID):
-        return self.ORM.Sentence.select('documentID=?', (docID,))
+        return self.Sentence.select('documentID=?', (docID,))
 
     def buildContext(self):
         context = DBContext(self.orm_manager.getConnection())
@@ -219,23 +199,23 @@ class SQLiteDocumentDAO():
             context = self.buildContext()
         
         if not a_sentence.ID:
-            self.ORM.Sentence.save(a_sentence, context=context)
+            self.Sentence.save(a_sentence, context=context)
             # save interpretations
             for interpretation in a_sentence.interpretations:
                 # Update sentenceID
                 interpretation.sentenceID = a_sentence.ID
-                self.ORM.Interpretation.save(interpretation,context=context)
+                self.Interpretation.save(interpretation,context=context)
                 # Save DMRS
                 for dmrs in interpretation.dmrs:
                     dmrs.interpretationID = interpretation.ID
-                    self.ORM.DMRS.save(dmrs,context=context)
+                    self.DMRS.save(dmrs,context=context)
                     
                     # save nodes
                     for node in dmrs.nodes:
                         nodeindex = NodeIndex()
                         #self.NodeIndex = ORMInfo('dmrs_node_index', ['nodeID', 'carg', 'lemmaID', 'pos', 'sense', 'gpred_valueID', 'dmrsID', 'documentID'], NodeIndex(), orm_manager=self.orm_manager)                     
                         node.dmrsID = dmrs.ID
-                        self.ORM.Node.save(node, context=context)
+                        self.Node.save(node, context=context)
                         # node index
                         nodeindex.nodeID = node.ID
                         if node.carg: nodeindex.carg = node.carg
@@ -243,7 +223,7 @@ class SQLiteDocumentDAO():
                         nodeindex.documentID = a_sentence.documentID
                         # save sortinfo
                         node.sortinfo.dmrs_nodeID = node.ID
-                        self.ORM.SortInfo.save(node.sortinfo,context=context)
+                        self.SortInfo.save(node.sortinfo,context=context)
                         # save realpred
                         if node.realpred:
                             # Escape lemma
@@ -252,7 +232,7 @@ class SQLiteDocumentDAO():
                                 node.realpred.lemma = lemma.ID # TODO: Fix this
                                 nodeindex.lemmaID = lemma.ID
                             node.realpred.dmrs_nodeID = node.ID
-                            self.ORM.RealPred.save(node.realpred,context)
+                            self.RealPred.save(node.realpred,context)
                             if node.realpred.pos: nodeindex.pos = node.realpred.pos
                             if node.realpred.sense: nodeindex.sense = node.realpred.sense
                         # save gpred
@@ -262,9 +242,9 @@ class SQLiteDocumentDAO():
                                 node.gpred.value = gpred_value.ID # TODO: fix this
                                 nodeindex.gpred_valueID = gpred_value.ID
                             node.gpred.dmrs_nodeID = node.ID
-                            self.ORM.Gpred.save(node.gpred,context)
+                            self.Gpred.save(node.gpred,context)
                         # index node
-                        self.ORM.NodeIndex.save(nodeindex, context=context)
+                        self.NodeIndex.save(nodeindex, context=context)
                     # end fore
                     
                     # save links
@@ -274,13 +254,13 @@ class SQLiteDocumentDAO():
                         link.dmrsID = dmrs.ID
                         link.fromNodeID = link.fromNode.ID
                         link.toNodeID = link.toNode.ID
-                        self.ORM.Link.save(link,context)
+                        self.Link.save(link,context)
                         # save post
                         link.post.dmrs_linkID = link.ID
-                        self.ORM.Post.save(link.post,context)
+                        self.Post.save(link.post,context)
                         # save rargname
                         link.rargname.dmrs_linkID = link.ID
-                        self.ORM.Rargname.save(link.rargname,context)
+                        self.Rargname.save(link.rargname,context)
                         # build link index
                         linkindex.linkID = link.ID
                         linkindex.fromNodeID = link.fromNode.ID
@@ -289,7 +269,7 @@ class SQLiteDocumentDAO():
                         linkindex.rargname=link.rargname.value
                         linkindex.dmrsID = dmrs.ID
                         linkindex.documentID = a_sentence.documentID
-                        self.ORM.LinkIndex.save(linkindex, context=context)
+                        self.LinkIndex.save(linkindex, context=context)
             if auto_flush:
                 context.flush()
         else:
@@ -431,7 +411,7 @@ class SQLiteDocumentDAO():
         return sentences
     
     def getLemma(self, lemma):
-        lemmata = self.ORM.Lemma.select("lemma=?", [lemma])
+        lemmata = self.Lemma.select("lemma=?", [lemma])
         if len(lemmata) == 1:
             return lemmata[0]
         else:
@@ -481,46 +461,46 @@ class SQLiteDocumentDAO():
             
     def getInterpretation(self, a_interpretation):
         # retrieve all DMRSes
-        self.ORM.DMRS.select('interpretationID=?', [a_interpretation.ID], a_interpretation.dmrs)
+        self.DMRS.select('interpretationID=?', [a_interpretation.ID], a_interpretation.dmrs)
         for a_dmrs in a_interpretation.dmrs:                
             # retrieve all nodes
-            self.ORM.Node.select('dmrsID=?', [a_dmrs.ID], a_dmrs.nodes)
+            self.Node.select('dmrsID=?', [a_dmrs.ID], a_dmrs.nodes)
             for a_node in a_dmrs.nodes:
                 # retrieve sortinfo
-                list_sortinfo = self.ORM.SortInfo.select('dmrs_nodeID=?', [a_node.ID])
+                list_sortinfo = self.SortInfo.select('dmrs_nodeID=?', [a_node.ID])
                 if len(list_sortinfo) == 1:
                     a_node.sortinfo = list_sortinfo[0]
                 # retrieve realpred
-                list_realpred = self.ORM.RealPred.select('dmrs_nodeID=?', [a_node.ID])
+                list_realpred = self.RealPred.select('dmrs_nodeID=?', [a_node.ID])
                 if len(list_realpred) == 1:
                     a_node.realpred = list_realpred[0]
                     # replace lemma
                     a_node.realpred.lemma = self.lemmaCache.getByID(int(a_node.realpred.lemma)).lemma
                 # retrieve gpred
-                list_gpred = self.ORM.Gpred.select('dmrs_nodeID=?', [a_node.ID])
+                list_gpred = self.Gpred.select('dmrs_nodeID=?', [a_node.ID])
                 if len(list_gpred) == 1:                    
                     a_node.gpred = list_gpred[0]
                     # replace gpred value
                     a_node.gpred.value = self.gpredCache.getByID(int(a_node.gpred.value)).value
             
             # retrieve all links
-            self.ORM.Link.select('dmrsID=?', [a_dmrs.ID], a_dmrs.links)
+            self.Link.select('dmrsID=?', [a_dmrs.ID], a_dmrs.links)
             # update link node
             for a_link in a_dmrs.links:
                 a_link.fromNode = a_dmrs.getNodeById(a_link.fromNodeID, True)[0]
                 a_link.toNode = a_dmrs.getNodeById(a_link.toNodeID, True)[0]
                 # get post
-                list_post = self.ORM.Post.select('dmrs_linkID=?', [a_link.ID])
+                list_post = self.Post.select('dmrs_linkID=?', [a_link.ID])
                 if len(list_post) == 1:
                     a_link.post = list_post[0]
                 # get rargname
-                list_rargname = self.ORM.Rargname.select('dmrs_linkID=?', [a_link.ID])
+                list_rargname = self.Rargname.select('dmrs_linkID=?', [a_link.ID])
                 if len(list_rargname) == 1:
                     a_link.rargname = list_rargname[0]
         return a_interpretation
 
     def getSentence(self, sentenceID, mode = None, interpretationIDs = None, skip_details=None):
-        a_sentence = self.ORM.Sentence.getByID(sentenceID)
+        a_sentence = self.Sentence.getByID(sentenceID)
         
         if a_sentence:
             # retrieve all interpretations
@@ -533,7 +513,7 @@ class SQLiteDocumentDAO():
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
                 params = params + interpretationIDs
                 
-            self.ORM.Interpretation.select(conditions, params, a_sentence.interpretations)
+            self.Interpretation.select(conditions, params, a_sentence.interpretations)
             for a_interpretation in a_sentence.interpretations:
                 if not skip_details:
                     self.getInterpretation(a_interpretation)

@@ -32,7 +32,7 @@ import unicodedata
 import sys
 import bisect
 
-from config import VisualKopasuConfiguration as vkconfig
+from config import ViskoConfig as vkconfig
 
 from visualkopasu.kopasu.dao import DocumentDAO
 from visualkopasu.kopasu.dmrs_search import LiteSearchEngine, SearchCluster
@@ -58,7 +58,7 @@ def analyse_query(q):
     writeline("")
 
 def getDAO(dbname=None):
-    root = vkconfig.CORPORA_FOLDER
+    root = vkconfig.BIBLIOTECHE_ROOT
     corpus = vkconfig.CORPUS
     if dbname is None:
         dbname = vkconfig.DEFAULT_DB_NAME

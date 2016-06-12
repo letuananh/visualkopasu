@@ -5,95 +5,123 @@ XML-based data access layer for VisualKopasu project.
 
 # Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 import gzip
 import os.path
-import logging
 from xml.etree import ElementTree as ETree
 
-from .models import Sentence, Interpretation, DMRS
+from visualkopasu.util import getLogger
+from .models import Sentence
+from .models import Interpretation
 from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname
+from .util import getSentenceFromXMLString
 
-"""
-XML Document repository 
-"""
-class XMLDocumentDAO():
-    """
-    input: path to folder stores the Sentence files
-    """
-    def __init__(self, config):
-        self.config = config
-        pass
+logger = getLogger('visko.dao')
+
+def getSubFolders(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
+
+def getFiles(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isfile(os.path.join(a_folder, child))]
+
+class XMLBiblioteche:
+    def __init__(self, root):
+        """
+        root: path to biblioteche folder
+        """
+        self.root = root
+
+    def getCorpusCollection(self, collection_name):
+        bibpath = os.path.join(self.root, collection_name)
+        return XMLCorpusCollection(bibpath, collection_name)
+
+class XMLCorpusCollection:
+    def __init__(self, path, name):
+        """
+        root: path to collection folder
+        """
+        self.path = path
+        self.name = name
+
+    def getCorpusDAO(self, corpus_name):
+        corpus_path = os.path.join(self.path, corpus_name)
+        return XMLCorpusDAO(corpus_path, corpus_name)
+
+    def getCorpora(self):
+        ''' Get all available corpora
+        '''
+        return self.getSubFolders(self.path)
+
+class XMLCorpusDAO:
+
+    def __init__(self, path, name, collection=None):
+        self.path = path
+        self.name = name
+        self.collection = collection
+        
+    def getDocumentDAO(self, doc_name):
+        doc_path = os.path.join(self.path, doc_name)
+        return XMLDocumentDAO(doc_path, doc_name)
+        
+
+
+class XMLDocumentDAO:
     
-    def getAllSentences(self):
-        folder_path = self.getPath()
-        all_files = [ f.split('.')[0] for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path,f)) ]
+    def __init__(self, path, name, corpus=None):
+        self.path = path
+        self.name = name
+        self.corpus = corpus
+    
+    def getSentences(self):
+        all_files = [f.split('.')[0] for f in getFiles(self.path)]
         all_files.sort()
         return all_files
-    
-    def getPath(self, sentenceID = None):
-        if sentenceID:
-            file_name = os.path.join(self.config['root'], self.config['corpus'], self.config['document'], str(sentenceID) + '.xml.gz')
-            file_name2 = os.path.join(self.config['root'], self.config['corpus'], self.config['document'], self.config['document'] + "-" + str(sentenceID) + '.xml.gz')
-            file_name3 = os.path.join(self.config['root'], self.config['corpus'], self.config['document'], str(sentenceID) + '.gz')
+
+    def getPath(self, sentenceID=None):
+        if not sentenceID:
+            return docPath
+        else:
+            file_name = os.path.join(self.path, str(sentenceID) + '.xml.gz')
+            file_name2 = os.path.join(self.path
+                        , "%s-%s.xml.gz" % (self.name, str(sentenceID)))
             print(("Filename1: %s" % file_name))
             print(("Filename2: %s" % file_name2))
-            print(("Filename3: %s" % file_name3))
+
             if os.path.isfile(file_name):
                 return file_name
             elif os.path.isfile(file_name2):
                 return file_name2
-            else:
-                return file_name3
-        else:
-            return os.path.join(self.config['root'], self.config['corpus'], self.config['document'])
     
-    def searchSentence(self, post):
-        sids = self.getAllSentences()
-        sentences = []
-        for sid in sids:
-            sentence = self.getSentence(sid)
-            active = sentence.getActiveInterpretation()
-            for dmrs in active.dmrs:
-                for link in dmrs.links:
-                    if link.post.value == post:
-                        sentences.append(sid)
-                        print(("DEBUG: found -> " + str(sid)))
-        return sentences
-    
-    def getSentenceRaw(self, sentenceID, documentID=None):
-        # Read raw text from file
-        full_path = self.getPath(sentenceID)
-        print(("sentenceID = " + sentenceID))
+    def getSentenceRaw(self, sentenceID):
         # Parse the file
+        full_path = self.getPath(sentenceID)
+        print(full_path)
         content = gzip.open(full_path, 'r').read()
         return content
 
-    def getDMRSRaw(self, sentenceID, interpretationID, documentID=None, dmrs_only=True):
-        self.config['document'] = documentID
+    def getDMRSRaw(self, sentenceID, interpretationID, dmrs_only=True):
         # Read raw text from file
-        print(("SentenceID = %s " % sentenceID))
         full_path = self.getPath(sentenceID)
-
-        # Parse the file
+        print(full_path)
         content = gzip.open(full_path, 'r').read()
+        # Parse the file
         root = ETree.fromstring(content)
 
         result_set = []
-        q = "interpretation[@id='" + interpretationID + "']" if interpretationID else "interpretation"
-        print(("Query = %s" % q))
+        q = "interpretation[@id='%s']" % (interpretationID,) if interpretationID else "interpretation"
+        logger.info(("Query = %s" % q))
         elements = root.findall(q)
-        print(("Found element: %s" % len(elements)))
+        logger.info(("Found element: %s" % len(elements)))
         # for each dmrs
         for element in elements:
             if dmrs_only:
@@ -109,88 +137,6 @@ class XMLDocumentDAO():
     def getSentence(self, sentenceID):
         # Read raw text from file
         full_path = self.getPath(sentenceID)
-
         # Parse the file
         xmlcontent = gzip.open(full_path, 'r').read()
-        return self.getSentenceFromXMLString(xmlcontent)
-    
-    def getSentenceFromXMLString(self, xmlcontent):
-        root = ETree.fromstring(xmlcontent)
-        
-        # Build Sentence object
-        sid = root.attrib['id']
-        text = root.find('text').text
-        sentence = Sentence(sid, text)
-        
-        for interpretation_tag in root.findall('interpretation'):
-            interpretation = Interpretation()
-            interpretation.update_field("rid", "id", interpretation_tag.attrib)
-            interpretation.update_field("mode", "", interpretation_tag.attrib)
-            #interpretation.update_from(interpretation_tag.attrib)
-            sentence.interpretations.append(interpretation)
-            # XXX: parse all synthetic trees
-            
-            # parse all DMRS
-            dmrs_list = interpretation_tag.findall('dmrs')
-            for dmrs_tag in dmrs_list:
-                dmrs = DMRS()
-                dmrs.ident = dmrs_tag.attrib['ident'] if 'ident' in dmrs_tag.attrib else ''
-                dmrs.cfrom = dmrs_tag.attrib['cfrom'] if 'cfrom' in dmrs_tag.attrib else ''
-                dmrs.cto = dmrs_tag.attrib['cto'] if 'cto' in dmrs_tag.attrib else ''
-                dmrs.surface = dmrs_tag.attrib['surface'] if 'surface' in dmrs_tag.attrib else ''
-                
-                # parse all nodes inside
-                for node_tag in dmrs_tag.findall('node'):
-                    temp_node = Node(node_tag.attrib['nodeid'], node_tag.attrib['cfrom'], node_tag.attrib['cto'])
-                    #temp_node.update_from(node_tag.attrib)
-                    temp_node.update_field('surface', '', node_tag.attrib)
-                    temp_node.update_field('base', '', node_tag.attrib)
-                    temp_node.update_field('carg', '', node_tag.attrib)
-                    #temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
-                    
-                    # TODO: parse sort info
-                    sortinfo_tag = node_tag.find("sortinfo")
-                    if sortinfo_tag != None:
-                        sortinfo = SortInfo()
-                        sortinfo.update_from(sortinfo_tag.attrib)
-                        temp_node.sortinfo = sortinfo
-                    # FIXME: parse gpred
-                    gpred_tag = node_tag.find("gpred")
-                    if gpred_tag != None:
-                        gpred = Gpred(gpred_tag.text)
-                        temp_node.gpred = gpred
-                    # TODO: parse realpred
-                    realpred_tag = node_tag.find("realpred")
-                    if realpred_tag != None:
-                        realpred = RealPred()
-                        realpred.update_from(realpred_tag.attrib)
-                        temp_node.realpred = realpred
-                    # Completed parsing, add the node_tag to DMRS object 
-                    dmrs.nodes.append(temp_node)
-                    # end for nodes
-                # create a map of nodes (by id)
-                node_map = dict(list(zip([n.nodeid for n in dmrs.nodes], dmrs.nodes)))
-            
-                # parse all links inside
-                for link_tag in dmrs_tag.findall('link'):
-                    fromNode = node_map[link_tag.attrib['from']]
-                    toNode = node_map[link_tag.attrib['to']]
-                    temp_link = Link(fromNode, toNode)
-                    
-                    # TODO: parse post
-                    post_tag = link_tag.find("post")
-                    if post_tag != None:
-                        post = Post(post_tag.text)
-                        temp_link.post = post
-                    # TODO: parse rargname
-                    rargname_tag = link_tag.find("rargname")
-                    if rargname_tag != None:
-                        rargname = Rargname(rargname_tag.text)
-                        temp_link.rargname = rargname
-                    # end for link_tag
-                    dmrs.links.append(temp_link)
-                # finished, add dmrs object to interpretation
-            interpretation.dmrs.append(dmrs)
-            # add interpretation to Sentence
-        # Return
-        return sentence
+        return getSentenceFromXMLString(xmlcontent)

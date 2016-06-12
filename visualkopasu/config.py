@@ -28,22 +28,24 @@ __status__ = "Prototype"
 ########################################################################
 
 import os
-from visualkopasu.kopasu.dao import DocumentDAO 
+from visualkopasu.kopasu.xmldao import XMLBiblioteche
+from visualkopasu.kopasu.dao import SQLiteCorpusCollection
 
-class VisualKopasuConfiguration:
+
+class ViskoConfig:
+    
     PROJECT_ROOT = os.path.expanduser('~/wk/visualkopasu')
     DJANGO_VIEW_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/views/')
     DJANGO_STATIC_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/static/')
-    CORPORA_FOLDER = os.path.join(PROJECT_ROOT, 'data/corpora')
+    BIBLIOTECHE_ROOT = os.path.join(PROJECT_ROOT, 'data/biblioteche')
 
-    # Default corpus
-    CORPUS = 'redwoods' 
-    DEFAULT_DB_NAME = "redwoods"
+    # available corpora
+    AvailableBiblioteche = ('redwoods',)
+    TextCorpora = XMLBiblioteche(BIBLIOTECHE_ROOT)
+    SqliteCorpora = SQLiteCorpusCollection(BIBLIOTECHE_ROOT)
 
-    ACL_CORPORA_ROOT = os.path.join(CORPORA_FOLDER, 'acl')
-    ACL_DB_NAME = 'acl' # without .db extension
-
-
+    Biblioteche = []
+    BibliotecheMap = {}
     # Setup scripts root
     SETUP_SCRIPTS_ROOT = os.path.join(PROJECT_ROOT, 'visualkopasu', 'console', 'scripts')
 
@@ -51,43 +53,28 @@ class VisualKopasuConfiguration:
     DATABASES_default_ENGINE = 'django.db.backends.sqlite3'
     DATABASES_default_NAME = os.path.join(PROJECT_ROOT, 'data/visko.db')
 
-    @staticmethod
-    def buildDAO(dbname=None):
-        root = VisualKopasuConfiguration.CORPORA_FOLDER
-        corpus = VisualKopasuConfiguration.CORPUS
-        dbname = VisualKopasuConfiguration.DEFAULT_DB_NAME if dbname is None else dbname
-        dao = DocumentDAO.getDAO(DocumentDAO.SQLITE3, {'root': root, 'corpus': corpus, 'dbname': dbname, 'fill_cache' : False })    
-        print("Connecting to DB: %s" % dao.orm_manager.db_path)
-        return dao
 
-    @staticmethod
-    def buildTextDAO(dbname=None,documentID=''):
-        root = VisualKopasuConfiguration.CORPORA_FOLDER
-        corpus = VisualKopasuConfiguration.CORPUS
-        dbname = VisualKopasuConfiguration.DEFAULT_DB_NAME + ".zip" if dbname is None else dbname + ".zip"
-        dao = DocumentDAO.getDAO(DocumentDAO.XML, { 'root': root, 'corpus': corpus, 'dbname': dbname, 'document': documentID})
-        print("Connecting to DB: %s" % dao.getPath())
-        return dao
+class Biblioteca:
+    ''' One biblioteca contains many corpora
+        It's a collection of documents
+    '''
 
-    DAO = None
-    SQLDAOs = None
+    def __init__(self, name):
+        self.name = name
+        self.textdao = ViskoConfig.TextCorpora.getCorpusCollection(name)
+        self.sqldao = ViskoConfig.SqliteCorpora.getCorpusDAO(name)
+        self.corpora = []
 
-    @staticmethod
-    def initDAO():
-        if VisualKopasuConfiguration.DAO is None:
-            VisualKopasuConfiguration.DAO = { 
-                VisualKopasuConfiguration.DEFAULT_DB_NAME : { 'sql' : VisualKopasuConfiguration.buildDAO()
-                                            , 'text' : VisualKopasuConfiguration.buildTextDAO()
-                                                } 
-                }
-            VisualKopasuConfiguration.SQLDAOs = [item['sql'] for item in VisualKopasuConfiguration.DAO.values()]
-    @staticmethod
-    def getDAO(dbname=None):
-        dbname = VisualKopasuConfiguration.DEFAULT_DB_NAME if dbname is None else dbname
-        return VisualKopasuConfiguration.DAO[dbname]['sql']
-    @staticmethod
-    def getTextDAO(dbname=None):
-        dbname = VisualKopasuConfiguration.DEFAULT_DB_NAME if dbname is None else dbname
-        return VisualKopasuConfiguration.DAO[dbname]['text']
-        
-VisualKopasuConfiguration.initDAO()
+    def get_sql_corpora(self):
+        self.corpora = self.sqldao.getCorpora()
+        for corpus in self.corpora:
+            corpus.documents = self.sqldao.getDocumentOfCorpus(corpus.ID)
+            for doc in corpus.documents:
+                doc.corpus = corpus
+
+# TODO: This should not be hardcoded
+if not ViskoConfig.Biblioteche:
+    for corpus in ViskoConfig.AvailableBiblioteche:
+        cdao = Biblioteca(corpus)
+        ViskoConfig.Biblioteche.append(cdao)
+        ViskoConfig.BibliotecheMap[corpus] = cdao

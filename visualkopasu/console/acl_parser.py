@@ -34,7 +34,7 @@ import time, datetime
 import os.path
 import re
 import gzip
-from config import VisualKopasuConfiguration as vkconfig
+from config import ViskoConfig as vkconfig
 import csv
 import logging
 import sys

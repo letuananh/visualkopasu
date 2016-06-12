@@ -38,7 +38,7 @@ import logging
 from xml.etree import ElementTree as ETree
 from xml.etree.ElementTree import Element, SubElement, Comment
 
-from visualkopasu.config import VisualKopasuConfiguration as vkconfig
+from visualkopasu.config import ViskoConfig as vkconfig
 from setup.acl_parser import header, ParseConfig, ParserHelper  
 
 # Init log function

@@ -339,14 +339,11 @@ class DMRSQueryParser:
 
 class LiteSearchEngine:
     
-    def __init__(self, dao, name=None, limit=40000):
-        self.dao = dao
+    def __init__(self, collections, limit=40000):
+        self.collections = collections
+        # TODO: search multiple collections
+        self.dao = collections[0].sqldao
         self.limit = limit
-        if name is None:
-            if self.dao.config['dbname']:
-                self.name = self.dao.config['dbname']
-            else:
-                self.name = self.dao.config['corpus']
     
     def count_node(self, query_nodes):
         if query_nodes is not None:
@@ -467,7 +464,7 @@ class LiteSearchEngine:
             results = self.dao.build_search_result(rows, True)
             if results:
                 for res in results:
-                    res.set_property("dbname", self.dao.config['dbname'])
+                    res.set_property("collection_name", self.dao.name)
             return results
         else:
             print("Cannot form query")
@@ -500,7 +497,7 @@ class SearchCluster():
         print("\nCluster counting: %s\n" % (", ".join([str(node) for node in query_nodes])))
         results = 0
         for engine in self.engines:
-            print("\nSearching on engine: %s\n" % engine.dao.config['dbname'])
+            print("\nSearching on engine: %s\n" % engine.dao.name)
             result = engine.count_node(query_nodes)
             if result is not None and result > -1:
                 results += result

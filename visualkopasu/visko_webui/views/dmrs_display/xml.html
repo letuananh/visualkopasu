@@ -56,8 +56,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 {% endfor %}
                 
                 $("#btnShowAll").button().click(function(){
-                    window.location = '{% url "original_display" docID sentenceID %}';
-                });
+                    window.location = '{% url "original_display" collection_name corpus_name doc_name sentence_ident %}';
+                });                
             }
             
         </script>
@@ -66,10 +66,12 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
     <body>
         <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
 
+        {% if interpretationID %}
         <div id="toolbar" class="ui-corner-all">
             <button type="button" id="btnShowAll" name="btnShowAll">Show All Interpretations</button>
         </div>
-
+        {% endif %}
+        
         <div style="height:20px;"/>
         <div id="holder"/>
         

@@ -26,7 +26,6 @@ __status__ = "Prototype"
 
 import copy
 import sqlite3
-from .textutil import EncodingUtil
 
 class ORMInfo:
     def __init__(self, table_name, mapping, prototype, columnID = 'ID', orm_manager = None):
@@ -249,3 +248,39 @@ class LiteORM():
             return an_object
         else:
             return None
+
+class SmartRecord:
+    def __init__(self):
+        pass
+    
+    def set_property(self, property, value):
+        self.__dict__[property] = value
+        return self
+        
+    def update_from(self, a_dict):
+        for key in self.__dict__.keys():
+            if key in a_dict:
+                self.set_property(key, a_dict[key])
+        return self
+    
+    def update_fields(self, map_info, a_dict):
+        for pair in map_info:
+            if type(pair) == list:
+                # print("using list mode for %s" % pair)
+                self.update_field(pair[1], pair[0], a_dict)
+            elif type(pair) == str:
+                self.update_field(pair, pair, a_dict)
+            else:
+                # TODO: error?
+                pass
+        return self
+    
+    def update_field(self, property_name, tag_attribute, a_dict):
+        if not tag_attribute:
+            tag_attribute = property_name
+        if tag_attribute in a_dict:
+            self.set_property(property_name, a_dict[tag_attribute])
+        return self
+            
+    def __str__(self):
+        return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.items() if v))

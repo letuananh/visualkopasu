@@ -46,13 +46,59 @@ import sys
 import os
 import unittest
 
+from visualkopasu.config import Biblioteca
+from visualkopasu.kopasu.util import getSentenceFromXMLString
+from visualkopasu.kopasu.util import getDMRSFromXMLString
+
 ########################################################################
 
 class TestDMRSXML(unittest.TestCase):
+    
+    redwoods = Biblioteca('redwoods')
+    corpus_name = 'redwoods'
+    doc_name = 'cb'
 
-    def test_null_args(self):
-        print("Test manipulating DMRS XML")
-        self.assertFalse(True)
+    def test_text_dao(self):        
+        print("test text DAO")
+        # get all sentences
+        cbdao = self.redwoods.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
+        sentences = cbdao.getSentences()
+        self.assertTrue(sentences)
+
+        # test first sentence
+        sentence = cbdao.getSentence(sentences[0])
+        validate_sentence(self, sentence)
+        # test first interpretation
+        interpretation = cbdao.getDMRSRaw(sentences[0], '0', False)
+        self.assertTrue(interpretation)
+        interpretation = cbdao.getDMRSRaw(sentences[0], '0', True)
+        self.assertTrue(interpretation)
+
+    def test_sql_dao(self):
+        print("test sql DAO")
+        corpusdao = self.redwoods.sqldao
+        # get document 
+        cb = corpusdao.getDocumentByName(self.doc_name)[0]
+        sentences = corpusdao.getSentences(cb.ID)
+        self.assertTrue(sentences)
+
+        sentence = corpusdao.getSentence(sentences[0].ID)
+        validate_sentence(self, sentence)
+
+    def test_xml_to_dmrs(self):
+        cbdao = self.redwoods.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
+        xmlstr = cbdao.getDMRSRaw(1010, 0, True)[0]
+        print(xmlstr)
+        dmrsobj = getDMRSFromXMLString(xmlstr)
+        self.assertTrue(dmrsobj)
+        print(dmrsobj)
+
+def validate_sentence(self, sentence):
+    self.assertIsNotNone(sentence)
+    self.assertTrue(sentence.interpretations)
+    self.assertTrue(sentence.interpretations[0])
+    self.assertTrue(sentence.interpretations[0].dmrs[0])
+    print(sentence)
 
 ########################################################################
 

@@ -26,63 +26,29 @@ __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
 ########################################################################
-from .textutil import EncodingUtil
-    
-class BaseConcept:
-    def __init__(self):
-        pass
-    
-    def set_property(self, property, value):
-        self.__dict__[property] = value
-        return self
-        
-    def update_from(self, a_dict):
-        for key in self.__dict__.keys():
-            if key in a_dict:
-                self.set_property(key, a_dict[key])
-        return self
-    
-    def update_fields(self, map_info, a_dict):
-        for pair in map_info:
-            if type(pair) == list:
-                # print("using list mode for %s" % pair)
-                self.update_field(pair[1], pair[0], a_dict)
-            elif type(pair) == str:
-                self.update_field(pair, pair, a_dict)
-            else:
-                # TODO: error?
-                pass
-        return self
-    
-    def update_field(self, property_name, tag_attribute, a_dict):
-        if not tag_attribute:
-            tag_attribute = property_name
-        if tag_attribute in a_dict:
-            self.set_property(property_name, a_dict[tag_attribute])
-        return self
-            
-    def __str__(self):
-        return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.iteritems() if v))
+
+from .liteorm import SmartRecord
 
 '''
     A corpus wrapper
 '''
-class Corpus(BaseConcept):
+class Corpus(SmartRecord):
     def __init__(self, name = ''):
         self.ID = None
         self.name = name
         self.documents = []
         pass
     
-class Document(BaseConcept):
+class Document(SmartRecord):
     def __init__(self, name = '', corpusID = None):
         self.ID = None
         self.name = name
         self.corpusID = corpusID
         self.corpus = None
+        self.sentences = []
         pass    
 
-class Sentence(BaseConcept):
+class Sentence(SmartRecord):
     def __init__(self, ident = 0, text = '', documentID = None):
         self.ID = None
         self.ident =  ident
@@ -101,7 +67,7 @@ class Sentence(BaseConcept):
         return "[ID=" + self.ident + "]" + self.text
         #return u"[ID=%s] %s" % (self.ident, self.text)
 
-class Interpretation(BaseConcept):   
+class Interpretation(SmartRecord):   
     
     INACTIVE = 0
     ACTIVE = 1 
@@ -137,7 +103,7 @@ class ParseNode:
     def __str__(self):
         return u"{type}: {value}".format(type=self.nodetype, value=self.value)
 
-class DMRS(BaseConcept):
+class DMRS(SmartRecord):
     """
     DMRS object default constructor
     """
@@ -174,7 +140,7 @@ class DMRS(BaseConcept):
             links += str(link) + "\n"
         return "DMRS: ident='{ident}', [{cfrom} : {to}], surface='{surface}'\n\n.:[Nodes]:.\n{nodes}\n.:[Links]:.\n{links}".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nodes=nodes, links=links)
 
-class Node(BaseConcept):
+class Node(SmartRecord):
     """
     Node object constructor
     """
@@ -195,7 +161,7 @@ class Node(BaseConcept):
     def __str__(self):
         return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred != None else str(self.realpred))
 
-class NodeIndex(BaseConcept):
+class NodeIndex(SmartRecord):
     def __init__(self):
         self.nodeID = None
         self.carg = None
@@ -207,7 +173,7 @@ class NodeIndex(BaseConcept):
         self.dmrsID = None
         self.documentID = None
 
-class LinkIndex(BaseConcept):
+class LinkIndex(SmartRecord):
     def __init__(self):
         self.linkID = None
         self.fromNodeID = None
@@ -219,7 +185,7 @@ class LinkIndex(BaseConcept):
 """
 sortinfo of a Node
 """
-class SortInfo(BaseConcept):
+class SortInfo(SmartRecord):
     
     def __init__(self, cvarsort = '', num = '', pers ='', gend = '', sf = '', tense = '', mood = '', prontype ='', prog ='', perf='', ind=''):
         self.ID = None
@@ -237,7 +203,7 @@ class SortInfo(BaseConcept):
         self.dmrs_nodeID = -1
 
     def __str__(self):
-        return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.iteritems() if v))
+        return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.items() if v))
 """
 Gpred of a node
 """
@@ -245,7 +211,7 @@ Gpred of a node
 """
 Grammar predicate
 """
-class Gpred(BaseConcept):
+class Gpred(SmartRecord):
     def __init__(self, value = None):
         self.ID = None
         self.value = value
@@ -254,7 +220,7 @@ class Gpred(BaseConcept):
 """
 Lemma of Real pred
 """
-class Lemma(BaseConcept):
+class Lemma(SmartRecord):
     def __init__(self, lemma = None):
         self.ID = None
         self.lemma = lemma
@@ -262,7 +228,7 @@ class Lemma(BaseConcept):
 """
 Gpred value
 """
-class GpredValue(BaseConcept):
+class GpredValue(SmartRecord):
     def __init__(self, value = None):
         self.ID = None
         self.value = value      
@@ -270,7 +236,7 @@ class GpredValue(BaseConcept):
 """
 Real predicate
 """
-class RealPred(BaseConcept):
+class RealPred(SmartRecord):
     def __init__(self, lemma='', pos='', sense=''):
         self.ID = None
         self.lemma = lemma
@@ -281,7 +247,7 @@ class RealPred(BaseConcept):
 """
     Link between DMRS node
 """ 
-class Link(BaseConcept):
+class Link(SmartRecord):
     """
     Link object constructor
     """
@@ -304,7 +270,7 @@ class Link(BaseConcept):
 """
 Post of a Link
 """
-class Post(BaseConcept):
+class Post(SmartRecord):
     def __init__(self, value = None):
         self.ID = None
         self.value = value
@@ -316,7 +282,7 @@ class Post(BaseConcept):
 """
 Rargname (of a Link)
 """ 
-class Rargname(BaseConcept):
+class Rargname(SmartRecord):
     def __init__(self, value = None):
         self.ID = None
         self.value = value

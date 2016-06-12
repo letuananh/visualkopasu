@@ -30,7 +30,7 @@ __status__ = "Prototype"
 ########################################################################
 
 import os, sys
-#from config import VisualKopasuConfiguration as vkconfig
+#from config import ViskoConfig as vkconfig
 from .simple_parser import *
 from .text_to_sqlite import *
 
@@ -47,25 +47,25 @@ def draw_separator():
 def convert_document(corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
     if answer is not None and answer != 'yes':
         return
-    source_folder = os.path.join(vkconfig.CORPORA_FOLDER, "raw", corpus_name, doc_name)
+    source_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, "raw", corpus_name, doc_name)
     print("Attempting to parse document from raw text into XML")
     print("Source folder: %s" % source_folder)
-    print("Destination folder: %s" % vkconfig.CORPORA_FOLDER)
+    print("Destination folder: %s" % vkconfig.BIBLIOTECHE_ROOT)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
     
     # Convert raw text to XML
-    parse_document(source_folder, vkconfig.CORPORA_FOLDER, corpus_name, doc_name, active_only=active_only)
+    parse_document(source_folder, vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name, active_only=active_only)
     draw_separator()
     
     # Convert XML to SQLite3
-    print("Now, I'm going to alter the content of the database: %s" % os.path.join(vkconfig.CORPORA_FOLDER, corpus_name + '.db'))
+    print("Now, I'm going to alter the content of the database: %s" % os.path.join(vkconfig.BIBLIOTECHE_ROOT, corpus_name + '.db'))
     if answer or confirm("Do you want to continue? (yes/no): "):
         if prepare_db:
-            prepare_database(vkconfig.CORPORA_FOLDER, corpus_name)
+            prepare_database(vkconfig.BIBLIOTECHE_ROOT, corpus_name)
         else:
             print("I will add the document to the current database. Existing documents will be kept.")
-        convert(vkconfig.CORPORA_FOLDER, corpus_name, doc_name)
+        convert(vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()

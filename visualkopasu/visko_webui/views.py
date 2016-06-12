@@ -38,48 +38,107 @@ from django.template import Context
 from django.shortcuts import redirect
 from django.shortcuts import render
 
-from visualkopasu.config import VisualKopasuConfiguration as vkconfig
+from chirptext.leutile import Counter
 
-from visualkopasu.kopasu.dao import DocumentDAO 
+from visualkopasu.config import ViskoConfig as vkconfig
 from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
-from .clientutil import DMRSNodeTooltip, DataUtil
+from .clientutil import DMRSNodeTooltip
+from .clientutil import DataUtil
 
-#def display(request, a_template, a_context):
-#    t = loader.get_template(a_template)
-#    return HttpResponse(t.render(a_context))
+# ISF support
+from coolisf.main import txt2dmrs, PredSense
 
 cvarsort_dict = { 'x' : 'individual', 'e' : 'event', 'i' : 'undefined', 'u' : 'unknown' }
 num_dict = { 'sg' : 'singular', 'pl' : 'plural', 'u' : 'unknown'}
 
+class DMRSItem:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+DMRSBasketItem=namedtuple('DMRSBasketItem', ['sentenceID', 'interpretationID'])
+
+class DMRSBasket:
+    def __init__(self, items=None):
+        self.items = [] if items is None else items
+    
+    def add(self, sentenceID, interpretationID):
+        sentenceID = str(sentenceID)
+        interpretationID = str(interpretationID)
+        if not sentenceID or not interpretationID:
+            # print("Invalid sentenceID or interpretationID")
+            return # bad sentenceID or interpretationID 
+        for item in self.items:
+            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
+                return # item exists
+        # Item doesn't exists
+        self.items.append(DMRSBasketItem(sentenceID=sentenceID, interpretationID=interpretationID))
+    
+    def count(self):
+        return len(self.items)
+    
+    def contains(self, sentenceID, interpretationID):
+        sentenceID = str(sentenceID)
+        interpretationID = str(interpretationID)
+        for item in self.items:
+            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
+                return True
+        return False
+    
+    def remove(self, sentenceID, interpretationID):
+        sentenceID = str(sentenceID)
+        interpretationID = str(interpretationID)
+        if sentenceID == '' and interpretationID == '':
+            self.items = []
+        else:
+            for item in self.items:
+                if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
+                    self.items.remove(item)
+    
+    def save(self, request):
+        if request:
+            request.session['visual_kopasu_dmrs_basket'] = self.items
+    
+    @staticmethod
+    def instance(request):
+        if 'visual_kopasu_dmrs_basket' in request.session:
+            basket = DMRSBasket(request.session['visual_kopasu_dmrs_basket'])
+            return basket
+        else:
+            basket = DMRSBasket()
+            request.session['visual_kopasu_dmrs_basket'] = basket.items
+        return basket
+
+
 def build_tooltip(a_node):
+    # TODO: clean up this mess please
     tooltip = DMRSNodeTooltip(3,3)
     if a_node.realpred:
-        if DataUtil.notEmpty(a_node.realpred.pos):
+        if a_node.realpred.pos:
             tooltip.push("pos:%s" % a_node.realpred.pos)
-        if DataUtil.notEmpty(a_node.realpred.sense):
+        if a_node.realpred.sense:
             tooltip.push("RP.sense:%s" % a_node.realpred.sense)
     if a_node.sortinfo:
-        if DataUtil.notEmpty(a_node.sortinfo.cvarsort):
+        if a_node.sortinfo.cvarsort:
             tooltip.push("cvarsort:%s" % DataUtil.translate(a_node.sortinfo.cvarsort, cvarsort_dict))
-        if DataUtil.notEmpty(a_node.sortinfo.num):
+        if a_node.sortinfo.num:
             tooltip.push("number:%s" % DataUtil.translate(a_node.sortinfo.num, num_dict))           
-        if DataUtil.notEmpty(a_node.sortinfo.pers):
+        if a_node.sortinfo.pers:
             tooltip.push("pers:%s" % DataUtil.translate(a_node.sortinfo.pers))
-        if DataUtil.notEmpty(a_node.sortinfo.gend):
+        if a_node.sortinfo.gend:
             tooltip.push("gend:%s" % DataUtil.translate(a_node.sortinfo.gend))
-        if DataUtil.notEmpty(a_node.sortinfo.sf):
+        if a_node.sortinfo.sf:
             tooltip.push("sf:%s" % DataUtil.translate(a_node.sortinfo.sf))                  
-        if DataUtil.notEmpty(a_node.sortinfo.tense):
+        if a_node.sortinfo.tense:
             tooltip.push("tense:%s" % DataUtil.translate(a_node.sortinfo.tense))
-        if DataUtil.notEmpty(a_node.sortinfo.mood):
+        if a_node.sortinfo.mood:
             tooltip.push("mood:%s" % DataUtil.translate(a_node.sortinfo.mood))
-        if DataUtil.notEmpty(a_node.sortinfo.prontype):
+        if a_node.sortinfo.prontype:
             tooltip.push("prontype:%s" % DataUtil.translate(a_node.sortinfo.prontype))
-        if DataUtil.notEmpty(a_node.sortinfo.prog):
+        if a_node.sortinfo.prog:
             tooltip.push("prog:%s" % DataUtil.translate(a_node.sortinfo.prog))
-        if DataUtil.notEmpty(a_node.sortinfo.perf):
+        if a_node.sortinfo.perf:
             tooltip.push("perf:%s" % DataUtil.translate(a_node.sortinfo.perf))
-        if DataUtil.notEmpty(a_node.sortinfo.ind):
+        if a_node.sortinfo.ind:
             tooltip.push("ind:%s" % DataUtil.translate(a_node.sortinfo.ind))
     return tooltip.str()
 
@@ -98,11 +157,7 @@ def node_to_javascript(a_node, number_of_links):
         text_type = "gpred"
         if text.endswith('_rel'):
             text = text[:-4]
-        
-    # text = a_node.realpred.lemma if a_node.realpred 
-    # else (a_node.carg if a_node.carg 
-    # else a_node.gpred.value)
-    
+
     node_template = u"var node_{id} = {{ 'text' : '{text}', 'from' : {cfrom}, 'to' : {cto}, 'type' : '{text_type}', 'pos': '{pos}', 'link_count' : {links}, 'tooltip' : {tooltip} }};"
     node_js = node_template.format(
                 id=a_node.ID
@@ -145,66 +200,95 @@ def link_to_javascript(a_link):
                                 )
     return link_js
 
-class Counter:
-    def __init__(self):
-        self.counter = {}
-        
-    def count(self, key):
-        if not key in self.counter:
-            self.counter[key] = 1
-        else:
-            self.counter[key] += 1
-            
-    def number(self, key):
-        if not key in self.counter:
-            return 0
-        else:
-            return self.counter[key]
+def getAllCollections():
+    for collection in vkconfig.Biblioteche:
+        collection.corpora = collection.sqldao.getCorpora()
+        for corpus in collection.corpora:
+            corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
+            for doc in corpus.documents:
+                doc.corpus = corpus
+    return vkconfig.Biblioteche
 
-def doc_display(request, doc_id):
-    database = request.GET.get('db', None)
+# ------------------------------------------------------------------
+# VIEWS
+# ------------------------------------------------------------------
+
+def home(request):
+    print(request.POST.get('user_query', ''))
+    
+    # dao = vkconfig.getDAO()    
+    c = Context({
+         'title'  : 'Home Page'
+        ,'header' : 'Visual Kopasu'
+        ,'biblioteche' : getAllCollections()
+    })
+    c.update(csrf(request))
+    return render(request, "home/index.html", c)
+
+
+def doc_display(request, collection_name, corpus_name, doc_id):
     doc_id = int(doc_id)
-    dao = vkconfig.getDAO(database)
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
     document = dao.getDocument(doc_id)
     sentences = dao.getSentences(doc_id)
     
     c = Context({'title' : 'Document viewer'
     ,'header': 'Document'
+    ,'collection_name' : collection_name
+    ,'corpus_name' : corpus_name
     ,'document' : document
     ,'sentences' : sentences
     })
     c.update(csrf(request))
     return render(request, "doc_display/index.html", c)
 
-def home(request):
-    print(request.POST.get('user_query', ''))
+def dmrs_display(request, collection_name, corpus_name, doc_id, sentence_id, interpretation_id=None):
+    search_count = None
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
     
-    # dao = vkconfig.getDAO()
-    corpora = []
-    for dao in vkconfig.SQLDAOs:
-        all_corpora = dao.getCorpora()
-        if all_corpora:
-            corpora += all_corpora
+    if not interpretation_id:
+        sentence = dao.getSentence(sentence_id,mode='active')
+    else:
+        sentence = dao.getSentence(sentence_id, interpretationIDs=[interpretation_id])
 
-        for corpus in corpora:
-            corpus.set_property("dbname", dao.config['dbname'])
-            print("Found a corpus: %s at db %s" % (corpus.name, corpus.dbname))
-            corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
-            for doc in corpus.documents:
-                print(" -> Doc: %s" % doc.name)
+    if (not sentence) or len(sentence.interpretations) == 0:
+        raise Http404
     
+    js_sentence = sentence_to_javascript(sentence, dao)     
+    sentence_interpretations = dao.getSentence(sentence_id, skip_details=True).interpretations
+    
+    c = Context({'title' : sentence.text
+    ,'header': 'DMRS'
+    ,'collection_name' : collection_name
+    ,'corpus_name' : corpus_name
+    ,'sentence_info' : js_sentence
+    ,'interpretations' : sentence_interpretations
+    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
+    ,'basket_size' : DMRSBasket.instance(request).count()
+    })
+    return render(request, "dmrs_display/index.html", c)
+
+def original_display(request, collection_name, corpus_name, doc_name, sentence_ident, interpretationID=''):
+    dao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
+    content = dao.getDMRSRaw(sentence_ident, interpretationID)
+    
+    title = 'Original XML of %s:%s' % (sentence_ident, interpretationID) if interpretationID else 'Original XML of %s' % (sentence_ident,)
     c = Context({
-         'title'  : 'Home Page'
-        ,'header' : 'Visual Corpora'
-        ,'corpora' : corpora
+         'title'  : title
+        ,'header' : title
+        ,'collection_name' : collection_name
+        ,'corpus_name' : corpus_name
+        ,'content' : content if content is not None and len(content) > 0 else ''
+        ,'doc_name' : doc_name
+        ,'sentence_ident' : sentence_ident
+        ,'interpretationID' : interpretationID
     })
     c.update(csrf(request))
-    return render(request, "home/index.html", c)
+    return render(request, "dmrs_display/xml.html", c)
 
 def search(request):
     DEFAULT_LIMIT = 10000 # result limit
-    dao = vkconfig.getDAO()
-    engine = LiteSearchEngine(dao, limit=DEFAULT_LIMIT)
+    engine = LiteSearchEngine(vkconfig.Biblioteche, limit=DEFAULT_LIMIT)
     try:
         user_query = request.POST.get('user_query', '')
         print("User query: %s" % user_query)
@@ -247,32 +331,10 @@ def search(request):
     c.update(csrf(request))
     return render(request, "search/index.html", c)
 
-def isf_parse(request):
-    sentence = request.POST.get('sentence', None)
-    from coolisf.main import txt2dmrs, PredSense
-    results = txt2dmrs(sentence)
-    mrses = None
-    if results and results.mrs:
-        print(results.mrs[0].preds())
-        mrses = [ PredSense.tag_sentence(mrs).replace('\n', '<br/>\n') for mrs in results.mrs ]
-    c = Context({
-        'sentence' : sentence
-        ,'mrses' : mrses
-    })
-    print(results.mrs)
-    c.update(csrf(request))   
-    return render(request, 'coolisf/index.html', c)
-
-def dmrs_search_display(request, search_id):
+def dmrs_search_display(request, collection_name, search_id):
     search_id = int(search_id)
-    search_count = None
-    try:
-        database = request.GET.get('db', None)
-    except:
-        return redirect("/dmrs/1")
-        sentence_id = 1
-    
-    dao = vkconfig.getDAO(database)
+    search_count = None    
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
     
     prev_search = False
     next_search = False
@@ -299,6 +361,7 @@ def dmrs_search_display(request, search_id):
     
     c = Context({'title' : sentence.text
     ,'header': 'DMRS'
+                 ,'collection_name' : collection_name
     ,'sentence_info' : js_sentence
     ,'interpretations' : sentence_interpretations
     ,'prev_search' : prev_search
@@ -310,110 +373,10 @@ def dmrs_search_display(request, search_id):
     })
     return render(request, "dmrs_display/index.html", c)
     
-
-def dmrs_display(request, sentence_id):
-    search_count = None
-    try:
-        database = request.GET.get('db', None)
-        sentence_id = int(sentence_id)
-        interpretation_id = request.GET.get('r', '')
-    except:
-        return redirect("/dmrs/1")
-        sentence_id = 1
-    
-    dao = vkconfig.getDAO(database)
-    
-    # print('Fetching id=%s repre=%s' %(sentence_id, interpretation_id))
-    
-    prev_search = False
-    next_search = False
-    if not interpretation_id:
-        sentence = dao.getSentence(sentence_id,mode='active')
-    else:
-        sentence = dao.getSentence(sentence_id, interpretationIDs=[interpretation_id])
-
-    if (not sentence) or len(sentence.interpretations) == 0:
-        return redirect("/dmrs/?id=1")
-    
-    js_sentence = sentence_to_javascript(sentence, dao)     
-    sentence_interpretations = dao.getSentence(sentence_id, skip_details=True).interpretations
-    
-    c = Context({'title' : sentence.text
-    ,'header': 'DMRS'
-    ,'sentence_info' : js_sentence
-    ,'interpretations' : sentence_interpretations
-    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
-    ,'basket_size' : DMRSBasket.instance(request).count()
-    })
-    return render(request, "dmrs_display/index.html", c)
-
-class DMRSItem:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-DMRSBasketItem=namedtuple('DMRSBasketItem', ['sentenceID', 'interpretationID'])
-
-class DMRSBasket:
-    def __init__(self, items=None):
-        self.items = [] if items is None else items
-    
-    def add(self, sentenceID, interpretationID):
-        sentenceID = str(sentenceID)
-        interpretationID = str(interpretationID)
-        if not sentenceID or not interpretationID:
-            # print("Invalid sentenceID or interpretationID")
-            return # bad sentenceID or interpretationID 
-        for item in self.items:
-            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
-                # print("Item exists!")
-                return # item exists
-        # Item doesn't exists
-        self.items.append(DMRSBasketItem(sentenceID=sentenceID, interpretationID=interpretationID))
-        # print("Added, size = %s" % len(self.items))
-    
-    def count(self):
-        return len(self.items)
-    
-    def contains(self, sentenceID, interpretationID):
-        sentenceID = str(sentenceID)
-        interpretationID = str(interpretationID)
-        for item in self.items:
-            # print("Comparing: %s v.s %s --- %s v.s %s" %(item.sentenceID, sentenceID, item.interpretationID, interpretationID))
-            if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
-                return True
-        return False
-    
-    def remove(self, sentenceID, interpretationID):
-        sentenceID = str(sentenceID)
-        interpretationID = str(interpretationID)
-        if sentenceID == '' and interpretationID == '':
-            self.items = []
-        else:
-            for item in self.items:
-                if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
-                    self.items.remove(item)
-    
-    def save(self, request):
-        if request:
-            request.session['visual_kopasu_dmrs_basket'] = self.items
-    
-    @staticmethod
-    def instance(request):
-        if 'visual_kopasu_dmrs_basket' in request.session:
-            #print("Retrieving basket from session")
-            basket = DMRSBasket(request.session['visual_kopasu_dmrs_basket'])
-            #print("Basket size = %s" % len(basket.items))
-            return basket
-        else:
-            print("Basket doesn't exist, create a new one")
-            basket = DMRSBasket()
-            request.session['visual_kopasu_dmrs_basket'] = basket.items
-        return basket
-
 '''
 Convert the first DMRS of the first interpretation to javascript
 '''
-def sentence_to_javascript(sentence, dao):
+def sentence_to_javascript(sentence, dao=None):
     if sentence and len(sentence.interpretations) > 0:
         # retrieved sentence, now convert DMRS to javascript code
         dmrs = sentence.interpretations[0].dmrs[0]
@@ -424,17 +387,27 @@ def sentence_to_javascript(sentence, dao):
         
         link_counter = Counter()
         for a_link in dmrs.links:
+            if not a_link.ID:
+                a_link.ID = len(link_id_list) + 1
+            if not a_link.fromNode.ID:
+                a_link.fromNode.ID = a_link.fromNode.nodeid
+            if not a_link.toNode.ID:
+                a_link.toNode.ID = a_link.toNode.nodeid
             link_list += link_to_javascript(a_link) + "\n\t\t\t\t"
             link_id_list.append( "link_" + str(a_link.ID) )
             link_counter.count(a_link.fromNode.ID)
             link_counter.count(a_link.toNode.ID)
             
         for a_node in dmrs.nodes:
-            node_list += node_to_javascript(a_node, link_counter.number(a_node.ID)) + "\n\t\t\t\t"
+            if a_node.ID == -1:
+                a_node.ID = a_node.ident
+                print('ID: %s' % (a_node.ID))
+            node_list += node_to_javascript(a_node, link_counter[a_node.ID]) + "\n\t\t\t\t"
             node_id_list.append( "node_" + str(a_node.ID) )
-            
-            
-        #print "ident = %s" % sentence.interpretations[0].ident
+
+        document = dao.getDocument(sentence.documentID) if dao else ''
+        corpus = dao.getCorpusByID(document.corpusID) if dao else ''
+
         return DMRSItem(sentence_text=sentence.text.replace('\'', '\\\'').replace('\r','').replace('\n', '')
                         ,node_list=node_list
                         ,node_id_list=', '.join(node_id_list)
@@ -442,7 +415,8 @@ def sentence_to_javascript(sentence, dao):
                         ,link_id_list=', '.join(link_id_list)
                         ,sentence=sentence
                         ,interpretation=sentence.interpretations[0]
-                        ,document=dao.getDocument(sentence.documentID)
+                        ,document=document
+                        ,corpus=corpus
                         )
     else:
         return None
@@ -488,30 +462,39 @@ def basket(request):
     })
     return render(request, "basket/index.html", c)  
 
-def original_display(request, document, sentenceID, interpretationID=''):
-    dao = vkconfig.getDAO()
-    
-    try:
-        database = request.GET.get('db', None)
-        #document = request.GET.get('doc', '')
-        #sentenceID = request.GET.get('id', '')
-        #interpretationID = request.GET.get('r', '')
-        #dao = getTextDAO(document)
-        dao = vkconfig.getTextDAO(database)
-        content = dao.getDMRSRaw(sentenceID, interpretationID, documentID=str(document))
-        # content = '--'
-    except Exception as e:
-        print("Error: {e}".format(e=e))
-        content = []
-        raise e
-    
-    title = 'Original XML of %s:%s' % (sentenceID, interpretationID) if interpretationID else 'Original XML of %s' % (sentenceID,)
+def isf_parse(request):
+    ''' Parse a sentence using ISF and then display its DMRS
+    '''
+    sentence = request.POST.get('sentence', None)
+    results = txt2dmrs(sentence)
+    mrses = None
+    if results and results.mrs:
+        print(results.mrs[0].preds())
+        mrses = [ PredSense.tag_sentence(mrs).replace('\n', '<br/>\n') for mrs in results.mrs ]
     c = Context({
-         'title'  : title
-        ,'header' : title
-        ,'content' : content if content is not None and len(content) > 0 else ''
-        ,'docID' : document
-        ,'sentenceID' : sentenceID
+        'sentence' : sentence
+        ,'mrses' : mrses
     })
-    c.update(csrf(request))
-    return render(request, "dmrs_display/xml.html", c)
+    print(results.mrs)
+    c.update(csrf(request))   
+    return render(request, 'coolisf/index.html', c)
+
+def dev_test(request):
+    sentence_id = 1010
+    dao = vkconfig.BibliotecheMap['redwoods'].textdao.getCorpusDAO('redwoods').getDocumentDAO('cb')
+    sentence = dao.getSentence(sentence_id)
+    
+    js_sentence = sentence_to_javascript(sentence)
+    sentence_interpretations = sentence.interpretations
+    
+    c = Context({'title' : sentence.text
+    ,'header': 'DMRS'
+    ,'collection_name' : None
+    ,'corpus_name' : None
+    ,'sentence_info' : js_sentence
+    ,'interpretations' : sentence_interpretations
+    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
+    ,'basket_size' : DMRSBasket.instance(request).count()
+    })
+    return render(request, "dev_test/index.html", c)
+    

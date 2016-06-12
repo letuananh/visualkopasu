@@ -79,17 +79,23 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         });
         
         function initialise(){
+            $("#btnHome").button().click(function(){
+                window.location = "{% url 'home' %}";           
+            });
+
+            {% if corpus_name %}
             $("#btnShowDocument").button().click(function(){
-                window.location = "{% url 'doc_display' sentence_info.sentence.documentID %}";          
+                window.location = "{% url 'doc_display' collection_name corpus_name sentence_info.sentence.documentID %}";          
             });
             $("#btnShowXML").button().click(function(){
-                window.open("{% url 'original_display' sentence_info.document.name sentence_info.sentence.ident sentence_info.interpretation.rid %}");          
+                window.open("{% url 'original_display' collection_name sentence_info.corpus.name sentence_info.document.name sentence_info.sentence.ident sentence_info.interpretation.rid %}");          
             });
             $("#interpretations").change(function(){
-                url = "{% url 'dmrs_display' sentence_info.sentence.ID %}" + $("#interpretations").val()
+                url = "{% url 'dmrs_display' collection_name sentence_info.corpus.name sentence_info.sentence.documentID sentence_info.sentence.ID %}" + $("#interpretations").val()
                 //alert(url)
                 window.location = url
             });
+            {% endif %}
             //{{added_to_basket}}
             {% if not added_to_basket %}
             $("#btnFavourite").button({ text: false
@@ -112,7 +118,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
              $( "#btnPrev" ).button({ text: false
                 , icons: { primary: "ui-icon-seek-prev" }
                 }).click(function(){
-                window.location = "{% url 'dmrs_search_display' prev_search %}";   
+                window.location = "{% url 'dmrs_search_display' collection_name prev_search %}";   
                 });     
             {% else %}
              $( "#btnPrev" ).button({ text: false
@@ -125,7 +131,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
              $( "#btnNext" ).button({ text: false
                 , icons: { primary: "ui-icon-seek-next" }
                 }).click(function(){
-                window.location = "{% url 'dmrs_search_display' next_search %}";   
+                window.location = "{% url 'dmrs_search_display' collection_name next_search %}";   
                 });
             {% else %}
              $( "#btnNext" ).button({ text: false
@@ -138,14 +144,15 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
     </head>
 
     <body>
-        <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
-        <div id="toolbar" class="ui-corner-all">
+      <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
+      
+      <div id="toolbar" class="ui-corner-all">
+        <input type="button" id="btnHome" name="btnHome" value="Home"/>
+        {% if collection_name %}
             <input type="button" id="btnShowDocument" name="btnShowDocument" value="Go to document"/>
             <span id="effect" class="toolbar_label">Interpretations</span>
             <select id="interpretations" class="ui-widget">
             {% for interpretation in interpretations %}
-                <!-- HERE: {{interpretation.ID}}-->
-                <!--HERE: {{current_interpretation_id}}-->
                 {% if interpretation.ID = sentence_info.interpretation.ID %}
                     <option value="{{interpretation.ID}}" selected="selected" >
                 {% else %}
@@ -162,7 +169,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             <input type="button" id="btnShowXML" name="btnShowXML" value="Show XML"/>
             <button id="btnFavourite">Favourite</button>
             <button type="button" id="btnShowBasket" name="btnAdvanceSearch">Show clipped DMRS</button>
-            
+            {% endif %}
             {% if prev_search or next_search %}
             <span>
                 <span id="effect" class="toolbar_label">Search results: </span>

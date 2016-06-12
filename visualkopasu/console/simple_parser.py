@@ -35,7 +35,7 @@ import time
 import os.path
 import re
 import gzip
-from visualkopasu.config import VisualKopasuConfiguration as vkconfig
+from visualkopasu.config import ViskoConfig as vkconfig
 
 INTERPRETATION_TOKEN     = chr(10) + chr(12) + chr(10)
 DRMS_TREE_TOKEN          = chr(10) + chr(10) + chr(10)
@@ -164,8 +164,8 @@ def parse_document(source_folder, corpora_root, corpus_name, doc_name, active_on
 def main():
     corpus_name = "redwoods"
     doc_name = "cb"
-    source_folder = os.path.join(vkconfig.CORPORA_FOLDER, "raw", corpus_name, doc_name)
-    parse_document(source_folder, vkconfig.CORPORA_FOLDER, corpus_name, doc_name)
+    source_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, "raw", corpus_name, doc_name)
+    parse_document(source_folder, vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name)
 
 if __name__ == "__main__":
     # main()

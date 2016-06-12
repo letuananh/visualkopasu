@@ -33,7 +33,7 @@ import shutil
 import csv, time, datetime
 import sqlite3
 import os
-from visualkopasu.config import VisualKopasuConfiguration as vkconfig
+from visualkopasu.config import ViskoConfig as vkconfig
 
 class Timer:
     def __init__(self):
@@ -299,8 +299,8 @@ def convert(corpora_root, corpus_name, doc_name, dbname=None, context=None, auto
     return context
     
 def main():
-    prepare_database(vkconfig.CORPORA_FOLDER, "redwoods")
-    convert(vkconfig.CORPORA_FOLDER, "redwoods", "cb")
+    prepare_database(vkconfig.BIBLIOTECHE_ROOT, "redwoods")
+    convert(vkconfig.BIBLIOTECHE_ROOT, "redwoods", "cb")
     pass
 
 if __name__ == '__main__':

@@ -302,7 +302,7 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
 			var current_node = nodes[idx];
 			min_width = (current_node.link_count + 1) * theme.LINK_SLOT_SPACE;
 			var node_style = 'rounded';
-			console.writeline(current_node.text + " - " + current_node.pos);
+			//console.writeline(current_node.text + " - " + current_node.pos);
 			switch(current_node.pos){
 				case 'a':{ node_style = 'parallelogram'; break; }
 				case 's':{ node_style = 'diagonals'; break; }

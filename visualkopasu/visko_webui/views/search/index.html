@@ -84,7 +84,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             {{sentence.text}}<br/>
                 {% for interpretation in sentence.interpretations %}
                     {% if forloop.counter <= 10 %}
-                    <a href="{% url 'dmrs_search_display' interpretation.search_ID %}" target="visualkopasu_searchresult">{{interpretation.ID}}</a>
+                    <a href="{% url 'dmrs_search_display' sentence.collection_name interpretation.search_ID %}" target="visualkopasu_searchresult">{{interpretation.ID}}</a>
                     {% elif forloop.last %}
                     ...
                     {% endif %}

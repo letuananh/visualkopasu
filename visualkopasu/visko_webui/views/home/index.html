@@ -32,6 +32,10 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             });
             
             function initialise(){
+                $("#btnDevTest").button().click(function(){
+                    window.location = "{% url 'dev_test' %}";           
+                });
+
                 $("#btnAdvanceSearch").button().click(function(){
                     window.location = "{% url 'search' %}";         
                 });
@@ -57,7 +61,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         </div>
         <form id="form_search" action="{% url 'search' %}" method="POST">
         {% csrf_token %}
-            <div id="toolbar" class="ui-corner-all">
+        <div id="toolbar" class="ui-corner-all">
+          <input type="button" id="btnDevTest" name="btnDevTest" value="Dev Test"/>
                 <button id="btnAdvanceSearch" name="btnAdvanceSearch" type="button">Advance Search</button>
                 <span id="effect" class="toolbar_label">Search</span>
                 <input id="user_query" name="user_query" />
@@ -66,19 +71,22 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             </div>
         </form>
         
-        <h1>Available Corpora</h1>
         
+        
+        {% for collection in biblioteche %}
+        <h1>Collection: {{ collection.name }}</h1>
         <ol class="sentence_list">
-        {% for corpus in corpora %}
+        {% for corpus in collection.corpora %}
             <li>Corpus: {{corpus.name}}
                 <ul>
                 {% for document in corpus.documents %}
-                    <li><a href="{% url 'doc_display' document.ID %}">{{document.name}}</a></li>
+                    <li><a href="{% url 'doc_display' collection.name corpus.name document.ID %}">{{document.name}}</a></li>
                 {% endfor %}
                 </ul>
             </li>
         {% endfor %}
         </ol>
+        {% endfor %}
         
         <h1>Integrated Semantic Framework</h1>
         <form id="form_isf" action="{% url 'isf_parse' %}" method="POST">

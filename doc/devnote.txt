@@ -1,0 +1,20 @@
+Data schema
+===========
+
+Each biblioteca is a collection of corpora. One biblioteca consists of 
+a single SQLite database named [biblioteca-name].db and a folder of xml file.
+
+The recommended structure is:
+
+[project root folder]
+    data
+        biblioteche
+            redwoods.db                  (SQLite database)
+            redwoods                     (library)
+                redwoods                 (corpus)
+                    cb                   (document)
+                        1010.xml.gz      (sentence 1010)
+                        1020.xml.gz      (sentence 1020)
+                        1030.xml.gz      (sentence 1030)
+                        1040.xml.gz      (sentence 1040)
+                        ...

@@ -58,7 +58,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
     <form id="form_search" action="{% url 'search' %}" method="post">
     {% csrf_token %}
         <div id="toolbar" class="ui-corner-all">
-            <input type="button" id="btnShowCorpus" name="btnShowCorpus" value="Show Corpus"/>
+          <input type="button" id="btnShowCorpus" name="btnShowCorpus" value="Home"/>
                 <span class="toolbar_label">Search</span>
                 <input id="user_query" name="user_query" />
                 <button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
@@ -68,7 +68,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
     <hr/>
     <ol class="sentence_list">
     {% for sentence in sentences %}
-        <li><a href="{% url 'dmrs_display' sentence.ID %}">{{sentence.text}}</a><br/></li>
+        <li><a href="{% url 'dmrs_display' collection_name corpus_name document.ID sentence.ID %}">{{sentence.text}}</a><br/></li>
     {% endfor %}
     </ol>
 </body>
