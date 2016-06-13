@@ -156,7 +156,8 @@ class Node(SmartRecord):
         
         self.sortinfo = None
         self.gpred = None
-        self.realpred = None 
+        self.realpred = None
+        self.sense = None
         
     def __str__(self):
         return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred != None else str(self.realpred))
@@ -182,6 +183,14 @@ class LinkIndex(SmartRecord):
         self.rargname = None
         self.dmrsID = None
         self.documentID = None
+
+class Sense(SmartRecord):
+    def __init__(self, lemma='', pos='', synsetid='', score=0):
+        self.lemma = lemma
+        self.pos = pos
+        self.synsetid = synsetid
+        self.score = score
+
 """
 sortinfo of a Node
 """

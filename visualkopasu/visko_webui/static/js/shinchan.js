@@ -123,6 +123,21 @@ ChibiJS.Table.prototype = {
 }
 
 //
+// URL
+//
+ChibiJS.URL = function(text, url){
+	this._text = text;
+	this._url = url;
+}
+ChibiJS.URL.prototype = {
+	text : function(){ return this._text; }
+	,url : function(){ return this._url; }
+	,str : function(){
+		return '<a target="_blank" href="' + this._url + '">' + this._text + '</a>';
+	}
+}
+
+//
 // A simple canvas library
 //
 
@@ -272,6 +287,7 @@ ChibiJS.ShinChan.Shape.prototype = {
 	}
 	
 	,click : function(handler){ this.getObject().click(handler); }
+	,click_params : function(params, handler){ this.getObject().click(params, handler); }
 	,unclick : function(handler){ this.getObject().unclick(handler); }
 	,hide : function(){ this.getObject().hide(); }
 	,show : function(){ this.getObject().show(); }
@@ -1193,6 +1209,10 @@ ChibiJS.ShinChan.Layer.prototype.draw_link_u = function(from_x, from_y, to_x, to
 	return path.drawTo(this, name);
 }
 
+function gotourl(event){
+	 console.writeline(event.data.url); 
+};
+
 ChibiJS.ShinChan.Layer.prototype.draw_table = function(x, y, table_data, name, padding){
 	if(!table_data || table_data.length == 0){ return undefined; }
 	if(!padding){ padding = 5; }
@@ -1202,13 +1222,28 @@ ChibiJS.ShinChan.Layer.prototype.draw_table = function(x, y, table_data, name, p
 	// Render cell text
 	for(var row_id = 0; row_id < table_data.length; row_id++){
 		for(var col_id = 0; col_id < table_data[row_id].length; col_id++){
-			var cell_text = new String(table_data[row_id][col_id]);
+			cell_data = table_data[row_id][col_id];
+			cell_url = undefined;
+			var cell_text = undefined;
+			if ((cell_data.url == undefined) || (cell_data.text == undefined)){
+				cell_text = new String(cell_data);
+			}
+			else{
+				cell_text = cell_data.text();
+				cell_url = cell_data.url();
+			}
 			// Draw this cell text to table
 			var visual_cell = this.draw_text(0, 0, cell_text, cell_text);//, cell_text);
 			visual_cell.text = cell_text;
+			visual_cell.url = cell_url;
 			visual_table.setCell(row_id, col_id, visual_cell);
 			visual_table.expandColumnWidth(col_id, visual_cell.size.width);
 			visual_table.expandRowHeight(row_id, visual_cell.size.height);
+			
+			// make links clickable
+			if (cell_url != undefined){
+				visual_cell.click(function(url){ return function(){ window.open(url, '_blank');} }(cell_url));
+			}
 		}		
 	}
 	// Draw text to correct location

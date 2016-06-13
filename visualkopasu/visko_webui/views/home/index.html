@@ -39,7 +39,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 $("#btnAdvanceSearch").button().click(function(){
                     window.location = "{% url 'search' %}";         
                 });
-                $("#btnSearch").button();
+            $("#btnSearch").button();
+            $("#btnParse").button();
                 $("#form_search").submit(function(){
                     if($("#user_query").val().length == 0){
                         alert("Please enter your query");
@@ -67,7 +68,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 <span id="effect" class="toolbar_label">Search</span>
                 <input id="user_query" name="user_query" />
                 <button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
-                <button type="button" id="btnShowBasket" name="btnAdvanceSearch">Show clipped DMRS</button>
+                {% comment %}<button type="button" id="btnShowBasket" name="btnAdvanceSearch">Show clipped DMRS</button>{% endcomment %}
             </div>
         </form>
         
@@ -93,8 +94,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         {% csrf_token %}
             <div id="toolbar" class="ui-corner-all">
                 <span id="effect" class="toolbar_label">Sentence</span>
-                <input id="sentence" name="sentence" />
-                <button type="submit" id="btnSearch" name="btnSearch">Parse</button>
+                <input id="sentence" name="sentence" value='Some dogs bark.' />
+                <button type="submit" id="btnParse" name="btnParse">Parse</button>
             </div>
         </form>
         

@@ -27,6 +27,20 @@ __status__ = "Prototype"
 
 ########################################################################
 
+class TooltipURL:
+    def __init__(self, text, url):
+        """
+        
+        """
+        self.text = text
+        self.url = url
+
+    def __repr__(self):
+        return str(self)
+        
+    def __str__(self):
+        return 'new ChibiJS.URL("{text}", "{url}")'.format(text=self.text, url=self.url);
+
 class DMRSNodeTooltip:
     def __init__(self, rows, cols):
         self.contents = [None] * rows
@@ -58,7 +72,10 @@ class DMRSNodeTooltip:
                     break 
                 if len(row_content) > 1:
                     row_content += ","
-                row_content += "'%s'" % cell
+                if isinstance(cell, TooltipURL):
+                    row_content += str(cell)
+                else:
+                    row_content += "'%s'" % cell
             row_content += "]"
             if len(row_content) > 2:
                 if len(js_content) > 1:

@@ -26,9 +26,11 @@ __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
 ########################################################################
-
+import os
 import logging
 from collections import namedtuple
+
+import xml.etree.ElementTree as ET
 
 from django.core.context_processors import csrf
 from django.http import HttpResponse
@@ -40,13 +42,21 @@ from django.shortcuts import render
 
 from chirptext.leutile import Counter
 
+from visualkopasu.kopasu.models import Sentence
+from visualkopasu.kopasu.models import Interpretation
 from visualkopasu.config import ViskoConfig as vkconfig
 from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
+from visualkopasu.kopasu.util import getDMRSFromXML
+from visualkopasu.kopasu.util import getDMRSFromXMLString
 from .clientutil import DMRSNodeTooltip
+from .clientutil import TooltipURL
 from .clientutil import DataUtil
 
 # ISF support
-from coolisf.main import txt2dmrs, PredSense
+from coolisf.main import PredSense
+from coolisf.util import Grammar
+from coolisf.gold_extract import sentence_to_xml
+from coolisf.gold_extract import prettify_xml
 
 cvarsort_dict = { 'x' : 'individual', 'e' : 'event', 'i' : 'undefined', 'u' : 'unknown' }
 num_dict = { 'sg' : 'singular', 'pl' : 'plural', 'u' : 'unknown'}
@@ -112,7 +122,11 @@ class DMRSBasket:
 def build_tooltip(a_node):
     # TODO: clean up this mess please
     tooltip = DMRSNodeTooltip(3,3)
-    if a_node.realpred:
+    if a_node.sense:
+        sense_text = "{synsetid}: {lemma}".format(synsetid=a_node.sense.synsetid, lemma=a_node.sense.lemma)
+        sense_url = 'http://compling.hss.ntu.edu.sg/omw/cgi-bin/wn-gridx.cgi?synset=' + a_node.sense.synsetid
+        tooltip.push(TooltipURL(sense_text, sense_url))
+    if a_node.realpred:        
         if a_node.realpred.pos:
             tooltip.push("pos:%s" % a_node.realpred.pos)
         if a_node.realpred.sense:
@@ -421,6 +435,40 @@ def sentence_to_javascript(sentence, dao=None):
     else:
         return None
 
+def dmrs_to_js(sentence_text, dmrs):
+    node_list = ''
+    node_id_list = []
+    link_list = ''
+    link_id_list = []
+    sentence_text=sentence_text.replace('\'', '\\\'').replace('\r','').replace('\n', '')
+    
+    link_counter = Counter()
+    for a_link in dmrs.links:
+        if not a_link.ID:
+            a_link.ID = len(link_id_list) + 1
+        if not a_link.fromNode.ID:
+            a_link.fromNode.ID = a_link.fromNode.nodeid
+        if not a_link.toNode.ID:
+            a_link.toNode.ID = a_link.toNode.nodeid
+        link_list += link_to_javascript(a_link) + "\n\t\t\t\t"
+        link_id_list.append("link_" + str(a_link.ID))
+        link_counter.count(a_link.fromNode.ID)
+        link_counter.count(a_link.toNode.ID)
+
+    for a_node in dmrs.nodes:
+        if a_node.ID == -1:
+            a_node.ID = a_node.ident
+            print('ID: %s' % (a_node.ID))
+        node_list += node_to_javascript(a_node, link_counter[a_node.ID]) + "\n\t\t\t\t"
+        node_id_list.append("node_" + str(a_node.ID))
+
+    return DMRSItem(sentence_text=sentence_text
+                    , node_list=node_list
+                    , node_id_list=', '.join(node_id_list)
+                    , link_list=link_list
+                    , link_id_list=', '.join(link_id_list)
+                    )
+    
 def basket(request):
     try:
         command = request.GET.get('action', 'view')
@@ -463,10 +511,55 @@ def basket(request):
     return render(request, "basket/index.html", c)  
 
 def isf_parse(request):
+    sentence_text = request.POST.get('sentence', None)
+    parse_result = Grammar().txt2dmrs(sentence_text)
+    # with sense tags
+    sentence_xml_node = sentence_to_xml(parse_result)
+
+    sentence = Sentence(text=sentence_text)
+    js_dmrses = []
+    filepath = os.path.abspath("data/isf_debug.xml")
+    print(filepath)
+    debugfile = open(filepath, 'w')
+    
+    for mrs_node in sentence_xml_node.findall('./dmrses/dmrs'):
+        xmlstr = ET.tostring(mrs_node, encoding='utf-8').decode('utf-8')
+        debugfile.write(xmlstr)
+        debugfile.write('\n\n')
+        # build visualkopasu.kopasu.models.DMRS object
+        DMRS_obj = getDMRSFromXML(mrs_node)
+        js_dmrses.append(dmrs_to_js(sentence_text, DMRS_obj))
+
+    debugfile.close()
+    
+    c = Context({'title' : sentence.text
+                 ,'header': 'Integrated Semantic Framework'
+                 ,'dmrses' : js_dmrses
+                 ,'sentence_text': sentence_text
+    })
+    c.update(csrf(request))   
+    return render(request, "coolisf/index.html", c)    
+
+def dev_test(request):
+    # What do we need to display a sentence?
+    sentence_id = 1010
+    dao = vkconfig.BibliotecheMap['redwoods'].textdao.getCorpusDAO('redwoods').getDocumentDAO('cb')
+    sentence = dao.getSentence(sentence_id)
+
+    js_sentence = sentence_to_javascript(sentence)
+    sentence_interpretations = sentence.interpretations
+    
+    c = Context({'title' : sentence.text
+    ,'header': 'DMRS'
+    ,'sentence_info' : js_sentence
+    })
+    return render(request, "dev_test/index.html", c)
+    
+def isf_parse_raw(request):
     ''' Parse a sentence using ISF and then display its DMRS
     '''
     sentence = request.POST.get('sentence', None)
-    results = txt2dmrs(sentence)
+    results = Grammar().txt2dmrs(sentence)
     mrses = None
     if results and results.mrs:
         print(results.mrs[0].preds())
@@ -477,24 +570,4 @@ def isf_parse(request):
     })
     print(results.mrs)
     c.update(csrf(request))   
-    return render(request, 'coolisf/index.html', c)
-
-def dev_test(request):
-    sentence_id = 1010
-    dao = vkconfig.BibliotecheMap['redwoods'].textdao.getCorpusDAO('redwoods').getDocumentDAO('cb')
-    sentence = dao.getSentence(sentence_id)
-    
-    js_sentence = sentence_to_javascript(sentence)
-    sentence_interpretations = sentence.interpretations
-    
-    c = Context({'title' : sentence.text
-    ,'header': 'DMRS'
-    ,'collection_name' : None
-    ,'corpus_name' : None
-    ,'sentence_info' : js_sentence
-    ,'interpretations' : sentence_interpretations
-    ,'added_to_basket' : DMRSBasket.instance(request).contains(sentence.ID, js_sentence.interpretation.ID)
-    ,'basket_size' : DMRSBasket.instance(request).count()
-    })
-    return render(request, "dev_test/index.html", c)
-    
+    return render(request, 'coolisf/raw.html', c)

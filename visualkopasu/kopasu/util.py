@@ -31,7 +31,7 @@ import logging
 from xml.etree import ElementTree as ETree
 
 from .models import Sentence, Interpretation, DMRS
-from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname
+from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname, Sense
 
 def getDMRSFromXMLString(xmlcontent):
     root = ETree.fromstring(xmlcontent)
@@ -55,9 +55,16 @@ def getDMRSFromXML(dmrs_tag):
         temp_node.update_field('carg', '', node_tag.attrib)
         #temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
 
+        # Parse sense info
+        sense_tag = node_tag.find('sense')
+        if sense_tag is not None:
+            sense_info = Sense()
+            sense_info.update_from(sense_tag.attrib)
+            temp_node.sense = sense_info
+        
         # TODO: parse sort info
         sortinfo_tag = node_tag.find("sortinfo")
-        if sortinfo_tag != None:
+        if sortinfo_tag is not None:
             sortinfo = SortInfo()
             sortinfo.update_from(sortinfo_tag.attrib)
             temp_node.sortinfo = sortinfo
@@ -68,7 +75,7 @@ def getDMRSFromXML(dmrs_tag):
             temp_node.gpred = gpred
         # TODO: parse realpred
         realpred_tag = node_tag.find("realpred")
-        if realpred_tag != None:
+        if realpred_tag is not None:
             realpred = RealPred()
             realpred.update_from(realpred_tag.attrib)
             temp_node.realpred = realpred
@@ -80,22 +87,27 @@ def getDMRSFromXML(dmrs_tag):
 
     # parse all links inside
     for link_tag in dmrs_tag.findall('link'):
-        fromNode = node_map[link_tag.attrib['from']]
-        toNode = node_map[link_tag.attrib['to']]
-        temp_link = Link(fromNode, toNode)
+        fromNodeID = link_tag.attrib['from']
+        toNodeID   = link_tag.attrib['to']
+        if fromNodeID not in node_map or toNodeID not in node_map:
+            logging.error("ERROR: Invalid nodeID [%s=>%s] in link_tag: %s" % (fromNodeID, toNodeID, link_tag))
+        else:
+            fromNode = node_map[fromNodeID]
+            toNode = node_map[toNodeID]
+            temp_link = Link(fromNode, toNode)
 
-        # TODO: parse post
-        post_tag = link_tag.find("post")
-        if post_tag != None:
-            post = Post(post_tag.text)
-            temp_link.post = post
-        # TODO: parse rargname
-        rargname_tag = link_tag.find("rargname")
-        if rargname_tag != None:
-            rargname = Rargname(rargname_tag.text)
-            temp_link.rargname = rargname
-        # end for link_tag
-        dmrs.links.append(temp_link)
+            # TODO: parse post
+            post_tag = link_tag.find("post")
+            if post_tag != None:
+                post = Post(post_tag.text)
+                temp_link.post = post
+                # TODO: parse rargname
+            rargname_tag = link_tag.find("rargname")
+            if rargname_tag != None:
+                rargname = Rargname(rargname_tag.text)
+                temp_link.rargname = rargname
+            # end for link_tag
+            dmrs.links.append(temp_link)
     # finished, add dmrs object to interpretation
     return dmrs
 

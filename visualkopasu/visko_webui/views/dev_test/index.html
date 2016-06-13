@@ -79,7 +79,11 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             initialise();
         });
 
-        function initialise(){}
+        function initialise(){
+            $("#btnHome").button().click(function(){
+                window.location = "{% url 'home' %}";           
+            });
+        }
         
         </script>
     </head>
