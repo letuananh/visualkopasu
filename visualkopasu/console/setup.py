@@ -43,29 +43,33 @@ else:
 
 def draw_separator():
     print("-" * 80)
+
+def get_raw_doc_folder(collection_name, corpus_name, doc_name):
+    return os.path.join(vkconfig.DATA_ROOT, "raw", collection_name, corpus_name, doc_name)
     
-def convert_document(corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
+def convert_document(collection_name, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
     if answer is not None and answer != 'yes':
         return
-    source_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, "raw", corpus_name, doc_name)
+    source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
+    dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")
     print("Source folder: %s" % source_folder)
-    print("Destination folder: %s" % vkconfig.BIBLIOTECHE_ROOT)
+    print("Destination folder: %s" % dest_folder)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
     
     # Convert raw text to XML
-    parse_document(source_folder, vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name, active_only=active_only)
+    parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     draw_separator()
     
     # Convert XML to SQLite3
     print("Now, I'm going to alter the content of the database: %s" % os.path.join(vkconfig.BIBLIOTECHE_ROOT, corpus_name + '.db'))
     if answer or confirm("Do you want to continue? (yes/no): "):
         if prepare_db:
-            prepare_database(vkconfig.BIBLIOTECHE_ROOT, corpus_name)
+            prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
         else:
             print("I will add the document to the current database. Existing documents will be kept.")
-        convert(vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name)
+        convert(collection_name, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()
@@ -74,11 +78,13 @@ def convert_document(corpus_name, doc_name, prepare_db = False, answer = None, a
 if __name__ == '__main__':
     # sys.setdefaultencoding('utf-8')
     # print(sys.getdefaultencoding())
+    collection_name = 'redwoods'
     corpus_name = "redwoods"
     doc_name = "cb"
     active_only = False
+
     
-    answer = convert_document(corpus_name, "cb", True, active_only=active_only)
+    answer = convert_document(collection_name, corpus_name, "cb", True, active_only=active_only)
     #convert_document(corpus_name, "sc01", False, answer, active_only=active_only)
     #convert_document(corpus_name, "sc02", False, answer, active_only=active_only)
     #convert_document(corpus_name, "sc03", False, answer, active_only=active_only)

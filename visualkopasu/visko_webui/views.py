@@ -217,10 +217,11 @@ def link_to_javascript(a_link):
 def getAllCollections():
     for collection in vkconfig.Biblioteche:
         collection.corpora = collection.sqldao.getCorpora()
-        for corpus in collection.corpora:
-            corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
-            for doc in corpus.documents:
-                doc.corpus = corpus
+        if collection.corpora:
+            for corpus in collection.corpora:
+                corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
+                for doc in corpus.documents:
+                    doc.corpus = corpus
     return vkconfig.Biblioteche
 
 # ------------------------------------------------------------------

@@ -37,7 +37,8 @@ class ViskoConfig:
     PROJECT_ROOT = os.path.expanduser('~/wk/visualkopasu')
     DJANGO_VIEW_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/views/')
     DJANGO_STATIC_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/static/')
-    BIBLIOTECHE_ROOT = os.path.join(PROJECT_ROOT, 'data/biblioteche')
+    DATA_ROOT = os.path.join(PROJECT_ROOT, 'data')
+    BIBLIOTECHE_ROOT = os.path.join(DATA_ROOT, 'biblioteche')
 
     # available corpora
     AvailableBiblioteche = ('redwoods',)
