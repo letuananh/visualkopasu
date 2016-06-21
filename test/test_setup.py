@@ -42,18 +42,19 @@ __status__ = "Prototype"
 
 ########################################################################
 
-import sys
+# import sys
 import os
 import unittest
 
 from visualkopasu.config import Biblioteca
-from visualkopasu.kopasu.util import getSentenceFromXMLString
-from visualkopasu.kopasu.util import getDMRSFromXMLString
-from visualkopasu.kopasu.util import getDMRSFromXML
-from coolisf.util import Grammar
-from coolisf.gold_extract import sentence_to_xml
-from coolisf.gold_extract import sentence_to_xmlstring
+# from visualkopasu.kopasu.util import getSentenceFromXMLString
+# from visualkopasu.kopasu.util import getDMRSFromXMLString
+# from visualkopasu.kopasu.util import getDMRSFromXML
+# from coolisf.util import Grammar
+# from coolisf.gold_extract import sentence_to_xml
+# from coolisf.gold_extract import sentence_to_xmlstring
 
+from visualkopasu.console.setup import prepare_database
 from visualkopasu.console.setup import parse_document
 from visualkopasu.console.setup import get_raw_doc_folder
 from visualkopasu.console.setup import convert_document
@@ -65,7 +66,7 @@ class TestConsoleSetup(unittest.TestCase):
 
     def test_setup(self):
         collection_name = 'test'
-        minicb = Biblioteca(collection_name)
+        testbib = Biblioteca(collection_name)
         corpus_name = 'minicb'
         doc_name = 'cb100'
 
@@ -74,23 +75,28 @@ class TestConsoleSetup(unittest.TestCase):
         raw_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
         self.assertTrue(os.path.isdir(raw_folder))
 
+        # Make sure that the test SQLite collection does not exist before this test
+        if os.path.isfile(testbib.sqldao.db_path):
+            os.unlink(testbib.sqldao.db_path)
+        # prepare_database(testbib.root, collection_name) 
+        
         # clean file before convert
         print("Make sure that we deleted sentence 1010 before test parsing")
-        cb100dao = minicb.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
+        cb100dao = testbib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
         sent1010_path = cb100dao.getPath(1010)
         print("sent1010_path = %s" % (sent1010_path,))
         if sent1010_path and os.path.isfile(sent1010_path):
             os.unlink(sent1010_path)
         
-        parse_document(raw_folder, minicb.textdao.path, corpus_name, doc_name)
+        parse_document(raw_folder, testbib.textdao.path, corpus_name, doc_name)
 
         print("Test generated XML file")
-        sent1010 = cb100dao.getSentence(1010)
-
+        # sent1010 = cb100dao.getSentence(1010)
+        # validate_sentence(self, sent1010)
         convert_document(collection_name, corpus_name, doc_name, prepare_db=True, answer=True)
 
-        print("DB: %s" % (minicb.sqldao.db_path,))
-        sentsql = minicb.sqldao.getSentence(1)
+        print("DB: %s" % (testbib.sqldao.db_path,))
+        sentsql = testbib.sqldao.getSentence(1)
         print("sentsql = %s" % (sentsql,))
         validate_sentence(self, sentsql)
 

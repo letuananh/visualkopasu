@@ -29,7 +29,7 @@ __status__ = "Prototype"
 
 from visualkopasu.kopasu.dao import *
 from visualkopasu.kopasu.dao import *
-import shutil
+
 import csv, time, datetime
 import sqlite3
 import os
@@ -244,6 +244,7 @@ def convert(collection_name, corpus_name, doc_name, dbname=None, context=None, a
     sqliteDAO = bib.sqldao
 
     # Retrieve corpus information first
+    print("Retrieving corpus ...")
     corpus = sqliteDAO.getCorpus(corpus_name)
     if not corpus:
         print("Corpus doesn't exist. Attempting to create one")

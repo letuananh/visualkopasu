@@ -60,8 +60,9 @@ class Biblioteca:
         It's a collection of documents
     '''
 
-    def __init__(self, name):
+    def __init__(self, name, root=ViskoConfig.BIBLIOTECHE_ROOT):
         self.name = name
+        self.root = root
         self.textdao = ViskoConfig.TextCorpora.getCorpusCollection(name)
         self.sqldao = ViskoConfig.SqliteCorpora.getCorpusDAO(name)
         self.corpora = []

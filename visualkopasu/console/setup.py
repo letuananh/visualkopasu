@@ -29,10 +29,13 @@ __status__ = "Prototype"
 
 ########################################################################
 
-import os, sys
-#from config import ViskoConfig as vkconfig
-from .simple_parser import *
-from .text_to_sqlite import *
+import sys
+import os
+
+from visualkopasu.config import ViskoConfig as vkconfig
+from .simple_parser import parse_document
+from .text_to_sqlite import prepare_database
+from .text_to_sqlite import convert
 
 if sys.version_info >= (3,0):
     def confirm(msg='Do you want to proceed (yes/no)? '):
@@ -48,7 +51,7 @@ def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_ROOT, "raw", collection_name, corpus_name, doc_name)
     
 def convert_document(collection_name, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
-    if answer is not None and answer != 'yes':
+    if answer is not None and answer != 'yes' and answer != True:
         return
     source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
     dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
@@ -69,7 +72,7 @@ def convert_document(collection_name, corpus_name, doc_name, prepare_db = False,
             prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
         else:
             print("I will add the document to the current database. Existing documents will be kept.")
-        convert(collection_name, corpus_name, doc_name)
+    convert(collection_name, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()
