@@ -1,0 +1,31 @@
+$ python mrs2dmrs.py some-dogs-and-cats-bark-loudly.mrs 
+[ LTOP: h0 INDEX: e1 [ e PERF: - TENSE: pres SF: prop MOOD: indicative PROG: - ]
+  RELS: < [ _some_q_rel<1:5> LBL: h3 ARG0: x2 [ x PERS: 3 ] RSTR: h4 BODY: h5 ]
+          [ udef_q_rel<6:10> LBL: h6 ARG0: x7 [ x IND: + NUM: pl PERS: 3 ] RSTR: h8 BODY: h9 ]
+          [ "_dog_n_1_rel"<6:10> LBL: h10 ARG0: x7 ]
+          [ udef_q_rel<11:19> LBL: h11 ARG0: x12 [ x IND: + NUM: pl PERS: 3 ] RSTR: h13 BODY: h14 ]
+          [ _and_c_rel<11:14> LBL: h15 ARG0: x2 L-INDEX: x7 R-INDEX: x12 ]
+          [ "_cat_n_1_rel"<15:19> LBL: h16 ARG0: x12 ]
+          [ "_bark_v_1_rel"<26:30> LBL: h17 ARG0: e1 ARG1: x2 ]
+          [ "_loud_a_1_rel"<31:38> LBL: h17 ARG0: e18 [ e PERF: - TENSE: untensed SF: prop MOOD: indicative PROG: - ] ARG1: e1 ] >
+  HCONS: < h4 qeq h15 h8 qeq h10 h13 qeq h16 > ]
+
+b'<dmrs cfrom="-1" cto="-1" index="1">
+<node cfrom="1" cto="5" nodeid="10001"><realpred lemma="some" pos="q" /><sortinfo /></node>
+<node cfrom="6" cto="10" nodeid="10002"><gpred>udef_q_rel</gpred><sortinfo /></node>
+<node cfrom="6" cto="10" nodeid="10003"><realpred lemma="dog" pos="n" sense="1" /><sortinfo cvarsort="x" ind="+" num="pl" pers="3" /></node>
+<node cfrom="11" cto="19" nodeid="10004"><gpred>udef_q_rel</gpred><sortinfo /></node>
+<node cfrom="11" cto="14" nodeid="10005"><realpred lemma="and" pos="c" /><sortinfo cvarsort="x" pers="3" /></node>
+<node cfrom="15" cto="19" nodeid="10006"><realpred lemma="cat" pos="n" sense="1" /><sortinfo cvarsort="x" ind="+" num="pl" pers="3" /></node>
+<node cfrom="26" cto="30" nodeid="10007"><realpred lemma="bark" pos="v" sense="1" /><sortinfo cvarsort="e" mood="indicative" perf="-" prog="-" sf="prop" tense="pres" /></node>
+<node cfrom="31" cto="38" nodeid="10008"><realpred lemma="loud" pos="a" sense="1" /><sortinfo cvarsort="e" mood="indicative" perf="-" prog="-" sf="prop" tense="untensed" /></node>
+<link from="10001" to="10005"><rargname>RSTR</rargname><post>H</post></link>
+<link from="10002" to="10003"><rargname>RSTR</rargname><post>H</post></link>
+<link from="10004" to="10006"><rargname>RSTR</rargname><post>H</post></link>
+<link from="10005" to="10003"><rargname>L-INDEX</rargname><post>NEQ</post></link>
+<link from="10005" to="10006"><rargname>R-INDEX</rargname><post>NEQ</post></link>
+<link from="10007" to="10005"><rargname>ARG1</rargname><post>NEQ</post></link>
+<link from="10008" to="10007"><rargname>ARG1</rargname><post>EQ</post></link>
+</dmrs>
+'
+

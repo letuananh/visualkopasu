@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+
+{% load staticfiles %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+        <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/raphael-min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/testutil.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/shinchan.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/visualisation_v2.js' %}"></script>
+
+        <script type="text/javascript">
+            {% autoescape off %}
+
+            {% for dmrs in dmrses %}
+            var dmrs{{ forloop.counter}} = new function(){
+                {% comment %}
+                // Nodes
+                //node1 = {"text": "Linux", "from": 0, "to": 5};
+                //node2 = {"text": "is", "from": 6, "to": 8};
+                {% endcomment %}
+                {{dmrs.node_list}}
+    
+                {% comment %}
+                // Links
+                //link1 = { "from": node1, "to": node2 };
+                {% endcomment %}
+                {{dmrs.link_list}}
+    
+                {% comment %}
+                // Node array and Link array
+                //nodes = [ node1, node2 ];
+                //links = [ link1 ];
+                {% endcomment %}
+                this.nodes = [ {{dmrs.node_id_list}} ];
+                this.links = [ {{dmrs.link_id_list}} ];
+    
+                this.sentence_text = '{{dmrs.sentence_text}}';
+            };
+            {% endfor %}
+            
+            {% endautoescape %}
+        </script>
+        
+        <script type="text/javascript">
+          {% for dmrs in dmrses %}
+          var dmrs_canvas{{forloop.counter}};
+          {% endfor %}
+        
+          $(document).ready(function() {
+          {% for dmrs in dmrses %}
+            dmrs_canvas{{forloop.counter}} = new Canvas("dmrs_canvas{{forloop.counter}}");
+            
+            // The div for display highlightable sentence text
+            dmrs{{forloop.counter}}_text_holder = new VisualKopasu.SentenceText("dmrs{{forloop.counter}}_text_holder", dmrs{{forloop.counter}}.sentence_text);
+            var visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(dmrs{{forloop.counter}}, dmrs_canvas{{forloop.counter}}, dmrs{{forloop.counter}}_text_holder);
+          visual_dmrs{{forloop.counter}}.visualise();
+          {% endfor %}
+
+            initialise();
+        });
+
+        function initialise(){
+            $("#btnHome").button().click(function(){
+                window.location = "{% url 'home' %}";           
+            });
+            $("#btnParse").button();
+        }
+        
+        </script>
+    </head>
+
+    <body>
+      <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
+      
+      <div id="toolbar" class="ui-corner-all">
+        <form id="form_isf" action="{% url 'isf_parse' %}" method="POST">
+        <input type="button" id="btnHome" name="btnHome" value="Home"/>
+        {% csrf_token %}
+        <span id="effect" class="toolbar_label">Sentence</span>
+        <input id="sentence" name="sentence" value='{{sentence_text}}' />
+        <button type="submit" id="btnParse" name="btnParse">Parse</button>
+        </form>
+      </div>
+
+      {% for dmrs in dmrses %}
+        <div id="dmrs_canvas{{forloop.counter}}"></div>
+        <div id="dmrs{{forloop.counter}}_text_holder" class="dmrs_sentence_text"></div>
+        {% endfor %}
+        <!--    
+        <div style="height:300px;width:90%;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+            <div id="holder"></div>
+        </div>
+        -->
+    
+        <!--<div id="console"></div>-->
+        <!--
+            <div id="sentence_holder"></div>
+            <hr/>
+        -->
+        
+        {% autoescape off %}
+        <!--{{debug_info}}-->
+        {% endautoescape %}   
+
+    </body>
+</html>

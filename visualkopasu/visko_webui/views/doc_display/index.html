@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+
+{% load staticfiles %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+    <title>{{ document.name }}</title>
+
+    <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+    <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            initialise();
+        });
+        
+        function initialise(){
+            $("#btnShowCorpus").button().click(function(){
+                window.location = "{% url 'home' %}";           
+            });
+            //$("#btnShowXML").button().click(function(){
+            //    window.open("{ % url 'original_display' sentence_ident % }");         
+            //});
+            $("#btnSearch").button();
+            $("#form_search").submit(function(){
+                if($("#user_query").val().length == 0){
+                    alert("Please enter your query");
+                    return false;                       
+                }
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div id="banner" class="ui-widget-header ui-corner-all">
+        Document: `{{document.name}}`
+    </div>
+    
+    <form id="form_search" action="{% url 'search' %}" method="post">
+    {% csrf_token %}
+        <div id="toolbar" class="ui-corner-all">
+          <input type="button" id="btnShowCorpus" name="btnShowCorpus" value="Home"/>
+                <span class="toolbar_label">Search</span>
+                <input id="user_query" name="user_query" />
+                <button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
+        </div>
+    </form>
+    
+    <hr/>
+    <ol class="sentence_list">
+    {% for sentence in sentences %}
+        <li><a href="{% url 'dmrs_display' collection_name corpus_name document.ID sentence.ID %}">{{sentence.text}}</a><br/></li>
+    {% endfor %}
+    </ol>
+</body>
+</html>

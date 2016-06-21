@@ -1,0 +1,39 @@
+Wishlist
+=======
+Search by gpred, link, etc
+
+Features
+=======
+
++ Fix link slot bug when there's self-loop
++ Use hexagon border for node with pos='v'
++ Search results will be opened in the same window
++ Show number of sentences found
++ Display only top-k in search results
++ Bold border for CARG
++ Different node styles for realpred nodes with different pos 
+	+ default style: rounded
+	+ pos=’a’ : parallelogram
+	+ pos=’s’ : diagonals
+	+ pos=’n’ : rectangle
+	+ pos=’v’ : -- (rounded)
++ Add DMRS basket for DMRSes comparison 
++ Lighter colour for gpred nodes.
++ Multiple documents (Imported cb, sc01, sc02, sc03)
++ Search by lemma & carg
++ New improved UI
++ Add event handler support (click, hover in, hover out)
++ Use lighter colour for gpred nodes
++ Add tooltip box for node (click node => permanent tooltip)
++ Use a new canvas graphic engine for better & cleaner visualisation code.
++ Remove the _rel of gpred
++ Use short form of RARGNAME
++ Add arrow for any ARGx (at the arrow head)
+
+Fixed bugs
+=========
+
++ Allow highlight the whole sentence
++ Fix table drawing bug
++ Upgrade raphael JS library to the latest release (Fix BBox bug!)
++ No more additional white space on top of DMRS canvas (new engine).

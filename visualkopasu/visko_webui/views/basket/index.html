@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2013, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+
+{% load staticfiles %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+        <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/raphael-min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/testutil.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/shinchan.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/visualisation_v2.js' %}"></script>
+
+        <script type="text/javascript">
+            {% autoescape off %}
+            
+            {% for dmrs in dmrses %}
+            
+            var dmrs{{forloop.counter}} = new function(){
+                // Nodes
+                //node1 = {"text": "Linux", "from": 0, "to": 5};
+                //node2 = {"text": "is", "from": 6, "to": 8};
+                {{dmrs.node_list}}
+    
+                // Links
+                //link1 = { "from": node1, "to": node2 };
+                {{dmrs.link_list}}
+    
+                // Node array and Link array
+                //nodes = [ node1, node2 ];
+                //links = [ link1 ];
+                this.nodes = [ {{dmrs.node_id_list}} ];
+                this.links = [ {{dmrs.link_id_list}} ];
+    
+                this.sentence_text = '{{dmrs.sentence_text}}';
+            };
+            
+            {% endfor %}
+            
+            {% endautoescape %}
+        </script>
+        
+        <script type="text/javascript">
+        var console;
+        
+        $(document).ready(function() {
+            // Console init
+            console = new Console("console");
+            console.setEnable(false);
+            initialise();
+            {% for dmrs in dmrses %}
+            //-------------------------------------------------
+            dmrs_canvas{{forloop.counter}} = new Canvas("dmrs_canvas{{forloop.counter}}");
+            // The div for display highlightable sentence text
+            dmrs{{forloop.counter}}_text_holder = new VisualKopasu.SentenceText("dmrs{{forloop.counter}}_text_holder", dmrs{{forloop.counter}}.sentence_text);
+            var visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(dmrs{{forloop.counter}}, dmrs_canvas{{forloop.counter}}, dmrs{{forloop.counter}}_text_holder);
+            visual_dmrs{{forloop.counter}}.visualise();
+            
+            {% endfor %}
+        });
+        
+        function initialise(){
+            $("#btnHome").button().click(function(){
+                window.location = "{% url 'home' %}";          
+            });
+            {% comment %}
+            $("#btnShowXML").button().click(function(){
+                window.open("{% url 'original_display' sentenceID=sentence_ident %}");         
+            });
+            $("#interpretations").change(function(){
+                url = "{% url 'dmrs_display' sentence.ID%}" + $("#interpretations").val()
+                //alert(url)
+                window.location = url
+            });
+            {% endcomment %}
+            
+            {% for dmrs in dmrses %}
+            $("#btnGoDMRS{{forloop.counter}}").button({ text: false
+            , icons: { primary: "ui-icon-extlink"   }
+            }).click(function(){
+                window.open("{% url 'dmrs_display' dmrs.sentence.ID dmrs.interpretation.ID %}");  
+                });
+            $("#btnRemoveDMRS{{forloop.counter}}").button({ text: false
+            , icons: { primary: "ui-icon-trash" }
+            }).click(function(){
+                window.location = "/basket?action=remove&id={{dmrs.sentence.ID}}&r={{dmrs.interpretation.ID}}"; 
+                });
+            {% endfor %}
+            $("#btnClearAll").button({ text: false
+            , icons: { primary: "ui-icon-trash" }
+            }).click(function(){
+                window.location = "/basket?action=remove";  
+                });         
+            $("#btnStarDummy").button({ text: false
+            , icons: { primary: "ui-icon-star"  }
+            }).click(function(){
+                alert("Yes, like that!");   
+                });         
+        }
+        </script>
+    </head>
+
+    <body>
+        <div id="banner" class="ui-widget-header ui-corner-all">{{header}}</div>
+        <div id="toolbar" class="ui-corner-all">
+            <input type="button" id="btnHome" name="btnHome" value="Home"/>
+            <button type="button" id="btnClearAll" name="btnClearAll">Clear Basket</button>
+            {% comment %}
+            <span id="effect" class="toolbar_label">Label</span>
+            <input type="button" id="btnShowXML" name="btnShowXML" value="Show XML"/>
+            {% endcomment %}
+        </div>
+        
+        {% if not dmrses %}
+        <div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;">
+        <p>
+        <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+        No DMRS selected. Click the star button (<button type="button" id="btnStarDummy" name="btnStarDummy">Click me!</button>) when you view a DMRS to add it here.
+        </p>
+        </div>
+        {% endif %}
+        
+        {% for dmrs in dmrses %}
+        <div id="dmrs_canvas{{forloop.counter}}"></div>
+        
+        <div class="basket_sentence ui-corner-all">
+        <button type="button" id="btnGoDMRS{{forloop.counter}}" name="btnGoDMRS{{forloop.counter}}">View all interpretations</button>
+        <button type="button" id="btnRemoveDMRS{{forloop.counter}}" name="btnRemoveDMRS{{forloop.counter}}">Ignore this interpretation</button>
+        <span id="dmrs{{forloop.counter}}_text_holder" class="dmrs_sentence_text"></span>
+        
+        </div>
+        {% endfor %}
+        <!--<div id="console"></div>-->
+    </body>
+</html>
