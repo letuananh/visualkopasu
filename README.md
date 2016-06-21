@@ -14,6 +14,8 @@ Prerequisite
   + lelesk library (requires WordNet data - see LeLesk README file for more information)
 * The LinGO English Resource Grammar (http://www.delph-in.net/erg/)
   + Generate grammar file (erg.dat) and copy it to data folder
+
+
 Installation guide
 ===============
 
@@ -23,7 +25,7 @@ Installation guide
 	(non-wordnet with multiple DMRS & syntactic trees version)
 	```cp redwoods/cb/*.gz $(PROJECT_ROOT)/data/corpora/raw/redwoods/cb/```
 * Modify file config.py to point to actual project root
-```PROJECT_ROOT = '/home/user/visualkopasu'```
+	```PROJECT_ROOT = '/home/user/visualkopasu'```
 * From terminal run the following command:
 	```cd ~/visualkopasu
 	chmod +x manage.py```
