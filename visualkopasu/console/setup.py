@@ -30,7 +30,7 @@ __status__ = "Prototype"
 ########################################################################
 
 import os, sys
-#from config import ViskoConfig as vkconfig
+import argparse
 from .simple_parser import *
 from .text_to_sqlite import *
 
@@ -44,18 +44,20 @@ else:
 def draw_separator():
     print("-" * 80)
     
-def convert_document(corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
+def convert_document(biblioteca, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
     if answer is not None and answer != 'yes':
         return
-    source_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, "raw", corpus_name, doc_name)
+    source_folder = os.path.join(vkconfig.DATA_FOLDER, 'raw', biblioteca, corpus_name, doc_name)
     print("Attempting to parse document from raw text into XML")
     print("Source folder: %s" % source_folder)
     print("Destination folder: %s" % vkconfig.BIBLIOTECHE_ROOT)
+    print("Biblioteca: %s" % biblioteca)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
     
     # Convert raw text to XML
-    parse_document(source_folder, vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name, active_only=active_only)
+    corpora_root = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca)
+    parse_document(source_folder, corpora_root, corpus_name, doc_name, active_only=active_only)
     draw_separator()
     
     # Convert XML to SQLite3
@@ -65,22 +67,31 @@ def convert_document(corpus_name, doc_name, prepare_db = False, answer = None, a
             prepare_database(vkconfig.BIBLIOTECHE_ROOT, corpus_name)
         else:
             print("I will add the document to the current database. Existing documents will be kept.")
-        convert(vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name)
+        convert(biblioteca, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()
     return answer
     
 if __name__ == '__main__':
-    # sys.setdefaultencoding('utf-8')
-    # print(sys.getdefaultencoding())
-    corpus_name = "redwoods"
-    doc_name = "cb"
-    active_only = False
-    
-    answer = convert_document(corpus_name, "cb", True, active_only=active_only)
-    #convert_document(corpus_name, "sc01", False, answer, active_only=active_only)
-    #convert_document(corpus_name, "sc02", False, answer, active_only=active_only)
-    #convert_document(corpus_name, "sc03", False, answer, active_only=active_only)
-    
+    parser = argparse.ArgumentParser(description="Data import tool")
+
+    parser.add_argument('biblioteca', help='Biblioteca name')
+    parser.add_argument('corpus', help='Corpus name')
+    parser.add_argument('doc', help='Document name')
+    parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
+    #biblioteca = "redwoods"
+    #corpus_name = "redwoods"
+    #doc_name = "cb"
+    #active_only = False
+    if len(sys.argv) == 1:
+        # User didn't pass any value in, show help
+        parser.print_help()
+    else:
+        # Parse input arguments
+        args = parser.parse_args()
+        if args.biblioteca and args.corpus and args.doc:
+            answer = convert_document(args.biblioteca, args.corpus, args.doc, True, active_only=args.active)
+
+    # answer = convert_document(biblioteca, corpus_name, doc_name, True, active_only=active_only)
     pass

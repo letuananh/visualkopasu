@@ -218,6 +218,7 @@ def getAllCollections():
     for collection in vkconfig.Biblioteche:
         collection.corpora = collection.sqldao.getCorpora()
         for corpus in collection.corpora:
+            corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
             corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
             for doc in corpus.documents:
                 doc.corpus = corpus

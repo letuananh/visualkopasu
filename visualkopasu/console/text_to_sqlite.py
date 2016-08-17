@@ -28,7 +28,7 @@ __status__ = "Prototype"
 ########################################################################
 
 from visualkopasu.kopasu.dao import *
-from visualkopasu.kopasu.dao import *
+from visualkopasu.kopasu.xmldao import *
 import shutil
 import csv, time, datetime
 import sqlite3
@@ -231,15 +231,20 @@ def convert_with_context(parse_context):
 '''
 Convert text format into SQLite format
 '''
-def convert(corpora_root, corpus_name, doc_name, dbname=None, context=None, auto_flush=True):
+def convert(biblioteca, corpus_name, doc_name, dbname=None, context=None, auto_flush=True):
     # analysis
     log_file = open(os.path.join(vkconfig.PROJECT_ROOT, 'logs/action_log.csv'), 'w')
     log = csv.writer(log_file, lineterminator='\n', delimiter=',', escapechar='\\', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
     # text-based sentence
-    # Get a sentence by ID 
-    textDAO = DocumentDAO.getDAO(DocumentDAO.XML, { 'root': corpora_root, 'corpus': corpus_name, 'document': doc_name})
-    sqliteDAO = DocumentDAO.getDAO(DocumentDAO.SQLITE3, {'root': corpora_root, 'dbname' : dbname, 'corpus': corpus_name, 'document': doc_name})
+    # Get a sentence by ID
+    docpath = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca, corpus_name, doc_name)
+    textDAO = XMLDocumentDAO(docpath, doc_name, corpus_name)
+    # textDAO = DocumentDAO.getDAO(DocumentDAO.XML, { 'root': corpora_root, 'corpus': corpus_name, 'document': doc_name})
+    dbpath = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca + '.db')
+    print("dbpath: %s" % (dbpath,))
+    sqliteDAO = SQLiteCorpusDAO(dbpath, biblioteca, False)
+    # sqliteDAO = DocumentDAO.getDAO(DocumentDAO.SQLITE3, {'root': corpora_root, 'dbname' : dbname, 'corpus': corpus_name, 'document': doc_name})
 
     # Retrieve corpus information first
     corpus = sqliteDAO.getCorpus(corpus_name)
@@ -272,7 +277,7 @@ def convert(corpora_root, corpus_name, doc_name, dbname=None, context=None, auto
             print("Tried to create document but failed. Script will be terminated now.")
             return False
 
-    sentenceIDs = textDAO.getAllSentences()
+    sentenceIDs = textDAO.getSentences()
     if context == None:
         context = sqliteDAO.buildContext()
     for id in sentenceIDs:
@@ -299,11 +304,11 @@ def convert(corpora_root, corpus_name, doc_name, dbname=None, context=None, auto
     return context
     
 def main():
-    prepare_database(vkconfig.BIBLIOTECHE_ROOT, "redwoods")
-    convert(vkconfig.BIBLIOTECHE_ROOT, "redwoods", "cb")
+    prepare_database(vkconfig.BIBLIOTECHE_ROOT, "test")
+    convert('test', "wn", "wndef")
     pass
 
 if __name__ == '__main__':
     # Do NOT use this, use setup.py instead
-    # main()
+    main()
     pass

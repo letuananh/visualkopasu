@@ -101,6 +101,7 @@ class XMLDocumentDAO:
                 return file_name
             elif os.path.isfile(file_name2):
                 return file_name2
+        return None
     
     def getSentenceRaw(self, sentenceID):
         # Parse the file
@@ -112,7 +113,8 @@ class XMLDocumentDAO:
     def getDMRSRaw(self, sentenceID, interpretationID, dmrs_only=True):
         # Read raw text from file
         full_path = self.getPath(sentenceID)
-        print(full_path)
+        if not full_path:
+            raise Exception("Sentence %s does not exist" % (sentenceID,))
         content = gzip.open(full_path, 'r').read()
         # Parse the file
         root = ETree.fromstring(content)

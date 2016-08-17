@@ -1,3 +1,11 @@
+test.db*
+minicb.db*
+redwoods.db*
+*_debug.xml*
+*.py~
+*.html~
+logs/
+
 *.py[cod]
 
 # C extensions

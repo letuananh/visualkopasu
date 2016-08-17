@@ -150,6 +150,8 @@ class LiteORM():
     '''
     def store_record(self, mapping_info, record, update_back=False, context=None):
         last_id = None
+        conn = None
+        query = None
         try:
             conn = context.conn if (context and context.conn) else self.getConnection()
             cur = context.cur if (context and context.cur) else conn.cursor()
@@ -182,8 +184,9 @@ class LiteORM():
                 conn.commit()
         except sqlite3.Error as e:
             print("Error happened while trying to store a record: %s" % e)
-            print("Query: %s" % query)
-            print("Params: %s" % params)
+            if query:
+                print("Query: %s" % query)
+                print("Params: %s" % params)
             pass
         finally:
             if (not context) or (context.auto_close):
@@ -193,6 +196,7 @@ class LiteORM():
         return last_id    
 
     def selectRecords(self, mapping_info, condition = '', params = [], a_list = None):
+        conn = None
         if condition:
             query = 'SELECT * FROM {table_name} WHERE {condition}'.format(
                             table_name = mapping_info.table_name

@@ -51,7 +51,13 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 , icons: { primary: "ui-icon-suitcase"  }
                 }).click(function(){
                 window.location = "{% url 'basket' %}";    
-                });
+            });
+
+            $('.corpus_name').tooltip();
+            $('.collection_name').tooltip({position: {
+              my: "right bottom+50"
+          },
+          tooltipClass: "entry-tooltip-positioner"});
             }
         </script>       
     </head>
@@ -75,10 +81,11 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         
         
         {% for collection in biblioteche %}
-        <h1>Collection: {{ collection.name }}</h1>
+        <h1><span title='DB file: {{collection.sqldao.db_path}}' class='collection_name'>Collection: {{ collection.name }}</span></h1>
+        
         <ol class="sentence_list">
         {% for corpus in collection.corpora %}
-            <li>Corpus: {{corpus.name}}
+            <li><label class='corpus_name' title='Path: {{corpus.path}}'>Corpus: {{corpus.name}}</label>
                 <ul>
                 {% for document in corpus.documents %}
                     <li><a href="{% url 'doc_display' collection.name corpus.name document.ID %}">{{document.name}}</a></li>
