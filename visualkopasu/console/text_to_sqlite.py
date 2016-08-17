@@ -30,11 +30,12 @@ __status__ = "Prototype"
 from visualkopasu.kopasu.dao import *
 from visualkopasu.kopasu.xmldao import *
 import shutil
+
 import csv, time, datetime
 import sqlite3
 import os
 from visualkopasu.config import ViskoConfig as vkconfig
-
+from visualkopasu.config import Biblioteca
 class Timer:
     def __init__(self):
         self._start = time.time()
@@ -84,7 +85,7 @@ def prepare_database(corpora_root, database_file):
 #    script_file_sample_data = readscript('init_%s.sql' % database_file)
     
     print("Converting document from XML into SQLite3 database")
-    print("Database path: %s" % location_target)
+    print("Database path     : %s" % location_target)
     print("Temp database path: %s" % location)
     
     try:
@@ -231,22 +232,19 @@ def convert_with_context(parse_context):
 '''
 Convert text format into SQLite format
 '''
-def convert(biblioteca, corpus_name, doc_name, dbname=None, context=None, auto_flush=True):
+def convert(collection_name, corpus_name, doc_name, dbname=None, context=None, auto_flush=True):
     # analysis
     log_file = open(os.path.join(vkconfig.PROJECT_ROOT, 'logs/action_log.csv'), 'w')
     log = csv.writer(log_file, lineterminator='\n', delimiter=',', escapechar='\\', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
     # text-based sentence
     # Get a sentence by ID
-    docpath = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca, corpus_name, doc_name)
-    textDAO = XMLDocumentDAO(docpath, doc_name, corpus_name)
-    # textDAO = DocumentDAO.getDAO(DocumentDAO.XML, { 'root': corpora_root, 'corpus': corpus_name, 'document': doc_name})
-    dbpath = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca + '.db')
-    print("dbpath: %s" % (dbpath,))
-    sqliteDAO = SQLiteCorpusDAO(dbpath, biblioteca, False)
-    # sqliteDAO = DocumentDAO.getDAO(DocumentDAO.SQLITE3, {'root': corpora_root, 'dbname' : dbname, 'corpus': corpus_name, 'document': doc_name})
+    bib = Biblioteca(collection_name)
+    textDAO = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
+    sqliteDAO = bib.sqldao
 
     # Retrieve corpus information first
+    print("Retrieving corpus ...")
     corpus = sqliteDAO.getCorpus(corpus_name)
     if not corpus:
         print("Corpus doesn't exist. Attempting to create one")

@@ -5,6 +5,10 @@ redwoods.db*
 *.py~
 *.html~
 logs/
+erg.dat
+test_coolisf.xml
+bs4
+
 
 *.py[cod]
 

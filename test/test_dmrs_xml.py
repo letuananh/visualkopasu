@@ -47,7 +47,7 @@ import os
 import unittest
 
 from visualkopasu.config import Biblioteca
-from visualkopasu.kopasu.util import getSentenceFromXMLString
+# from visualkopasu.kopasu.util import getSentenceFromXMLString
 from visualkopasu.kopasu.util import getDMRSFromXMLString
 from visualkopasu.kopasu.util import getDMRSFromXML
 from coolisf.util import Grammar
@@ -58,14 +58,14 @@ from coolisf.gold_extract import sentence_to_xmlstring
 
 class TestDMRSXML(unittest.TestCase):
     
-    redwoods = Biblioteca('redwoods')
-    corpus_name = 'redwoods'
-    doc_name = 'cb'
+    testbib = Biblioteca('test')
+    corpus_name = 'minicb'
+    doc_name = 'cb100'
 
     def test_text_dao(self):        
         print("test text DAO")
         # get all sentences
-        cbdao = self.redwoods.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
+        cbdao = self.testbib.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
         sentences = cbdao.getSentences()
         self.assertTrue(sentences)
 
@@ -80,7 +80,7 @@ class TestDMRSXML(unittest.TestCase):
 
     def test_sql_dao(self):
         print("test sql DAO")
-        corpusdao = self.redwoods.sqldao
+        corpusdao = self.testbib.sqldao
         # get document 
         cb = corpusdao.getDocumentByName(self.doc_name)[0]
         sentences = corpusdao.getSentences(cb.ID)
@@ -90,7 +90,7 @@ class TestDMRSXML(unittest.TestCase):
         validate_sentence(self, sentence)
 
     def test_xml_to_dmrs(self):
-        cbdao = self.redwoods.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
+        cbdao = self.testbib.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
         xmlstr = cbdao.getDMRSRaw(1010, 0, True)[0]
         # print(xmlstr)
         dmrsobj = getDMRSFromXMLString(xmlstr)

@@ -35,6 +35,8 @@ import time
 import os.path
 import re
 import gzip
+import logging
+
 from visualkopasu.config import ViskoConfig as vkconfig
 
 INTERPRETATION_TOKEN     = chr(10) + chr(12) + chr(10)
@@ -115,9 +117,10 @@ def parse(source_file, destination, active_only=True):
                         a_sentence.attrib['id'] = mt.group(1)
                         xml_text_elem = SubElement(a_sentence, 'text')
                         xml_text_elem.text = mt.group(2)
+            elif elem.startswith('<mrs'):
+                pass # XXX We ignore mrs node for now            
             else:
-                print("UNKNOWN")
-                print(elem)
+                print("UNKNOWN elem: >>> ||%s||" % (elem,))
 
     with gzip.open(destination, 'wb') as output_file:
         # output_file.write(XMLFormatter.format(a_sentence))
@@ -129,10 +132,10 @@ def parse(source_file, destination, active_only=True):
     
     return None
 
-def parse_document(source_folder, corpora_root, corpus_name, doc_name, active_only=True):
+def parse_document(source_folder, collection_folder, corpus_name, doc_name, active_only=True):
     all_files = [ f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f)) ]
     all_files.sort()
-    destination_folder = os.path.join(corpora_root, corpus_name, doc_name)
+    destination_folder = os.path.join(collection_folder, corpus_name, doc_name)
     
     total_time = 0
     processed_files = 0
@@ -144,8 +147,8 @@ def parse_document(source_folder, corpora_root, corpus_name, doc_name, active_on
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
         
-        output_file = os.path.join(corpora_root, corpus_name, doc_name, "sentence_" + str(file_id) + ".xml.gz")
-        destination = os.path.join(corpora_root, corpus_name, doc_name, str(file_id) + ".xml.gz")
+        output_file = os.path.join(collection_folder, corpus_name, doc_name, "sentence_" + str(file_id) + ".xml.gz")
+        destination = os.path.join(collection_folder, corpus_name, doc_name, str(file_id) + ".xml.gz")
         if not os.path.isfile(destination):
             before_time = time.time()
             parse(source_file, output_file, active_only=active_only)
@@ -157,7 +160,7 @@ def parse_document(source_folder, corpora_root, corpus_name, doc_name, active_on
             processed_files += 1
             os.rename(output_file, destination)
         else:
-            print(destination + " is found!")
+            logging.debug(destination + " is found!")
         
     print("Total consumed time = %5.2f secs" % total_time)
 

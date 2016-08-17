@@ -38,6 +38,5 @@ link_folder `readlink -f ./modules/intsem.fx/lelesk` lelesk
 link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
 
 # Grammars
-link_file `readlink -f ~/workspace/erg/erg.dat` data/erg.dat
-
+link_file `readlink -f ~/workspace/grammars/erg.dat` data/erg.dat
 

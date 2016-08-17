@@ -29,10 +29,14 @@ __status__ = "Prototype"
 
 ########################################################################
 
-import os, sys
+import sys
+import os
 import argparse
-from .simple_parser import *
-from .text_to_sqlite import *
+
+from visualkopasu.config import ViskoConfig as vkconfig
+from .simple_parser import parse_document
+from .text_to_sqlite import prepare_database
+from .text_to_sqlite import convert
 
 if sys.version_info >= (3,0):
     def confirm(msg='Do you want to proceed (yes/no)? '):
@@ -43,31 +47,34 @@ else:
 
 def draw_separator():
     print("-" * 80)
+
+def get_raw_doc_folder(collection_name, corpus_name, doc_name):
+    return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
     
-def convert_document(biblioteca, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
-    if answer is not None and answer != 'yes':
+def convert_document(collection_name, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
+    if answer is not None and answer != 'yes' and answer != True:
         return
-    source_folder = os.path.join(vkconfig.DATA_FOLDER, 'raw', biblioteca, corpus_name, doc_name)
+    source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
+    dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")
     print("Source folder: %s" % source_folder)
-    print("Destination folder: %s" % vkconfig.BIBLIOTECHE_ROOT)
-    print("Biblioteca: %s" % biblioteca)
+    print("Destination folder: %s" % dest_folder)
+    print("Biblioteca: %s" % collection_name)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
     
     # Convert raw text to XML
-    corpora_root = os.path.join(vkconfig.BIBLIOTECHE_ROOT, biblioteca)
-    parse_document(source_folder, corpora_root, corpus_name, doc_name, active_only=active_only)
+    parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     draw_separator()
     
     # Convert XML to SQLite3
     print("Now, I'm going to alter the content of the database: %s" % os.path.join(vkconfig.BIBLIOTECHE_ROOT, corpus_name + '.db'))
     if answer or confirm("Do you want to continue? (yes/no): "):
         if prepare_db:
-            prepare_database(vkconfig.BIBLIOTECHE_ROOT, corpus_name)
+            prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
         else:
             print("I will add the document to the current database. Existing documents will be kept.")
-        convert(biblioteca, corpus_name, doc_name)
+    convert(collection_name, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()
@@ -80,10 +87,6 @@ if __name__ == '__main__':
     parser.add_argument('corpus', help='Corpus name')
     parser.add_argument('doc', help='Document name')
     parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
-    #biblioteca = "redwoods"
-    #corpus_name = "redwoods"
-    #doc_name = "cb"
-    #active_only = False
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
         parser.print_help()
@@ -92,6 +95,4 @@ if __name__ == '__main__':
         args = parser.parse_args()
         if args.biblioteca and args.corpus and args.doc:
             answer = convert_document(args.biblioteca, args.corpus, args.doc, True, active_only=args.active)
-
-    # answer = convert_document(biblioteca, corpus_name, doc_name, True, active_only=active_only)
     pass
