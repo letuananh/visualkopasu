@@ -216,7 +216,10 @@ def link_to_javascript(a_link):
 
 def getAllCollections():
     for collection in vkconfig.Biblioteche:
-        collection.corpora = collection.sqldao.getCorpora()
+        corpora = None
+        if os.path.isfile(collection.sqldao.db_path):
+            corpora = collection.sqldao.getCorpora()
+        collection.corpora = corpora if corpora else []
         for corpus in collection.corpora:
             corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
             corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)

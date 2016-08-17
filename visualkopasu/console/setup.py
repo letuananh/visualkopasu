@@ -51,9 +51,7 @@ def draw_separator():
 def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
     
-def convert_document(collection_name, corpus_name, doc_name, prepare_db = False, answer = None, active_only=True):
-    if answer is not None and answer != 'yes' and answer != True:
-        return
+def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=True, ignore_raw=False):
     source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
     dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")
@@ -64,22 +62,26 @@ def convert_document(collection_name, corpus_name, doc_name, prepare_db = False,
     print("Document name: %s" % doc_name)
     
     # Convert raw text to XML
-    parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
-    draw_separator()
+    if not ignore_raw:
+        draw_separator()
+        parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     
     # Convert XML to SQLite3
-    print("Now, I'm going to alter the content of the database: %s" % os.path.join(vkconfig.BIBLIOTECHE_ROOT, corpus_name + '.db'))
-    if answer or confirm("Do you want to continue? (yes/no): "):
-        if prepare_db:
-            prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
-        else:
-            print("I will add the document to the current database. Existing documents will be kept.")
+    draw_separator()
+    db_path = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name + '.db')
+    if os.path.exists(db_path):
+        print("Now, I'm going to alter the content of the database: %s" % db_path)
+        if not (answer or confirm("Do you want to continue? (yes/no): ")):
+            return False
+    else:
+        prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     convert(collection_name, corpus_name, doc_name)
     #----------------DONE----------
     print("All Done!")
     draw_separator()
     return answer
-    
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Data import tool")
 
@@ -87,6 +89,8 @@ if __name__ == '__main__':
     parser.add_argument('corpus', help='Corpus name')
     parser.add_argument('doc', help='Document name')
     parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
+    parser.add_argument('-i', '--noraw', help='Import from XML to SQLite only', action='store_true')
+    parser.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')  
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
         parser.print_help()
@@ -94,5 +98,7 @@ if __name__ == '__main__':
         # Parse input arguments
         args = parser.parse_args()
         if args.biblioteca and args.corpus and args.doc:
-            answer = convert_document(args.biblioteca, args.corpus, args.doc, True, active_only=args.active)
+            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, ignore_raw=(args.noraw))
+        else:
+            parser.print_help()
     pass
