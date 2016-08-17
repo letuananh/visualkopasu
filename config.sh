@@ -40,3 +40,4 @@ link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
 # Grammars
 link_file `readlink -f ~/workspace/grammars/erg.dat` data/erg.dat
 
+./manage.py migrate
