@@ -144,21 +144,26 @@ class Node(SmartRecord):
     """
     Node object constructor
     """
-    def __init__(self, nodeid = None, cfrom = -1, cto = -1, surface = '', base = '', carg = ''):
+    def __init__(self, nodeid=None, cfrom=-1, cto=-1, surface='', base='', carg=''):
         self.ID = None
         self.nodeid = nodeid
         self.cfrom = cfrom
         self.cto = cto
-        self.surface = surface 
+        self.surface = surface
         self.base = base
         self.carg = carg
         self.dmrsID = -1
-        
         self.sortinfo = None
+        # gpred
         self.gpred = None
-        self.realpred = None
+        self.gpred_valueID = None
+        # realpred
+        self.rplemma = None
+        self.rplemmaID = None
+        self.rppos = None
+        self.rpsense = None # realpred sense
         self.sense = None
-        
+
     def __str__(self):
         return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred != None else str(self.realpred))
 
@@ -166,7 +171,6 @@ class NodeIndex(SmartRecord):
     def __init__(self):
         self.nodeID = None
         self.carg = None
-        
         self.lemmaID = None
         self.pos = None
         self.sense = None
@@ -191,12 +195,12 @@ class Sense(SmartRecord):
         self.synsetid = synsetid
         self.score = score
 
-"""
-sortinfo of a Node
-"""
+
 class SortInfo(SmartRecord):
-    
-    def __init__(self, cvarsort = '', num = '', pers ='', gend = '', sf = '', tense = '', mood = '', prontype ='', prog ='', perf='', ind=''):
+    """
+    sortinfo of a Node
+    """    
+    def __init__(self, cvarsort='', num='', pers='', gend='', sf='', tense='', mood='', prontype='', prog='', perf='', ind=''):
         self.ID = None
         self.cvarsort = cvarsort
         self.num = num
@@ -213,46 +217,26 @@ class SortInfo(SmartRecord):
 
     def __str__(self):
         return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.items() if v))
-"""
-Gpred of a node
-"""
 
-"""
-Grammar predicate
-"""
-class Gpred(SmartRecord):
-    def __init__(self, value = None):
+
+class GpredValue(SmartRecord):
+    """
+    Gpred (grammar predicate) value
+    """
+    def __init__(self, value=None):
         self.ID = None
         self.value = value
-        self.dmrs_nodeID = -1
 
-"""
-Lemma of Real pred
-"""
+
 class Lemma(SmartRecord):
-    def __init__(self, lemma = None):
+    """
+    Lemma of Real pred
+    """
+    def __init__(self, lemma=None):
         self.ID = None
         self.lemma = lemma
 
-"""
-Gpred value
-"""
-class GpredValue(SmartRecord):
-    def __init__(self, value = None):
-        self.ID = None
-        self.value = value      
-        
-"""
-Real predicate
-"""
-class RealPred(SmartRecord):
-    def __init__(self, lemma='', pos='', sense=''):
-        self.ID = None
-        self.lemma = lemma
-        self.pos = pos
-        self.sense = sense
-        self.dmrs_nodeID = -1
-    
+
 """
     Link between DMRS node
 """ 
@@ -260,7 +244,7 @@ class Link(SmartRecord):
     """
     Link object constructor
     """
-    def __init__(self, fromNode = None, toNode = None, post = None, rargname = None):
+    def __init__(self, fromNode=None, toNode=None, post=None, rargname=''):
         self.ID = None
         self.fromNodeID = -1
         self.toNodeID = -1
@@ -275,28 +259,3 @@ class Link(SmartRecord):
     def __str__(self):
         
         return "DMRS-Link:[Node: {fromNode}] => [Node: {toNode}] Post={post} Rargname={rargname}".format(fromNode=self.fromNode.nodeid, toNode=self.toNode.nodeid, post=self.post, rargname=self.rargname)
-
-"""
-Post of a Link
-"""
-class Post(SmartRecord):
-    def __init__(self, value = None):
-        self.ID = None
-        self.value = value
-        self.dmrs_linkID = -1
-    
-    def __str__(self):
-        return self.value
-
-"""
-Rargname (of a Link)
-""" 
-class Rargname(SmartRecord):
-    def __init__(self, value = None):
-        self.ID = None
-        self.value = value
-        self.dmrs_linkID = -1
-
-    def __str__(self):
-        return self.value
-        

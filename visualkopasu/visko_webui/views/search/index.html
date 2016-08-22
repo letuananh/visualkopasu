@@ -58,6 +58,7 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 <button type="button" id="btnShowCorpus" name="btnShowCorpus">Show Corpus</button>
                 <span class="toolbar_label">Search</span>
                 <input id="user_query" name="user_query" {% if user_query %}value="{{user_query}}"{% endif %} style="width: 500px" />
+                <input type='hidden' name="collection_name" value='{{collection_name}}' />
                 <button type="submit" id="btnSearch" name="btnSearch">Quick Search</button>
             </div>
         </form>     

@@ -41,7 +41,7 @@ class ViskoConfig:
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
 
     # available corpora
-    AvailableBiblioteche = ('redwoods','test')
+    AvailableBiblioteche = ('redwoods','test', 'isf')
     TextCorpora = XMLBiblioteche(BIBLIOTECHE_ROOT)
     SqliteCorpora = SQLiteCorpusCollection(BIBLIOTECHE_ROOT)
 

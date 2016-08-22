@@ -126,11 +126,12 @@ def build_tooltip(a_node):
         sense_text = "{synsetid}: {lemma}".format(synsetid=a_node.sense.synsetid, lemma=a_node.sense.lemma)
         sense_url = 'http://compling.hss.ntu.edu.sg/omw/cgi-bin/wn-gridx.cgi?synset=' + a_node.sense.synsetid
         tooltip.push(TooltipURL(sense_text, sense_url))
-    if a_node.realpred:        
-        if a_node.realpred.pos:
-            tooltip.push("pos:%s" % a_node.realpred.pos)
-        if a_node.realpred.sense:
-            tooltip.push("RP.sense:%s" % a_node.realpred.sense)
+    if a_node.rplemma:
+        tooltip.push("RP.lemma:%s" % a_node.rplemma)
+        if a_node.rppos:
+            tooltip.push("RP.POS:%s" % a_node.rppos)
+        if a_node.rpsense:
+            tooltip.push("RP.sense:%s" % a_node.rpsense)
     if a_node.sortinfo:
         if a_node.sortinfo.cvarsort:
             tooltip.push("cvarsort:%s" % DataUtil.translate(a_node.sortinfo.cvarsort, cvarsort_dict))
@@ -160,14 +161,14 @@ def node_to_javascript(a_node, number_of_links):
     # Determine node's text
     # 1st priority is lemma
     text_type = ""
-    if a_node.realpred:
-        text = a_node.realpred.lemma
+    if a_node.rplemma:
+        text = a_node.rplemma
         text_type = "realpred"
     elif a_node.carg:
         text = a_node.carg
         text_type = "carg"
     elif a_node.gpred:
-        text = a_node.gpred.value
+        text = a_node.gpred
         text_type = "gpred"
         if text.endswith('_rel'):
             text = text[:-4]
@@ -181,7 +182,7 @@ def node_to_javascript(a_node, number_of_links):
                 , text_type=text_type
                 , links=number_of_links
                 , tooltip=build_tooltip(a_node)
-                , pos=a_node.realpred.pos if a_node.realpred and a_node.realpred.pos else '')
+                , pos=a_node.rppos if a_node.rplemma and a_node.rppos else '')
     return node_js
 
 rargname_shortform = {
@@ -209,8 +210,8 @@ def link_to_javascript(a_link):
                                 id = a_link.ID
                                 , fromNodeID = a_link.fromNode.ID
                                 , toNodeID = a_link.toNode.ID
-                                , post = a_link.post.value
-                                , rargname = shorten_rargname(a_link.rargname.value)
+                                , post = a_link.post
+                                , rargname = shorten_rargname(a_link.rargname)
                                 )
     return link_js
 
@@ -265,7 +266,7 @@ def dmrs_display(request, collection_name, corpus_name, doc_id, sentence_id, int
     dao = vkconfig.BibliotecheMap[collection_name].sqldao
     
     if not interpretation_id:
-        sentence = dao.getSentence(sentence_id,mode='active')
+        sentence = dao.getSentence(sentence_id, mode='active')
     else:
         sentence = dao.getSentence(sentence_id, interpretationIDs=[interpretation_id])
 
@@ -306,16 +307,31 @@ def original_display(request, collection_name, corpus_name, doc_name, sentence_i
 
 def search(request):
     DEFAULT_LIMIT = 10000 # result limit
-    engine = LiteSearchEngine(vkconfig.Biblioteche, limit=DEFAULT_LIMIT)
+    engines = []
+    collection = request.POST.get('collection_name', '')
+    print("collection = %s" % (collection,))
+    if collection:
+        print("Limited search in collection %s" % (collection,))
+        dao = vkconfig.BibliotecheMap[collection].sqldao
+        engine = LiteSearchEngine(dao, limit=DEFAULT_LIMIT)
+        engines.append(engine)
+    else:
+        for bib in vkconfig.Biblioteche:
+            engine = LiteSearchEngine(bib.sqldao, limit=DEFAULT_LIMIT)
+            engines.append(engine)
     try:
         user_query = request.POST.get('user_query', '')
         print("User query: %s" % user_query)
         search_statistics = ''
         search_results = None
         dmrs_search_results = None
-        sentences = engine.search(user_query)
-        
-        if sentences != None:
+        sentences = []
+        for engine in engines:
+            res = engine.search(user_query)
+            if res:
+                sentences += res
+
+        if sentences:
             search_results = sentences
             logging.info("Query: [%s] - Found: %s sentence(s)" % (user_query, len(search_results)))
             # Store search result to session
@@ -345,6 +361,7 @@ def search(request):
         ,'dmrs_search_results' : dmrs_search_results
         ,'user_query' : user_query
         ,'search_statistics' : search_statistics
+        , 'collection_name' : collection
     })
     c.update(csrf(request))
     return render(request, "search/index.html", c)

@@ -29,15 +29,16 @@ __status__ = "Prototype"
 
 import logging
 from xml.etree import ElementTree as ETree
-
 from .models import Sentence, Interpretation, DMRS
-from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname, Sense
+from .models import Node, SortInfo, Link, Sense
+
 
 def getDMRSFromXMLString(xmlcontent):
     root = ETree.fromstring(xmlcontent)
     if root.tag == 'interpretation':
         root = root.findall('dmrs')[0]
     return getDMRSFromXML(root)
+
 
 def getDMRSFromXML(dmrs_tag):
     dmrs = DMRS()
@@ -49,11 +50,11 @@ def getDMRSFromXML(dmrs_tag):
     # parse all nodes inside
     for node_tag in dmrs_tag.findall('node'):
         temp_node = Node(node_tag.attrib['nodeid'], node_tag.attrib['cfrom'], node_tag.attrib['cto'])
-        #temp_node.update_from(node_tag.attrib)
+        # temp_node.update_from(node_tag.attrib)
         temp_node.update_field('surface', '', node_tag.attrib)
         temp_node.update_field('base', '', node_tag.attrib)
         temp_node.update_field('carg', '', node_tag.attrib)
-        #temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
+        # temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
 
         # Parse sense info
         sense_tag = node_tag.find('sense')
@@ -61,7 +62,7 @@ def getDMRSFromXML(dmrs_tag):
             sense_info = Sense()
             sense_info.update_from(sense_tag.attrib)
             temp_node.sense = sense_info
-        
+
         # TODO: parse sort info
         sortinfo_tag = node_tag.find("sortinfo")
         if sortinfo_tag is not None:
@@ -70,16 +71,18 @@ def getDMRSFromXML(dmrs_tag):
             temp_node.sortinfo = sortinfo
         # FIXME: parse gpred
         gpred_tag = node_tag.find("gpred")
-        if gpred_tag != None:
-            gpred = Gpred(gpred_tag.text)
-            temp_node.gpred = gpred
+        if gpred_tag is not None:
+            temp_node.gpred = gpred_tag.text
         # TODO: parse realpred
         realpred_tag = node_tag.find("realpred")
         if realpred_tag is not None:
-            realpred = RealPred()
-            realpred.update_from(realpred_tag.attrib)
-            temp_node.realpred = realpred
-        # Completed parsing, add the node_tag to DMRS object 
+            if 'lemma' in realpred_tag.attrib:
+                temp_node.rplemma = realpred_tag.attrib['lemma']
+            if 'pos' in realpred_tag.attrib:
+                temp_node.rppos = realpred_tag.attrib['pos']
+            if 'sense' in realpred_tag.attrib:
+                temp_node.rpsense = realpred_tag.attrib['sense']
+        # Completed parsing, add the node_tag to DMRS object
         dmrs.nodes.append(temp_node)
         # end for nodes
     # create a map of nodes (by id)
@@ -88,7 +91,14 @@ def getDMRSFromXML(dmrs_tag):
     # parse all links inside
     for link_tag in dmrs_tag.findall('link'):
         fromNodeID = link_tag.attrib['from']
-        toNodeID   = link_tag.attrib['to']
+        toNodeID = link_tag.attrib['to']
+        if fromNodeID == '0':
+            # we need to create a dummy node with ID = 0
+            node_zero = Node('0')
+            node_zero.sortinfo = SortInfo()
+            node_zero.gpred = 'unknown_root'
+            node_map['0'] = node_zero
+            dmrs.nodes.append(node_zero)
         if fromNodeID not in node_map or toNodeID not in node_map:
             logging.error("ERROR: Invalid nodeID [%s=>%s] in link_tag: %s" % (fromNodeID, toNodeID, link_tag))
         else:
@@ -98,18 +108,16 @@ def getDMRSFromXML(dmrs_tag):
 
             # TODO: parse post
             post_tag = link_tag.find("post")
-            if post_tag != None:
-                post = Post(post_tag.text)
-                temp_link.post = post
-                # TODO: parse rargname
+            if post_tag is not None:
+                temp_link.post = post_tag.text
             rargname_tag = link_tag.find("rargname")
-            if rargname_tag != None:
-                rargname = Rargname(rargname_tag.text)
-                temp_link.rargname = rargname
+            if rargname_tag is not None:
+                temp_link.rargname = rargname_tag.text
             # end for link_tag
             dmrs.links.append(temp_link)
     # finished, add dmrs object to interpretation
     return dmrs
+
 
 def getSentenceFromXMLString(xmlcontent):
     root = ETree.fromstring(xmlcontent)
@@ -123,7 +131,7 @@ def getSentenceFromXMLString(xmlcontent):
         interpretation = Interpretation()
         interpretation.update_field("rid", "id", interpretation_tag.attrib)
         interpretation.update_field("mode", "", interpretation_tag.attrib)
-        #interpretation.update_from(interpretation_tag.attrib)
+        # interpretation.update_from(interpretation_tag.attrib)
         sentence.interpretations.append(interpretation)
         # XXX: parse all synthetic trees
 

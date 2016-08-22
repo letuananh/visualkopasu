@@ -165,10 +165,7 @@ def convert_with_context(parse_context):
     corpus = parse_context.sqliteDAO.getCorpus(parse_context.corpus_name)
     if not corpus:
         print("Corpus doesn't exist. Attempting to create one")
-        corpus = Corpus(name=parse_context.corpus_name)
-        parse_context.sqliteDAO.saveCorpus(corpus, context=parse_context.context)
-        #parse_context.flush()
-        #corpus = parse_context.sqliteDAO.getCorpus(parse_context.corpus_name)
+        parse_context.sqliteDAO.createCorpus(corpus_name=parse_context.corpus_name, context=parse_context.context)
         
         if not corpus.ID:
             print(corpus)
@@ -248,7 +245,7 @@ def convert(collection_name, corpus_name, doc_name, dbname=None, context=None, a
     corpus = sqliteDAO.getCorpus(corpus_name)
     if not corpus:
         print("Corpus doesn't exist. Attempting to create one")
-        sqliteDAO.saveCorpus(Corpus(name=corpus_name))
+        sqliteDAO.createCorpus(corpus_name=corpus_name)
         corpus = sqliteDAO.getCorpus(corpus_name)
         if not corpus:
             print(corpus)

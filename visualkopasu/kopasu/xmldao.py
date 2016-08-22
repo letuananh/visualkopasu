@@ -23,7 +23,7 @@ from xml.etree import ElementTree as ETree
 from visualkopasu.util import getLogger
 from .models import Sentence
 from .models import Interpretation
-from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname
+from .models import Node, SortInfo, Link
 from .util import getSentenceFromXMLString
 
 logger = getLogger('visko.dao')
@@ -71,8 +71,7 @@ class XMLCorpusDAO:
         
     def getDocumentDAO(self, doc_name):
         doc_path = os.path.join(self.path, doc_name)
-        return XMLDocumentDAO(doc_path, doc_name)
-        
+        return XMLDocumentDAO(doc_path, doc_name) 
 
 
 class XMLDocumentDAO:

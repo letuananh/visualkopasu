@@ -339,10 +339,9 @@ class DMRSQueryParser:
 
 class LiteSearchEngine:
     
-    def __init__(self, collections, limit=40000):
-        self.collections = collections
+    def __init__(self, sqldao, limit=40000):
         # TODO: search multiple collections
-        self.dao = collections[0].sqldao
+        self.dao = sqldao
         self.limit = limit
     
     def count_node(self, query_nodes):
@@ -358,7 +357,7 @@ class LiteSearchEngine:
                 return -1
             q.query = "SELECT COUNT(*) FROM (%s LIMIT ?)" % q.query
             q.params = q.params + [self.limit]
-            #print(q)
+            print(q)
             rows = self.dao.query(q)
             #print(rows)
             if rows and len(rows) == 1 and len(rows[0]):
@@ -384,16 +383,15 @@ class LiteSearchEngine:
         return rows
 
     def search(self, query_text):
-        # print("Searching: %s" % query_text)
         clauses = DMRSQueryParser.parse(query_text)
         
         if clauses is None:
-            print("Cannot parse the given text query")
+            raise Exception("Invalid query (%s)" % (query_text,))
             return None
-        
+
         node_queries = []
         link_queries = []
-        
+
         for clause in clauses:
             if len(clause) == 1:
                 node_queries.append(DMRSQueryParser.parse_node(clause[0]))
@@ -415,20 +413,19 @@ class LiteSearchEngine:
                 pass
 
         #print("Before: ")
-        #for node in node_queries: print node
+        # for node in node_queries: print(node)
         
         # optimize node query order
         for node in node_queries:
             node.count = self.count_node([node])
-            if node.count == -1: 
+            if node.count == -1:
+                print("remove %s" %s (node,))
                 node_queries.remove(node)
             # AND only optimization => any 0 will lead to nothing!
             if node.count == 0:
+                print("empty %s" % (node,))
                 return []
         node_queries.sort()
-        
-        #print("After: ")
-        #for node in node_queries: print node
         
         n_query=None
         for node in node_queries:
@@ -457,7 +454,7 @@ class LiteSearchEngine:
             if rows:
                 print("Total found results: %s" % len(rows))
             else:
-                print("None was found")     
+                print("None was found")
             print("~" * 20)
 
             # Build search results

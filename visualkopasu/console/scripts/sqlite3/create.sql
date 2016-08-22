@@ -56,21 +56,9 @@ CREATE TABLE IF NOT EXISTS "dmrs_link" (
     , "fromNodeID" INTEGER NOT NULL 
     , "toNodeID" INTEGER NOT NULL
     , "dmrsID" INTEGER NOT NULL
+    , "post" TEXT NOT NULL
+    , "rargname" TEXT NOT NULL
     , FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS "dmrs_link_post" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "value" TEXT NOT NULL 
-    , "dmrs_linkID" INTEGER NOT NULL 
-    , FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS "dmrs_link_rargname" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "value" TEXT NOT NULL 
-    , "dmrs_linkID" INTEGER NOT NULL
-    , FOREIGN KEY(dmrs_linkID) REFERENCES dmrs_link(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 --
@@ -85,6 +73,12 @@ CREATE TABLE IF NOT EXISTS "dmrs_node" (
     , "base" VARCHAR
     , "carg" VARCHAR
     , "dmrsID" INTEGER NOT NULL
+    -- realpred
+    , "rplemmaID" INTEGER
+    , "rppos" VARCHAR
+    , "rpsense" VARCHAR
+    --gpred
+    , gpred_valueID VARCHAR     
     , FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -111,17 +105,6 @@ CREATE TABLE IF NOT EXISTS "dmrs_node_sortinfo" (
 --
 -- REAL PREDICATE
 --
-CREATE TABLE IF NOT EXISTS "dmrs_node_realpred" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "lemmaID" INTEGER
-    , "pos" VARCHAR
-    , "sense" VARCHAR
-    ,"dmrs_nodeID" INTEGER NOT NULL
-    , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE 
-);
---
--- REAL PREDICATE
---
 CREATE TABLE IF NOT EXISTS "dmrs_node_realpred_lemma" (
     "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
     ,"lemma" VARCHAR
@@ -130,13 +113,6 @@ CREATE TABLE IF NOT EXISTS "dmrs_node_realpred_lemma" (
 --
 -- GRAMMAR PREDICATE
 -- 
-CREATE TABLE IF NOT EXISTS "dmrs_node_gpred" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
-    , gpred_valueID VARCHAR 
-    ,"dmrs_nodeID" INTEGER NOT NULL
-    , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS "dmrs_node_gpred_value" (
     "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
     , "value" VARCHAR 
@@ -165,17 +141,13 @@ CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|dmrs_nodeID" ON "dmrs_node_sortin
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_carg" ON "dmrs_node" ("carg");
 
 -- DMRS_NODE_GPRED INDICES
-CREATE INDEX IF NOT EXISTS "dmrs_node_gpred_|_value" ON "dmrs_node_gpred"("gpred_valueID");
-CREATE INDEX IF NOT EXISTS "dmrs_node_gpred_|_dmrs_nodeID" ON "dmrs_node_gpred"("dmrs_nodeID");
+CREATE INDEX IF NOT EXISTS "dmrs_node_|_gpred_value" ON "dmrs_node"("gpred_valueID");
 
 -- dmrs_node_gpred_value
 CREATE INDEX IF NOT EXISTS "dmrs_node_gpred_value_|_value" ON "dmrs_node_gpred_value"("value");
 
 -- DMRS_NODE_REALPRED INDICES
-CREATE INDEX IF NOT EXISTS "dmrs_node_realpred_|_lemma_index" ON "dmrs_node_realpred"("lemmaID");
---CREATE INDEX IF NOT EXISTS "dmrs_node_realpred_|_pos" ON "dmrs_node_realpred"("pos");
---CREATE INDEX IF NOT EXISTS "dmrs_node_realpred_|_sense" ON "dmrs_node_realpred"("sense");
-CREATE INDEX IF NOT EXISTS "dmrs_node_realpred_|_dmrs_nodeID" ON "dmrs_node_realpred"("dmrs_nodeID");
+CREATE INDEX IF NOT EXISTS "dmrs_node_|_lemma_index" ON "dmrs_node"("rplemmaID");
 
 -- DMRS_NODE_REALPRED_LEMMA INDICES
 CREATE INDEX IF NOT EXISTS "dmrs_node_realpred_lemma_|_lemma" ON "dmrs_node_realpred_lemma"("lemma");
@@ -185,11 +157,8 @@ CREATE INDEX IF NOT EXISTS "dmrs_link_|_fromNodeID" ON "dmrs_link" ("fromNodeID"
 CREATE INDEX IF NOT EXISTS "dmrs_link_|_toNodeID" ON "dmrs_link" ("toNodeID" ASC);
 CREATE INDEX IF NOT EXISTS "dmrs_link_|_dmrsID" ON "dmrs_link" ("dmrsID" ASC);
 
-CREATE INDEX IF NOT EXISTS "dmrs_link_post_value_index" ON "dmrs_link_post"("value");
-CREATE INDEX IF NOT EXISTS "dmrs_link_post_|_dmrs_linkID" ON "dmrs_link_post"("dmrs_linkID");
-
-CREATE INDEX IF NOT EXISTS "dmrs_link_rargname_value_index" ON "dmrs_link_rargname"("value");
-CREATE INDEX IF NOT EXISTS "dmrs_link_rargname_|_dmrs_linkID" ON "dmrs_link_rargname"("dmrs_linkID");
+CREATE INDEX IF NOT EXISTS "dmrs_link_|_post" ON "dmrs_link"("post");
+CREATE INDEX IF NOT EXISTS "dmrs_link_|_rargname" ON "dmrs_link"("rargname");
 
 
 -- INDEX TABLES -- CAN BE REMOVED IF WE FIND BETTER SOLUTION
@@ -248,6 +217,7 @@ CREATE TABLE IF NOT EXISTS "dmrs_link_index" (
     --, "corpusID" INTEGER NOT NULL 
 );
 
+
 /**
  INDEXING NODES
  */
@@ -282,7 +252,6 @@ CREATE INDEX IF NOT EXISTS "dmrs_node_index|dmrsID" ON "dmrs_node_index"("dmrsID
 --CREATE INDEX IF NOT EXISTS "dmrs_node_index|sentenceID" ON "dmrs_node_index"("sentenceID");
 CREATE INDEX IF NOT EXISTS "dmrs_node_index|documentID" ON "dmrs_node_index"("documentID");
 --CREATE INDEX IF NOT EXISTS "dmrs_node_index|corpusID" ON "dmrs_node_index"("corpusID");
-
 
 /**
 INDEXING LINKS

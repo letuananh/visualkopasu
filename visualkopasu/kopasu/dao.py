@@ -49,7 +49,7 @@ class CorpusORMSchema(object):
         self.Interpretation = ORMInfo('interpretation',['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
         self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
         # Node related tables
-        self.Node = ORMInfo('dmrs_node', ['ID', ['nodeID', 'nodeid'], 'cfrom', 'cto', 'surface', 'base', 'carg', 'dmrsID'], Node(), orm_manager=self.orm_manager)
+        self.Node = ORMInfo('dmrs_node', ['ID', ['nodeID', 'nodeid'], 'cfrom', 'cto', 'surface', 'base', 'carg', 'dmrsID', 'rplemmaID', 'rppos', 'rpsense', 'gpred_valueID'], Node(), orm_manager=self.orm_manager)
         self.SortInfo = ORMInfo('dmrs_node_sortinfo'
                         , ['ID'
                             , 'cvarsort' 
@@ -66,25 +66,24 @@ class CorpusORMSchema(object):
                             , 'dmrs_nodeID'
                         ]
                         , SortInfo(),orm_manager=self.orm_manager)  
-        self.Gpred = ORMInfo('dmrs_node_gpred', ['ID', ['gpred_valueID','value'], 'dmrs_nodeID'], Gpred(),orm_manager=self.orm_manager) 
-        self.RealPred = ORMInfo('dmrs_node_realpred', ['ID', ['lemmaID','lemma'], 'pos', 'sense', 'dmrs_nodeID'], RealPred(),orm_manager=self.orm_manager)  
+        # self.Gpred = ORMInfo('dmrs_node_gpred', ['ID', ['gpred_valueID','value'], 'dmrs_nodeID'], Gpred(),orm_manager=self.orm_manager) 
+        # self.RealPred = ORMInfo('dmrs_node_realpred', ['ID', ['lemmaID','lemma'], 'pos', 'sense', 'dmrs_nodeID'], RealPred(),orm_manager=self.orm_manager)  
         self.GpredValue = ORMInfo('dmrs_node_gpred_value', ['ID', 'value'], GpredValue(), orm_manager=self.orm_manager)
         self.Lemma = ORMInfo('dmrs_node_realpred_lemma', ['ID', 'lemma'], Lemma(), orm_manager=self.orm_manager)
         # Link related tables
-        self.Link = ORMInfo('dmrs_link', ['ID', 'fromNodeID', 'toNodeID', 'dmrsID'], Link(),orm_manager=self.orm_manager)
-        self.Post = ORMInfo('dmrs_link_post', ['ID', 'value', 'dmrs_linkID'], Post(),orm_manager=self.orm_manager)
-        self.Rargname = ORMInfo('dmrs_link_rargname', ['ID', 'value', 'dmrs_linkID'], Rargname(),orm_manager=self.orm_manager)
+        self.Link = ORMInfo('dmrs_link', ['ID', 'fromNodeID', 'toNodeID', 'dmrsID', 'post', 'rargname'], Link(),orm_manager=self.orm_manager)
         
         self.NodeIndex = ORMInfo('dmrs_node_index', ['nodeID', 'carg', 'lemmaID', 'pos', 'sense', 'gpred_valueID', 'dmrsID', 'documentID'], NodeIndex(), orm_manager=self.orm_manager)
-        self.LinkIndex = ORMInfo('dmrs_link_index', ['linkID', 'fromNodeID', 'toNodeID', 'post', 'rargname', 'dmrsID', 'documentID'], LinkIndex(), orm_manager=self.orm_manager)
+        # self.LinkIndex = ORMInfo('dmrs_link_index', ['linkID', 'fromNodeID', 'toNodeID', 'post', 'rargname', 'dmrsID', 'documentID'], LinkIndex(), orm_manager=self.orm_manager)
 # TODO: Split the SQL code to a separate ORM engine
 
-'''
-A simple ORM cache
-@auto_fill: Auto select all objects to cache when the cache is created
-'''
+
 class ObjectCache():
-    def __init__(self, manager, orm_config, cache_by_field = "value", auto_fill=True):
+    '''
+    A simple ORM cache
+    @auto_fill: Auto select all objects to cache when the cache is created
+    '''
+    def __init__(self, manager, orm_config, cache_by_field="value", auto_fill=True):
         self.cacheMap = {}
         self.cacheMapByID = {}
         self.manager = manager
@@ -109,8 +108,8 @@ class ObjectCache():
                 self.cacheMapByID[key] = instance
             else:
                 print(("Cache error: ID [%s] exists!" % key))
-            
-    def getByValue(self, value, new_object = None, context = None):
+
+    def getByValue(self, value, new_object=None, context=None):
         if value not in self.cacheMap:
             # insert a new record
             if new_object is None:
@@ -120,18 +119,19 @@ class ObjectCache():
                     #print("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
                     new_object = self.orm_config.create_instance()
                     new_object.__dict__[self.cache_by_field] = value
-                    self.orm_config.save(new_object, update_back = True, context = context)
+                    self.orm_config.save(new_object, update_back=True, context=context)
                 else:
                     new_object = results[0] # Use the object from DB
             self.cache(new_object)
         return self.cacheMap[value]
-    
+
     def getByID(self, ID):
         if ID not in self.cacheMapByID:
             # select from database
             obj = self.orm_config.getByID(ID)
             self.cache(obj)
         return self.cacheMapByID[ID]
+
 
 class SQLiteCorpusCollection:
     def __init__(self, path):
@@ -140,7 +140,8 @@ class SQLiteCorpusCollection:
     def getCorpusDAO(self, collection_name, auto_fill=False):
         collection_db_path = os.path.join(self.path, collection_name + '.db')
         return SQLiteCorpusDAO(collection_db_path, collection_name, auto_fill)
-    
+
+
 class SQLiteCorpusDAO(CorpusORMSchema):
     
     def __init__(self, db_path, name, auto_fill):
@@ -157,9 +158,9 @@ class SQLiteCorpusDAO(CorpusORMSchema):
 
     def getCorpusByID(self, corpusID):
         return self.Corpus.select('ID=?', (corpusID,))[0]
-    
-    def saveCorpus(self, a_corpus, context=None):
-        self.Corpus.save(a_corpus, context=context)
+
+    def createCorpus(self, corpus_name, context=None):
+        return self.Corpus.save(Corpus(corpus_name), context=context)
 
     def saveDocument(self, a_document, context=None):
         self.Document.save(a_document, context=context)
@@ -204,72 +205,56 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             for interpretation in a_sentence.interpretations:
                 # Update sentenceID
                 interpretation.sentenceID = a_sentence.ID
-                self.Interpretation.save(interpretation,context=context)
+                self.Interpretation.save(interpretation, context=context)
                 # Save DMRS
                 for dmrs in interpretation.dmrs:
                     dmrs.interpretationID = interpretation.ID
-                    self.DMRS.save(dmrs,context=context)
-                    
+                    self.DMRS.save(dmrs, context=context)
                     # save nodes
                     for node in dmrs.nodes:
                         nodeindex = NodeIndex()
-                        #self.NodeIndex = ORMInfo('dmrs_node_index', ['nodeID', 'carg', 'lemmaID', 'pos', 'sense', 'gpred_valueID', 'dmrsID', 'documentID'], NodeIndex(), orm_manager=self.orm_manager)                     
                         node.dmrsID = dmrs.ID
-                        self.Node.save(node, context=context)
-                        # node index
-                        nodeindex.nodeID = node.ID
-                        if node.carg: nodeindex.carg = node.carg
-                        nodeindex.dmrsID = dmrs.ID
-                        nodeindex.documentID = a_sentence.documentID
-                        # save sortinfo
-                        node.sortinfo.dmrs_nodeID = node.ID
-                        self.SortInfo.save(node.sortinfo,context=context)
                         # save realpred
-                        if node.realpred:
+                        if node.rplemma:
                             # Escape lemma
-                            if node.realpred.lemma:
-                                lemma = self.lemmaCache.getByValue(node.realpred.lemma, context=context)
-                                node.realpred.lemma = lemma.ID # TODO: Fix this
-                                nodeindex.lemmaID = lemma.ID
-                            node.realpred.dmrs_nodeID = node.ID
-                            self.RealPred.save(node.realpred,context)
-                            if node.realpred.pos: nodeindex.pos = node.realpred.pos
-                            if node.realpred.sense: nodeindex.sense = node.realpred.sense
+                            lemma = self.lemmaCache.getByValue(node.rplemma, context=context)
+                            node.rplemmaID = lemma.ID
+                            nodeindex.lemmaID = lemma.ID
+                            nodeindex.pos = node.rppos
+                            nodeindex.sense = node.rpsense
                         # save gpred
                         if node.gpred:
-                            if node.gpred.value:
-                                gpred_value = self.gpredCache.getByValue(node.gpred.value, context=context)
-                                node.gpred.value = gpred_value.ID # TODO: fix this
-                                nodeindex.gpred_valueID = gpred_value.ID
-                            node.gpred.dmrs_nodeID = node.ID
-                            self.Gpred.save(node.gpred,context)
-                        # index node
+                            gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
+                            node.gpred_valueID = gpred_value.ID
+                            nodeindex.gpred_valueID = gpred_value.ID                        
+                        self.Node.save(node, context=context)
+                        # save sortinfo
+                        node.sortinfo.dmrs_nodeID = node.ID
+                        self.SortInfo.save(node.sortinfo, context=context)
+                        # other nodeindex info
+                        nodeindex.nodeID = node.ID
+                        if node.carg:
+                            nodeindex.carg = node.carg
+                        nodeindex.dmrsID = dmrs.ID
+                        nodeindex.documentID = a_sentence.documentID
                         self.NodeIndex.save(nodeindex, context=context)
-                    # end fore
-                    
                     # save links
                     for link in dmrs.links:
-                        linkindex = LinkIndex()
-                        #self.LinkIndex = ORMInfo('dmrs_link_index', ['linkID', 'fromNodeID', 'toNodeID', 'post', 'rargname', 'dmrsID', 'documentID'], LinkIndex(), orm_manager=self.orm_manager)
                         link.dmrsID = dmrs.ID
                         link.fromNodeID = link.fromNode.ID
                         link.toNodeID = link.toNode.ID
-                        self.Link.save(link,context)
-                        # save post
-                        link.post.dmrs_linkID = link.ID
-                        self.Post.save(link.post,context)
-                        # save rargname
-                        link.rargname.dmrs_linkID = link.ID
-                        self.Rargname.save(link.rargname,context)
+                        if link.rargname is None:
+                            link.rargname = ''
                         # build link index
+                        linkindex = LinkIndex()
                         linkindex.linkID = link.ID
                         linkindex.fromNodeID = link.fromNode.ID
                         linkindex.toNodeID = link.toNode.ID
-                        linkindex.post=link.post.value
-                        linkindex.rargname=link.rargname.value
+                        linkindex.post = link.post
+                        linkindex.rargname = link.rargname
                         linkindex.dmrsID = dmrs.ID
                         linkindex.documentID = a_sentence.documentID
-                        self.LinkIndex.save(linkindex, context=context)
+                        self.Link.save(link, context)
             if auto_flush:
                 context.flush()
         else:
@@ -471,32 +456,17 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 if len(list_sortinfo) == 1:
                     a_node.sortinfo = list_sortinfo[0]
                 # retrieve realpred
-                list_realpred = self.RealPred.select('dmrs_nodeID=?', [a_node.ID])
-                if len(list_realpred) == 1:
-                    a_node.realpred = list_realpred[0]
-                    # replace lemma
-                    a_node.realpred.lemma = self.lemmaCache.getByID(int(a_node.realpred.lemma)).lemma
+                if a_node.rplemmaID:
+                    a_node.rplemma = self.lemmaCache.getByID(int(a_node.rplemmaID)).lemma
                 # retrieve gpred
-                list_gpred = self.Gpred.select('dmrs_nodeID=?', [a_node.ID])
-                if len(list_gpred) == 1:                    
-                    a_node.gpred = list_gpred[0]
-                    # replace gpred value
-                    a_node.gpred.value = self.gpredCache.getByID(int(a_node.gpred.value)).value
-            
+                if a_node.gpred_valueID:
+                    a_node.gpred = self.gpredCache.getByID(int(a_node.gpred_valueID)).value
             # retrieve all links
             self.Link.select('dmrsID=?', [a_dmrs.ID], a_dmrs.links)
             # update link node
             for a_link in a_dmrs.links:
                 a_link.fromNode = a_dmrs.getNodeById(a_link.fromNodeID, True)[0]
                 a_link.toNode = a_dmrs.getNodeById(a_link.toNodeID, True)[0]
-                # get post
-                list_post = self.Post.select('dmrs_linkID=?', [a_link.ID])
-                if len(list_post) == 1:
-                    a_link.post = list_post[0]
-                # get rargname
-                list_rargname = self.Rargname.select('dmrs_linkID=?', [a_link.ID])
-                if len(list_rargname) == 1:
-                    a_link.rargname = list_rargname[0]
         return a_interpretation
 
     def getSentence(self, sentenceID, mode = None, interpretationIDs = None, skip_details=None):
