@@ -51,7 +51,7 @@ def draw_separator():
 def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
     
-def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=True, ignore_raw=False):
+def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=False, ignore_raw=False):
     source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
     dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")

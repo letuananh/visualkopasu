@@ -47,18 +47,12 @@ import os
 import unittest
 
 from visualkopasu.config import Biblioteca
-# from visualkopasu.kopasu.util import getSentenceFromXMLString
-# from visualkopasu.kopasu.util import getDMRSFromXMLString
-# from visualkopasu.kopasu.util import getDMRSFromXML
-# from coolisf.util import Grammar
-# from coolisf.gold_extract import sentence_to_xml
-# from coolisf.gold_extract import sentence_to_xmlstring
 
 from visualkopasu.console.setup import prepare_database
 from visualkopasu.console.setup import parse_document
 from visualkopasu.console.setup import get_raw_doc_folder
 from visualkopasu.console.setup import convert_document
-from .test_dmrs_xml import validate_sentence
+from .test_dmrs_dao import validate_sentence
 
 ########################################################################
 
@@ -93,7 +87,7 @@ class TestConsoleSetup(unittest.TestCase):
         print("Test generated XML file")
         # sent1010 = cb100dao.getSentence(1010)
         # validate_sentence(self, sent1010)
-        convert_document(collection_name, corpus_name, doc_name, prepare_db=True, answer=True)
+        convert_document(collection_name, corpus_name, doc_name)
 
         print("DB: %s" % (testbib.sqldao.db_path,))
         sentsql = testbib.sqldao.getSentence(1)
