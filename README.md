@@ -7,7 +7,9 @@ Prerequisite
 * beautifulsoup
 * numpy
 * lxml
-* pyDelphin (https://github.com/delph-in/pydelphin)
+* pyDelphin 0.5.1 (https://github.com/delph-in/pydelphin)
+* fuzzywuzzy (required by coolisf)
+* python-levenshtein (optional for fuzzywuzzy)
 * nltk (Use this version instead of NLTK's trunk: https://github.com/letuananh/nltk)
   + WordNet data should be downloaded (nltk.download() => `book` package)
 * The Integrated Semantic Framework - CoolISF (https://github.com/letuananh/intsem.fx)
@@ -18,6 +20,9 @@ Prerequisite
 
 Installation guide
 ===============
+
+* Installed required packages using pip3
+pip3 install django==1.9.6 numpy lxml pydelphin==0.5.1 nltk==3.2.1 fuzzywuzzy python-levenshtein
 
 * Extract the visual_kopasu.tar.gz to a folder (e.g. /home/user/visualkopasu)
 * Download sample dataset ("the Cathedral and the Bazaar") from: http://letuananh.dakside.org/home/download/cb.tgz

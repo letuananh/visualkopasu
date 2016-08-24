@@ -24,12 +24,12 @@ git submodule sync && git submodule init && git submodule update
 
 cd modules/intsem.fx
 git submodule sync && git submodule init && git submodule update
-./config.sh
+bash ./config.sh
 cd ../../
 
-link_folder `readlink -f ../pydelphin/delphin` delphin
 link_folder `readlink -f ../beautifulsoup/bs4-python3` bs4
-link_folder `readlink -f ../nltk/nltk` nltk
+# link_folder `readlink -f ../pydelphin/delphin` delphin
+# link_folder `readlink -f ../nltk/nltk` nltk
 
 link_folder `readlink -f ./modules/chirptext/chirptext` chirptext
 link_folder `readlink -f ./modules/puchikarui/puchikarui` puchikarui

@@ -419,7 +419,7 @@ class LiteSearchEngine:
         for node in node_queries:
             node.count = self.count_node([node])
             if node.count == -1:
-                print("remove %s" %s (node,))
+                print("remove %s" % (node,))
                 node_queries.remove(node)
             # AND only optimization => any 0 will lead to nothing!
             if node.count == 0:
