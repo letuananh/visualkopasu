@@ -78,7 +78,10 @@ CREATE TABLE IF NOT EXISTS "dmrs_node" (
     , "rppos" VARCHAR
     , "rpsense" VARCHAR
     --gpred
-    , gpred_valueID VARCHAR     
+    , gpred_valueID VARCHAR
+    -- wordnet synsets
+    , synsetid CHARACTER(10)
+    , synset_score INTEGER
     , FOREIGN KEY(dmrsID) REFERENCES dmrs(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -139,6 +142,7 @@ CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|dmrs_nodeID" ON "dmrs_node_sortin
 
 -- INDEX CARG OF NODE
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_carg" ON "dmrs_node" ("carg");
+CREATE INDEX IF NOT EXISTS "dmrs_node_|_synsetid" ON "dmrs_node" ("synsetid");
 
 -- DMRS_NODE_GPRED INDICES
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_gpred_value" ON "dmrs_node"("gpred_valueID");

@@ -1,0 +1,22 @@
+<sentence id="1040" version="1.0"><!--
+
+Redwoods export of `cb';
+(cl1@cl; 16-aug-2012 (16:08 h)).
+--><text>This is version 3.0</text><interpretation id="0" mode="active"><parsetree>(S (NP (N (N (this))))
+ (VP (V (is)) (NP (N (N (N (N (version)))) (N (ADJ (3.0)))))))</parsetree><dmrs cfrom="-1" cto="-1">
+<node cfrom="0" cto="4" nodeid="10001"><gpred>generic_entity_rel</gpred><sortinfo cvarsort="x" gend="n" num="sg" pers="3" /></node>
+<node cfrom="0" cto="4" nodeid="10002"><realpred lemma="this" pos="q" sense="dem" /><sortinfo /></node>
+<node cfrom="5" cto="7" nodeid="10003"><realpred lemma="be" pos="v" sense="id" /><sortinfo cvarsort="e" mood="indicative" perf="minus" prog="minus" sf="prop" tense="pres" /></node>
+<node cfrom="8" cto="19" nodeid="10004"><gpred>number_q_rel</gpred><sortinfo /></node>
+<node cfrom="8" cto="19" nodeid="10005"><gpred>compound_rel</gpred><sortinfo cvarsort="e" mood="indicative" perf="minus" prog="minus" sf="prop" tense="untensed" /></node>
+<node cfrom="8" cto="15" nodeid="10006"><gpred>udef_q_rel</gpred><sortinfo /></node>
+<node cfrom="8" cto="15" nodeid="10007"><realpred lemma="version" pos="n" sense="of" /><sortinfo cvarsort="x" ind="plus" num="sg" pers="3" /></node>
+<node carg="3.0" cfrom="16" cto="19" nodeid="10008"><gpred>card_rel</gpred><sortinfo cvarsort="x" num="sg" pers="3" /></node>
+<link from="10002" to="10001"><rargname>RSTR</rargname><post>H</post></link>
+<link from="10003" to="10001"><rargname>ARG1</rargname><post>NEQ</post></link>
+<link from="10003" to="10008"><rargname>ARG2</rargname><post>NEQ</post></link>
+<link from="10004" to="10008"><rargname>RSTR</rargname><post>H</post></link>
+<link from="10005" to="10008"><rargname>ARG1</rargname><post>NEQ</post></link>
+<link from="10005" to="10007"><rargname>ARG2</rargname><post>NEQ</post></link>
+<link from="10006" to="10007"><rargname>RSTR</rargname><post>H</post></link>
+</dmrs></interpretation></sentence>

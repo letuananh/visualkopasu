@@ -21,18 +21,23 @@ import os.path
 from xml.etree import ElementTree as ETree
 
 from visualkopasu.util import getLogger
-from .models import Sentence
-from .models import Interpretation
-from .models import Node, SortInfo, Link
+# from .models import Sentence
+# from .models import Interpretation
+# from .models import Node
+# from .models import SortInfo
+# from .models import Link
 from .util import getSentenceFromXMLString
 
 logger = getLogger('visko.dao')
 
+
 def getSubFolders(a_folder):
     return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
 
+
 def getFiles(a_folder):
     return [child for child in os.listdir(a_folder) if os.path.isfile(os.path.join(a_folder, child))]
+
 
 class XMLBiblioteche:
     def __init__(self, root):
@@ -88,24 +93,24 @@ class XMLDocumentDAO:
 
     def getPath(self, sentenceID=None):
         if not sentenceID:
-            return docPath
+            raise Exception("sentenceID cannot be None")
         else:
             file_name = os.path.join(self.path, str(sentenceID) + '.xml.gz')
-            file_name2 = os.path.join(self.path
-                        , "%s-%s.xml.gz" % (self.name, str(sentenceID)))
-            print(("Filename1: %s" % file_name))
-            print(("Filename2: %s" % file_name2))
+            file_name2 = os.path.join(self.path,
+                                      "%s-%s.xml.gz" % (self.name, str(sentenceID)))
+            logger.debug(("Filename1: %s" % file_name))
+            logger.debug(("Filename2: %s" % file_name2))
 
             if os.path.isfile(file_name):
                 return file_name
             elif os.path.isfile(file_name2):
                 return file_name2
         return None
-    
+
     def getSentenceRaw(self, sentenceID):
         # Parse the file
         full_path = self.getPath(sentenceID)
-        print(full_path)
+        logger.debug(full_path)
         content = gzip.open(full_path, 'r').read()
         return content
 

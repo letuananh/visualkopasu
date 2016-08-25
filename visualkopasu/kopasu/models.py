@@ -5,20 +5,26 @@ Data models for VisualKopasu project.
 
 # Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+
+########################################################################
+
+from .liteorm import SmartRecord
+
+########################################################################
 
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = [ "Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying" ]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -27,31 +33,34 @@ __status__ = "Prototype"
 
 ########################################################################
 
-from .liteorm import SmartRecord
 
-'''
-    A corpus wrapper
-'''
 class Corpus(SmartRecord):
-    def __init__(self, name = ''):
+    '''
+    A corpus wrapper
+    '''
+    def __init__(self, name=''):
         self.ID = None
         self.name = name
         self.documents = []
         pass
-    
+
+
 class Document(SmartRecord):
-    def __init__(self, name = '', corpusID = None):
+    
+    def __init__(self, name='', corpusID=None):
         self.ID = None
         self.name = name
         self.corpusID = corpusID
         self.corpus = None
         self.sentences = []
-        pass    
+        pass
+
 
 class Sentence(SmartRecord):
-    def __init__(self, ident = 0, text = '', documentID = None):
+    
+    def __init__(self, ident=0, text='', documentID=None):
         self.ID = None
-        self.ident =  ident
+        self.ident = ident
         self.text = text
         self.documentID = documentID
         self.interpretations = []
@@ -60,18 +69,19 @@ class Sentence(SmartRecord):
 
     def getInactiveInterpretation(self):
         return [repr for repr in self.interpretations if repr.mode == "inactive"]
+
     def getActiveInterpretation(self):
         return [repr for repr in self.interpretations if repr.mode == "active"]
 
     def __str__(self):
         return "[ID=" + self.ident + "]" + self.text
-        #return u"[ID=%s] %s" % (self.ident, self.text)
 
-class Interpretation(SmartRecord):   
-    
+
+class Interpretation(SmartRecord):
+
     INACTIVE = 0
-    ACTIVE = 1 
-    
+    ACTIVE = 1
+
     def __init__(self, rid='', mode='', ID=None, dmrs=None, trees=None):
         self.ID = ID
         self.rid = rid
@@ -79,47 +89,50 @@ class Interpretation(SmartRecord):
         self.dmrs = dmrs if dmrs else list()
         self.parse_trees = trees if trees else list()
         self.sentenceID = None
-        
+
     def __str__(self):
         return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
 
-"""
-Parse tree (synthetic tree)
-"""
+
 class ParseTree:
-    def __init__(self, root, value = ''):
+    """
+    Parse tree (synthetic tree)
+    """
+    def __init__(self, root, value=''):
         self.value = value
         self.root = root
 
-"""
-A node of parse tree
-"""
+
 class ParseNode:
+    """
+    A node of parse tree
+    """
     def __init__(self, nodetype, value):
         self.nodetype = nodetype
         self.value = value
         self.children = []
-        
+
     def __str__(self):
         return u"{type}: {value}".format(type=self.nodetype, value=self.value)
+
 
 class DMRS(SmartRecord):
     """
     DMRS object default constructor
     """
-    def __init__(self, ident = '', cfrom = -1, cto = -1, surface = ''):
+    def __init__(self, ident='', cfrom=-1, cto=-1, surface=''):
         self.ID = None
         self.ident = ident
         self.cfrom = cfrom
         self.cto = cto
         self.surface = surface
         self.interpretationID = None
-        
+
         # Nodes and links might be indexed for faster access
         self.nodes = []
         self.links = []
-    
-    def getNodeById(self, nodeid, use_record_ID = False):
+
+    def getNodeById(self, nodeid, use_record_ID=False):
         if use_record_ID:
             return [node for node in self.nodes if node.ID == nodeid]
         else:
@@ -139,6 +152,7 @@ class DMRS(SmartRecord):
         for link in self.links:
             links += str(link) + "\n"
         return "DMRS: ident='{ident}', [{cfrom} : {to}], surface='{surface}'\n\n.:[Nodes]:.\n{nodes}\n.:[Links]:.\n{links}".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nodes=nodes, links=links)
+
 
 class Node(SmartRecord):
     """
@@ -161,11 +175,14 @@ class Node(SmartRecord):
         self.rplemma = None
         self.rplemmaID = None
         self.rppos = None
-        self.rpsense = None # realpred sense
+        self.rpsense = None  # realpred sense
         self.sense = None
+        self.synsetid = None
+        self.synset_score = None
 
     def __str__(self):
-        return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred != None else str(self.realpred))
+        return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred is not None else str(self.realpred))
+
 
 class NodeIndex(SmartRecord):
     def __init__(self):
@@ -178,6 +195,7 @@ class NodeIndex(SmartRecord):
         self.dmrsID = None
         self.documentID = None
 
+
 class LinkIndex(SmartRecord):
     def __init__(self):
         self.linkID = None
@@ -187,6 +205,7 @@ class LinkIndex(SmartRecord):
         self.rargname = None
         self.dmrsID = None
         self.documentID = None
+
 
 class Sense(SmartRecord):
     def __init__(self, lemma='', pos='', synsetid='', score=0):
@@ -199,7 +218,7 @@ class Sense(SmartRecord):
 class SortInfo(SmartRecord):
     """
     sortinfo of a Node
-    """    
+    """
     def __init__(self, cvarsort='', num='', pers='', gend='', sf='', tense='', mood='', prontype='', prog='', perf='', ind=''):
         self.ID = None
         self.cvarsort = cvarsort
@@ -237,25 +256,19 @@ class Lemma(SmartRecord):
         self.lemma = lemma
 
 
-"""
-    Link between DMRS node
-""" 
 class Link(SmartRecord):
     """
-    Link object constructor
+    DMRS links
     """
     def __init__(self, fromNode=None, toNode=None, post=None, rargname=''):
         self.ID = None
         self.fromNodeID = -1
         self.toNodeID = -1
         self.dmrsID = None
-        
-        self.fromNode = fromNode # From node
-        self.toNode = toNode # To node
+        self.fromNode = fromNode
+        self.toNode = toNode
         self.post = post
         self.rargname = rargname
-        
-        
+
     def __str__(self):
-        
         return "DMRS-Link:[Node: {fromNode}] => [Node: {toNode}] Post={post} Rargname={rargname}".format(fromNode=self.fromNode.nodeid, toNode=self.toNode.nodeid, post=self.post, rargname=self.rargname)

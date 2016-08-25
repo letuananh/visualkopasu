@@ -100,14 +100,23 @@ class TestDMRSDAO(unittest.TestCase):
         # print(xmlstr)
         dmrsobj = getDMRSFromXMLString(xmlstr)
         self.assertTrue(dmrsobj)
-        # print(dmrsobj)
 
     def test_xml_file_to_dmrs(self):
-        with open('data/test_coolisf.xml') as testfile:
+        print("Test XML parser")
+        with open('data/speckled_10565.xml') as testfile:
             xmlstr = testfile.read()
             # print(">>>", xmlstr)
-            dmrsobj = getDMRSFromXMLString(xmlstr)
-            self.assertTrue(dmrsobj)
+            sentobj = getSentenceFromXMLString(xmlstr)
+            self.assertTrue(sentobj)
+            self.assertTrue(sentobj.interpretations)
+            i = sentobj.interpretations[0]
+            d = i.dmrs[0]
+            self.assertTrue(d.nodes)
+            self.assertTrue(d.links)
+            self.assertTrue(d.nodes[2].sense)
+            for n in d.nodes:
+                if n.sense:
+                    print(n.sense.synsetid)
 
     def test_xml_dao(self):
         print("Test ISF sense reading")
@@ -156,11 +165,9 @@ class TestDMRSSQLite(unittest.TestCase):
             os.unlink(db_path)
         prepare_database(vkconfig.BIBLIOTECHE_ROOT, cls.bibname)
 
-
     @classmethod
     def tearDownClass(cls):
         print("Cleaning up")
-
 
     def test_create_a_corpus(self):
         print("Test creating a new corpus")
@@ -170,7 +177,6 @@ class TestDMRSSQLite(unittest.TestCase):
         corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
         self.assertIsNotNone(corpus)
         self.assertIsNotNone(corpus.name)
-
 
     def test_create_document(self):
         print("Test creating document")

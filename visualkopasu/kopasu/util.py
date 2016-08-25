@@ -57,11 +57,23 @@ def getDMRSFromXML(dmrs_tag):
         # temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
 
         # Parse sense info
-        sense_tag = node_tag.find('sense')
-        if sense_tag is not None:
+        sensegold_tag = node_tag.find('sensegold')
+        if sensegold_tag is not None:
+            # if we have sensegold, use it instead
+            print("Using gold")
             sense_info = Sense()
-            sense_info.update_from(sense_tag.attrib)
+            sense_info.lemma = sensegold_tag.attrib['clemma']
+            sense_info.synsetid = sensegold_tag.attrib['synset']
+            sense_info.pos = sense_info.synsetid[-1]
+            sense_info.score = '999'
             temp_node.sense = sense_info
+            pass
+        else:
+            sense_tag = node_tag.find('sense')
+            if sense_tag is not None:
+                sense_info = Sense()
+                sense_info.update_from(sense_tag.attrib)
+                temp_node.sense = sense_info
 
         # TODO: parse sort info
         sortinfo_tag = node_tag.find("sortinfo")

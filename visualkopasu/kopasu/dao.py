@@ -17,9 +17,31 @@ Data access layer for VisualKopasu project.
 # You should have received a copy of the GNU General Public License 
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
+import os.path
+from visualkopasu.util import getLogger
+from .models import Corpus
+from .models import Document
+from .models import Sentence
+from .models import Interpretation
+from .models import DMRS
+from .models import Node
+from .models import Sense
+from .models import SortInfo
+from .models import NodeIndex
+from .models import Link
+from .models import LinkIndex
+from .models import GpredValue
+from .models import Lemma
+
+
+from .liteorm import ORMInfo, LiteORM
+from .liteorm import DBContext
+
+########################################################################
+
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = [ "Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying" ]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -28,15 +50,8 @@ __status__ = "Prototype"
 
 ########################################################################
 
-import gzip
-import os.path
-import copy
-import sqlite3
-from xml.etree import ElementTree as ETree
+logger = getLogger('visko.dao')
 
-from .models import *
-from .liteorm import ORMInfo, LiteORM
-from .liteorm import DBContext
 
 class CorpusORMSchema(object):
     def __init__(self, db_path):
@@ -45,34 +60,58 @@ class CorpusORMSchema(object):
         # 0: table column | 1: object property
         self.Corpus = ORMInfo('corpus', ['ID', 'name'], Corpus(), orm_manager=self.orm_manager)
         self.Document = ORMInfo('document', ['ID', 'name', 'corpusID'], Document(), orm_manager=self.orm_manager)
-        self.Sentence = ORMInfo('sentence', [ 'ID', 'ident', 'text', 'documentID' ], Sentence(), orm_manager=self.orm_manager)
-        self.Interpretation = ORMInfo('interpretation',['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
+        self.Sentence = ORMInfo('sentence', ['ID', 'ident', 'text', 'documentID'], Sentence(), orm_manager=self.orm_manager)
+        self.Interpretation = ORMInfo('interpretation', ['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
         self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
         # Node related tables
-        self.Node = ORMInfo('dmrs_node', ['ID', ['nodeID', 'nodeid'], 'cfrom', 'cto', 'surface', 'base', 'carg', 'dmrsID', 'rplemmaID', 'rppos', 'rpsense', 'gpred_valueID'], Node(), orm_manager=self.orm_manager)
-        self.SortInfo = ORMInfo('dmrs_node_sortinfo'
-                        , ['ID'
-                            , 'cvarsort' 
-                            , ['number', 'num']
-                            , ['person', 'pers']
-                            , ['gender', 'gend']
-                            , ['sentence_force', 'sf']
-                            , 'tense'
-                            , 'mood'
-                            , ['pronoun_type', 'prontype']
-                            , ['progressive', 'prog']
-                            , ['perfective_aspect', 'perf']
-                            , 'ind'
-                            , 'dmrs_nodeID'
-                        ]
-                        , SortInfo(),orm_manager=self.orm_manager)  
-        # self.Gpred = ORMInfo('dmrs_node_gpred', ['ID', ['gpred_valueID','value'], 'dmrs_nodeID'], Gpred(),orm_manager=self.orm_manager) 
-        # self.RealPred = ORMInfo('dmrs_node_realpred', ['ID', ['lemmaID','lemma'], 'pos', 'sense', 'dmrs_nodeID'], RealPred(),orm_manager=self.orm_manager)  
+        self.Node = ORMInfo('dmrs_node',
+                            [
+                                'ID',
+                                ['nodeID', 'nodeid'],
+                                'cfrom',
+                                'cto',
+                                'surface',
+                                'base',
+                                'carg',
+                                'dmrsID',
+                                'rplemmaID',
+                                'rppos',
+                                'rpsense',
+                                'gpred_valueID',
+                                'synsetid',
+                                'synset_score'
+                            ],
+                            Node(), orm_manager=self.orm_manager)
+        self.SortInfo = ORMInfo('dmrs_node_sortinfo',
+                                [
+                                    'ID',
+                                    'cvarsort',
+                                    ['number', 'num'],
+                                    ['person', 'pers'],
+                                    ['gender', 'gend'],
+                                    ['sentence_force', 'sf'],
+                                    'tense',
+                                    'mood',
+                                    ['pronoun_type', 'prontype'],
+                                    ['progressive', 'prog'],
+                                    ['perfective_aspect', 'perf'],
+                                    'ind',
+                                    'dmrs_nodeID'
+                                ],
+                                SortInfo(), orm_manager=self.orm_manager)
         self.GpredValue = ORMInfo('dmrs_node_gpred_value', ['ID', 'value'], GpredValue(), orm_manager=self.orm_manager)
         self.Lemma = ORMInfo('dmrs_node_realpred_lemma', ['ID', 'lemma'], Lemma(), orm_manager=self.orm_manager)
         # Link related tables
-        self.Link = ORMInfo('dmrs_link', ['ID', 'fromNodeID', 'toNodeID', 'dmrsID', 'post', 'rargname'], Link(),orm_manager=self.orm_manager)
-        
+        self.Link = ORMInfo('dmrs_link',
+                            [
+                                'ID',
+                                'fromNodeID',
+                                'toNodeID',
+                                'dmrsID',
+                                'post',
+                                'rargname'],
+                            Link(), orm_manager=self.orm_manager)
+
         self.NodeIndex = ORMInfo('dmrs_node_index', ['nodeID', 'carg', 'lemmaID', 'pos', 'sense', 'gpred_valueID', 'dmrsID', 'documentID'], NodeIndex(), orm_manager=self.orm_manager)
         # self.LinkIndex = ORMInfo('dmrs_link_index', ['linkID', 'fromNodeID', 'toNodeID', 'post', 'rargname', 'dmrsID', 'documentID'], LinkIndex(), orm_manager=self.orm_manager)
 # TODO: Split the SQL code to a separate ORM engine
@@ -114,14 +153,14 @@ class ObjectCache():
             # insert a new record
             if new_object is None:
                 # try to select from database first
-                results = self.orm_config.select(condition = "%s=?" % self.cache_by_field, args = [value])
+                results = self.orm_config.select(condition="%s=?" % self.cache_by_field, args=[value])
                 if results is None or len(results) != 1:
-                    #print("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
+                    # print("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
                     new_object = self.orm_config.create_instance()
                     new_object.__dict__[self.cache_by_field] = value
                     self.orm_config.save(new_object, update_back=True, context=context)
                 else:
-                    new_object = results[0] # Use the object from DB
+                    new_object = results[0]  # Use the object from DB
             self.cache(new_object)
         return self.cacheMap[value]
 
@@ -185,20 +224,18 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         context.cur.execute("PRAGMA cache_size=80000000")
         context.cur.execute("PRAGMA journal_mode=MEMORY")
         context.cur.execute("PRAGMA temp_store=MEMORY")
-        #context.cur.execute("PRAGMA count_changes=OFF")
+        # context.cur.execute("PRAGMA count_changes=OFF")
         return context
 
     def query(self, query_obj):
         return self.orm_manager.selectRows(query_obj.query, query_obj.params)
 
-    """
-    Complicated queries
-    """
-            
     def saveSentence(self, a_sentence, context=None, auto_flush=True):
+        """
+        Complicated queries
+        """
         if context is None:
             context = self.buildContext()
-        
         if not a_sentence.ID:
             self.Sentence.save(a_sentence, context=context)
             # save interpretations
@@ -226,7 +263,11 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                         if node.gpred:
                             gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
                             node.gpred_valueID = gpred_value.ID
-                            nodeindex.gpred_valueID = gpred_value.ID                        
+                            nodeindex.gpred_valueID = gpred_value.ID
+                        # save sense
+                        if node.sense:
+                            node.synsetid = node.sense.synsetid
+                            node.synset_score = node.sense.score
                         self.Node.save(node, context=context)
                         # save sortinfo
                         node.sortinfo.dmrs_nodeID = node.ID
@@ -294,13 +335,13 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         node_conditions = ''
         conditions = []
         params = []
-        
+
         # Interpretation condition
         if mode:
             interpretation_condition += 'mode = ?'
             conditions.append(interpretation_condition)
             params.append(mode)
-        
+
         # Node condition
         if lemma:
             node_conditions += ' realpred.lemmaID = (SELECT ID FROM dmrs_node_realpred_lemma WHERE lemma=?) '
@@ -308,7 +349,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         if len(node_conditions) > 0:
             node_conditions = 'WHERE ' + node_conditions
             node_conditions = node_conditions_template.format(node_conditions=node_conditions)
-            conditions.append(node_conditions) 
+            conditions.append(node_conditions)
             
         # Link condition
         if rargname:
@@ -320,14 +361,13 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         if len(link_conditions) > 0:
             link_conditions = 'WHERE ' + link_conditions
             link_conditions = link_conditions_template.format(link_conditions=link_conditions)
-            conditions.append(link_conditions) 
+            conditions.append(link_conditions)
             
         # Final condition
         condition = ' AND '.join(conditions)
         if len(condition) > 0:
             condition = 'WHERE ' + condition
-            
-        
+
         params.append(limit)
         print(("Query: %s" % query.format(condition=condition)))
         print(("Params: %s" % params))
@@ -337,9 +377,9 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             print(("Found: %s presentation(s)" % len(rows)))
         else:
             print("None was found!")
-        
+
         sentences = []
-        sentences_by_id = { }
+        sentences_by_id = {}
         for row in rows:
             interpretationID = row['interpretationID']
             sentenceID = row['sentenceID']
@@ -355,7 +395,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 a_sentence.interpretations.append(a_interpretation)
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
-            #sentences.append(a_sentence)
+            # sentences.append(a_sentence)
         
         print(("Sentence count: %s" % len(sentences)))
         return sentences
@@ -461,6 +501,13 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 # retrieve gpred
                 if a_node.gpred_valueID:
                     a_node.gpred = self.gpredCache.getByID(int(a_node.gpred_valueID)).value
+                # create sense object
+                if a_node.synsetid:
+                    sense_info = Sense()
+                    sense_info.synsetid = a_node.synsetid
+                    sense_info.score = a_node.synset_score
+                    sense_info.pos = a_node.synsetid[-1]
+                    a_node.sense = sense_info
             # retrieve all links
             self.Link.select('dmrsID=?', [a_dmrs.ID], a_dmrs.links)
             # update link node
