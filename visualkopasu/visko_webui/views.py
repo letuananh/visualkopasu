@@ -512,7 +512,7 @@ def isf_parse(request):
     # for debug
     dmrs_xml_strings = []
 
-    for mrs, mrs_node in zip(parse_result.mrs, sentence_xml_node.findall('./dmrses/dmrs')):
+    for mrs, mrs_node in zip(parse_result.mrses, sentence_xml_node.findall('./dmrses/dmrs')):
         # for debug
         xmlstr = ET.tostring(mrs_node, encoding='utf-8').decode('utf-8')
         dmrs_xml_strings.append(xmlstr)
@@ -544,10 +544,11 @@ def dev_test(request):
 
     text = 'Dogs are funnier than Asian tiger mosquitoes.'
     results = Grammar().txt2dmrs(text)
-    mrs_json = results.mrs[0].mrs_json()
-    dmrs_json = results.mrs[0].dmrs_json()
-    mrs = results.mrs[0].mrs_str()
-    dmrs = results.mrs[0].dmrs_str()
+    mrs = results.mrses[0]
+    mrs_json = mrs.mrs_json()
+    dmrs_json = mrs.dmrs_json()
+    mrs_str = mrs.mrs_str()
+    dmrs_str = mrs.dmrs_str()
 
     sentence_xml_node = sentence_to_xml(results)
     first_dmrs_xml = sentence_xml_node.findall('./dmrses/dmrs')[0]
@@ -556,8 +557,8 @@ def dev_test(request):
                 'header': 'DMRS',
                  'sentence_info': js_sentence,
                  'text': text,
-                 'mrs': mrs,
-                 'dmrs': dmrs,
+                 'mrs': mrs_str,
+                 'dmrs': dmrs_str,
                  'mrs_json': mrs_json,
                  'dmrs_json': dmrs_json,
                  'dmrs_isf': dmrs_isf})
