@@ -18,7 +18,9 @@ urlpatterns = [
     
     url(r'^basket/$', views.basket, name='basket'),
 
+    url(r'^viz$', views.dev_viz, name='dev_viz'),
     url(r'^dev/$', views.dev_test, name='dev_test'),
+
     
     url(r'^coolisf/$', views.isf_parse, name='isf_parse'),
 ]

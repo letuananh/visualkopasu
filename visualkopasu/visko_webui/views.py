@@ -75,7 +75,7 @@ class DMRSBasket:
         sentenceID = str(sentenceID)
         interpretationID = str(interpretationID)
         if not sentenceID or not interpretationID:
-            # print("Invalid sentenceID or interpretationID")
+            # logging.debug("Invalid sentenceID or interpretationID")
             return # bad sentenceID or interpretationID 
         for item in self.items:
             if item.sentenceID == sentenceID and item.interpretationID == interpretationID:
@@ -233,7 +233,7 @@ def getAllCollections():
 # ------------------------------------------------------------------
 
 def home(request):
-    print(request.POST.get('user_query', ''))
+    logging.debug(request.POST.get('user_query', ''))
     
     # dao = vkconfig.getDAO()    
     c = Context({
@@ -309,9 +309,9 @@ def search(request):
     DEFAULT_LIMIT = 10000 # result limit
     engines = []
     collection = request.POST.get('collection_name', '')
-    print("collection = %s" % (collection,))
+    logging.debug("collection = %s" % (collection,))
     if collection:
-        print("Limited search in collection %s" % (collection,))
+        logging.debug("Limited search in collection %s" % (collection,))
         dao = vkconfig.BibliotecheMap[collection].sqldao
         engine = LiteSearchEngine(dao, limit=DEFAULT_LIMIT)
         engines.append(engine)
@@ -321,7 +321,7 @@ def search(request):
             engines.append(engine)
     try:
         user_query = request.POST.get('user_query', '')
-        print("User query: %s" % user_query)
+        logging.debug("User query: %s" % user_query)
         search_statistics = ''
         search_results = None
         dmrs_search_results = None
@@ -352,7 +352,7 @@ def search(request):
         search_results = None
         pass
     
-    #print("Search results: %s" % search_results)
+    #logging.debug("Search results: %s" % search_results)
     
     c = Context({
          'title'  : 'Search Results' if user_query else 'Search'
@@ -441,10 +441,10 @@ def dmrs_to_js(sentence_text, dmrs, corpus=None, document=None, sentence=None, i
     for a_node in dmrs.nodes:
         if a_node.ID == -1:
             a_node.ID = a_node.ident
-            print('ID: %s' % (a_node.ID))
+            logging.debug('ID: %s' % (a_node.ID))
         node_list += node_to_javascript(a_node, link_counter[a_node.ID]) + "\n\t\t\t\t"
         node_id_list.append("node_" + str(a_node.ID))
-    print(node_list)
+    logging.debug(node_list)
 
     return DMRSItem(sentence_text=sentence_text,
                     node_list=node_list,
@@ -455,6 +455,10 @@ def dmrs_to_js(sentence_text, dmrs, corpus=None, document=None, sentence=None, i
                     document=document,
                     sentence=sentence,
                     interpretation=interpretation,
+                    dmrs_str='',
+                    mrs_str='',
+                    dmrs_json='',
+                    mrs_json=''
                     )
 
 
@@ -467,13 +471,13 @@ def basket(request):
         command = 'view'
     dao = vkconfig.getDAO()
     if command == 'remove':
-        print("Removing from basket: sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
+        logging.debug("Removing from basket: sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
         DMRSBasket.instance(request).remove(sentenceID, interpretationID)
         DMRSBasket.instance(request).save(request)
         # redirect to view
         return redirect("/basket")
     if command == 'add':
-        print("Adding sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
+        logging.debug("Adding sentenceID=%s (interpretationID=%s)" % (sentenceID, interpretationID))
         DMRSBasket.instance(request).add(sentenceID, interpretationID)
         DMRSBasket.instance(request).save(request)
         # redirect to view
@@ -482,9 +486,9 @@ def basket(request):
         # display basket
         basket = DMRSBasket.instance(request)
         dmrses = []
-        print("Basket size: %s" % len(basket.items))
+        logging.debug("Basket size: %s" % len(basket.items))
         for item in basket.items:
-            print("Adding sentenceID=%s (interpretationID=%s)" % (item.sentenceID, item.interpretationID))
+            logging.debug("Adding sentenceID=%s (interpretationID=%s)" % (item.sentenceID, item.interpretationID))
             sentence = dao.getSentence(item.sentenceID, interpretationIDs=[item.interpretationID])
             dmrs = sentence_to_javascript(sentence, dao)
             if dmrs:
@@ -505,27 +509,29 @@ def isf_parse(request):
 
     sentence = Sentence(text=sentence_text)
     js_dmrses = []
-    filepath = os.path.abspath("data/isf_debug.xml")
-    print(filepath)
-    debugfile = open(filepath, 'w')
-    
-    for mrs_node in sentence_xml_node.findall('./dmrses/dmrs'):
+    # for debug
+    dmrs_xml_strings = []
+
+    for mrs, mrs_node in zip(parse_result.mrs, sentence_xml_node.findall('./dmrses/dmrs')):
+        # for debug
         xmlstr = ET.tostring(mrs_node, encoding='utf-8').decode('utf-8')
-        debugfile.write(xmlstr)
-        debugfile.write('\n\n')
+        dmrs_xml_strings.append(xmlstr)
         # build visualkopasu.kopasu.models.DMRS object
         DMRS_obj = getDMRSFromXML(mrs_node)
-        js_dmrses.append(dmrs_to_js(sentence_text, DMRS_obj))
+        dmrs_js = dmrs_to_js(sentence_text, DMRS_obj)
+        dmrs_js.dmrs_str = mrs.dmrs_str()
+        dmrs_js.mrs_str = mrs.mrs_str()
+        dmrs_js.dmrs_json = mrs.dmrs_json()
+        dmrs_js.mrs_json = mrs.mrs_json()
+        js_dmrses.append(dmrs_js)
 
-    debugfile.close()
-    
-    c = Context({'title' : sentence.text
-                 ,'header': 'Integrated Semantic Framework'
-                 ,'dmrses' : js_dmrses
-                 ,'sentence_text': sentence_text
-    })
-    c.update(csrf(request))   
-    return render(request, "coolisf/index.html", c)    
+    c = Context({'title': sentence.text,
+                 'header': 'Integrated Semantic Framework',
+                 'dmrses': js_dmrses,
+                 'sentence_text': sentence.text})
+    c.update(csrf(request))
+    return render(request, "coolisf/index.html", c)
+
 
 def dev_test(request):
     # What do we need to display a sentence?
@@ -534,14 +540,38 @@ def dev_test(request):
     sentence = dao.getSentence(sentence_id)
 
     js_sentence = sentence_to_javascript(sentence)
-    sentence_interpretations = sentence.interpretations
-    
-    c = Context({'title' : sentence.text
-    ,'header': 'DMRS'
-    ,'sentence_info' : js_sentence
-    })
+    # sentence_interpretations = sentence.interpretations
+
+    text = 'Dogs are funnier than Asian tiger mosquitoes.'
+    results = Grammar().txt2dmrs(text)
+    mrs_json = results.mrs[0].mrs_json()
+    dmrs_json = results.mrs[0].dmrs_json()
+    mrs = results.mrs[0].mrs_str()
+    dmrs = results.mrs[0].dmrs_str()
+
+    sentence_xml_node = sentence_to_xml(results)
+    first_dmrs_xml = sentence_xml_node.findall('./dmrses/dmrs')[0]
+    dmrs_isf = dmrs_to_js(text, getDMRSFromXML(first_dmrs_xml))
+    c = Context({'title': sentence.text,
+                'header': 'DMRS',
+                 'sentence_info': js_sentence,
+                 'text': text,
+                 'mrs': mrs,
+                 'dmrs': dmrs,
+                 'mrs_json': mrs_json,
+                 'dmrs_json': dmrs_json,
+                 'dmrs_isf': dmrs_isf})
     return render(request, "dev_test/index.html", c)
-    
+
+
+def dev_viz(request):
+    '''Delphin-viz demo'''
+    c = Context({'title': 'Delphin-viz demo',
+                 'header': 'Delphin-viz demo',
+                 'sentence_info': ''})
+    return render(request, "dev_test/viz.html", c)
+
+
 def isf_parse_raw(request):
     ''' Parse a sentence using ISF and then display its DMRS
     '''
@@ -549,12 +579,10 @@ def isf_parse_raw(request):
     results = Grammar().txt2dmrs(sentence)
     mrses = None
     if results and results.mrs:
-        print(results.mrs[0].preds())
-        mrses = [ PredSense.tag_sentence(mrs).replace('\n', '<br/>\n') for mrs in results.mrs ]
-    c = Context({
-        'sentence' : sentence
-        ,'mrses' : mrses
-    })
-    print(results.mrs)
-    c.update(csrf(request))   
+        logging.debug(results.mrs[0].preds())
+        mrses = [PredSense.tag_sentence(mrs).replace('\n', '<br/>\n') for mrs in results.mrs]
+    c = Context({'sentence': sentence,
+                 'mrses': mrses})
+    logging.debug(results.mrs)
+    c.update(csrf(request))
     return render(request, 'coolisf/raw.html', c)

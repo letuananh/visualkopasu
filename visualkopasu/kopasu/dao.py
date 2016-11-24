@@ -3,19 +3,20 @@ Data access layer for VisualKopasu project.
 @author: Le Tuan Anh
 '''
 
-
-# Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+# Copyright 2016, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+
+########################################################################
 
 import os.path
 from visualkopasu.util import getLogger
@@ -140,13 +141,13 @@ class ObjectCache():
             if key not in self.cacheMap:
                 self.cacheMap[key] = instance
             else:
-                print(("Cache error: key [%s] exists!" % key))
+                logger.debug(("Cache error: key [%s] exists!" % key))
                 
             key = instance.__dict__[self.orm_config.columnID]
             if key not in self.cacheMapByID:
                 self.cacheMapByID[key] = instance
             else:
-                print(("Cache error: ID [%s] exists!" % key))
+                logger.debug(("Cache error: ID [%s] exists!" % key))
 
     def getByValue(self, value, new_object=None, context=None):
         if value not in self.cacheMap:
@@ -155,7 +156,7 @@ class ObjectCache():
                 # try to select from database first
                 results = self.orm_config.select(condition="%s=?" % self.cache_by_field, args=[value])
                 if results is None or len(results) != 1:
-                    # print("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
+                    # logger.debug("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
                     new_object = self.orm_config.create_instance()
                     new_object.__dict__[self.cache_by_field] = value
                     self.orm_config.save(new_object, update_back=True, context=context)
@@ -369,14 +370,14 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             condition = 'WHERE ' + condition
 
         params.append(limit)
-        print(("Query: %s" % query.format(condition=condition)))
-        print(("Params: %s" % params))
+        logger.debug(("Query: %s" % query.format(condition=condition)))
+        logger.debug(("Params: %s" % params))
         rows = self.orm_manager.selectRows(query.format(condition=condition), params)
-        # print("rows: %s" % rows)
+        # logger.debug("rows: %s" % rows)
         if rows:
-            print(("Found: %s presentation(s)" % len(rows)))
+            logger.debug(("Found: %s presentation(s)" % len(rows)))
         else:
-            print("None was found!")
+            logger.debug("None was found!")
 
         sentences = []
         sentences_by_id = {}
@@ -397,14 +398,14 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 sentences_by_id[sentenceID] = a_sentence
             # sentences.append(a_sentence)
         
-        print(("Sentence count: %s" % len(sentences)))
+        logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
     
     def build_search_result(self, rows, no_more_query=False):
         if rows:
-            print(("Found: %s presentation(s)" % len(rows)))
+            logger.debug(("Found: %s presentation(s)" % len(rows)))
         else:
-            print("None was found!")
+            logger.debug("None was found!")
             return []
         sentences = []
         sentences_by_id = { }
@@ -432,7 +433,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 sentences_by_id[sentenceID] = a_sentence
             #sentences.append(a_sentence)
         
-        print(("Sentence count: %s" % len(sentences)))
+        logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
     
     def getLemma(self, lemma):
@@ -447,7 +448,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         if lemma is None:
             return []
         else:
-            print(lemma)
+            logger.debug(lemma)
             lemmaID = lemma.ID
             
         query = '''
@@ -462,8 +463,8 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         '''
         params = [lemmaID, limit]
 
-        print(("Query: %s" % query))
-        print(("Params: %s" % params))
+        logger.debug(("Query: %s" % query))
+        logger.debug(("Params: %s" % params))
         rows = self.orm_manager.selectRows(query, params)
         return self.build_search_result(rows)
     
@@ -479,8 +480,8 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         '''
         params = [carg, limit]
         
-        print(("Query: %s" % query))
-        print(("Params: %s" % params))
+        logger.debug(("Query: %s" % query))
+        logger.debug(("Params: %s" % params))
         rows = self.orm_manager.selectRows(query, params)
         return self.build_search_result(rows)
             

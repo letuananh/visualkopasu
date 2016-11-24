@@ -16,9 +16,37 @@ Parse raw text document (ACL dataset) into XML-based format for VisualKopasu
 # You should have received a copy of the GNU General Public License 
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
+########################################################################
+
+import sys
+import time
+import datetime
+import os.path
+# import re
+import gzip
+# import csv
+import logging
+from collections import deque
+from zipfile import ZipFile
+# from gzip import GzipFile
+# import StringIO
+
+from xml.etree import ElementTree as ETree
+from xml.etree.ElementTree import Element
+from xml.etree.ElementTree import SubElement
+# from xml.etree.ElementTree import Comment
+
+from chirptext.leutile import header
+
+from config import ViskoConfig as vkconfig
+from text_to_sqlite import ParseContext
+from text_to_sqlite import convert_with_context
+
+########################################################################
+
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2013, Visual Kopasu"
-__credits__ = [ "Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying" ]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -27,44 +55,18 @@ __status__ = "Prototype"
 
 ########################################################################
 
-from xml.etree import ElementTree as ETree
-from xml.etree.ElementTree import Element, SubElement, Comment
-
-import time, datetime
-import os.path
-import re
-import gzip
-from config import ViskoConfig as vkconfig
-import csv
-import logging
-import sys
-from text_to_sqlite import *
-from zipfile import ZipFile
-from gzip import GzipFile
-import StringIO
-from collections import deque
-
 # Init log function
 sim_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logger = logging.getLogger('acl_parser')
 
-INTERPRETATION_TOKEN     = chr(10) + chr(12) + chr(10)
-DRMS_TREE_TOKEN          = chr(10) + chr(10) + chr(10)
-PARSE_TREE_TOKEN         = chr(10) + chr(10)    
-DEBUG_MODE               = False
+INTERPRETATION_TOKEN = chr(10) + chr(12) + chr(10)
+DRMS_TREE_TOKEN = chr(10) + chr(10) + chr(10)
+PARSE_TREE_TOKEN = chr(10) + chr(10)
+DEBUG_MODE = False
 
-def header(text, style='H2', additional_text=''):
-    if style == 'H1':
-        print("###################################################")
-        print("# " + text)
-        print("###################################################")
-    else:
-        print('')
-        print("{{{{{{{{{{---" + text + "---}}}}}}}}}}")
-        print('')
-    print(additional_text)
-    
+
 class ParseConfig:
+
     def __init__(self, data_root, database_name=None):
         self.data_root = data_root
         self.sentence_list_folder = os.path.join(data_root, 'sentence_list')
@@ -73,39 +75,41 @@ class ParseConfig:
         self.output_folder = os.path.join(data_root, 'output')
         self.logfolder = os.path.join(data_root, 'logs')
 
+
 class ParserHelper:
     @staticmethod
     def list_files(source_folder):
-        all_files = [ f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f)) ]
+        all_files = [f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f))]
         return all_files
 
     @staticmethod
     def list_dirs(source_folder):
-        all_files = [ f for f in os.listdir(source_folder) if os.path.isdir(os.path.join(source_folder, f)) ]
+        all_files = [f for f in os.listdir(source_folder) if os.path.isdir(os.path.join(source_folder, f))]
         return all_files
-    
+
     @staticmethod
     def makedirs(destination_folder):
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
 
+
 def parse(dmrs_content_file, sentence_id, sentence_text, destination):
     logger.debug("parsing [{src}] >> ...".format(src=dmrs_content_file))
-    
+
     dmrs_content = open(dmrs_content_file, 'rb').read().decode('utf-8')
-        
+
     # store to XML
     a_sentence = Element('sentence')
     a_sentence.set('version', '1.0')
-    
+
     a_sentence.attrib['id'] = sentence_id.decode('utf-8')
     xml_text_elem = SubElement(a_sentence, 'text')
     xml_text_elem.text = sentence_text.decode('utf-8')
-    
+
     a_interpretation = SubElement(a_sentence, 'interpretation')
     a_interpretation.attrib['id'] = '1'
     a_interpretation.attrib['mode'] = 'active'
-    
+
     try:
         dmrs_node = ETree.fromstring(dmrs_content.encode('utf-8'))
     except Exception, e:
@@ -119,10 +123,11 @@ def parse(dmrs_content_file, sentence_id, sentence_text, destination):
         xml_content = ETree.tostring(a_sentence, encoding='UTF-8', method="xml")
         logger.debug("Writing XML content to file...")
         output_file.write(xml_content)
-    
+
     logger.debug("Finished: [{src}] => [{dest}]".format(src=dmrs_content_file, dest=destination))
-    
+
     return True
+
 
 def parse_doc(config, corpus_name, doc_name, doc_progress=''):
     document_path = os.path.join(config.sentence_list_folder, corpus_name, doc_name, doc_name + "-leg-sentences.txt")
@@ -131,10 +136,8 @@ def parse_doc(config, corpus_name, doc_name, doc_progress=''):
     # make output dir if needed
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
-    
     total_time = 0
     processed_files = 0
-    
     sentences = open(document_path, 'rb').readlines()
     sentences_count = len(sentences)
     for i in range(sentences_count):
@@ -143,7 +146,6 @@ def parse_doc(config, corpus_name, doc_name, doc_progress=''):
         # for each sentence
         pieces = sentence.split('\t')
         if len(pieces) != 5:
-            #print("ERROR")
             logger.error("Invalid sentence information: [corpus=%s - docname=%s]%s" % (corpus_name, doc_name, sentence))
         else:
             # 0 - sentenceID, 4 sentence_text
@@ -172,14 +174,13 @@ def parse_doc(config, corpus_name, doc_name, doc_progress=''):
             else:
                 logger.debug(destination + " is found!")
     logger.debug("Total consumed time = %5.2f secs" % total_time)
-        
-    pass
+
 
 def parse_corpora(config):
-    #print("Listing %s" % config.sentence_list_folder)
     corpora = ParserHelper.list_dirs(config.sentence_list_folder)
     for corpus in corpora:
         parse_corpus(config, corpus)
+
 
 def parse_corpus(config, corpus):
     header(corpus)
@@ -191,10 +192,10 @@ def parse_corpus(config, corpus):
         parse_doc(config, corpus, doc, doc_progress="%s/%s" % (i, doc_count))       
         # convert(config.output_folder, corpus, doc, dbname=config.database_name)   
 
+
 def import_corpus(config, corpus):
     documents = ParserHelper.list_dirs(os.path.join(config.sentence_list_folder, corpus))
     doc_count = len(documents)
-    
     context = ParseContext(config.output_folder, corpus, '', dbname=config.database_name, auto_flush=False)
     for i in range(doc_count):
         doc = documents[i]
@@ -203,10 +204,12 @@ def import_corpus(config, corpus):
     print("Finished import documents from corpus %s. Flushing corpus to database ..." % corpus)
     context.flush()
     print("DONE!!!")
-        
+
+
 def import_doc(config, corpus, doc, doc_progress, parse_context):
     print("Importing doc %s of corpus %s (%s) into SQLITE DB" % (doc, corpus, doc_progress))
     convert_with_context(parse_context)
+
 
 class CorpusInfo:
     def __init__(self, root, name):
@@ -215,17 +218,18 @@ class CorpusInfo:
 
     def get_path(self):
         return os.path.join(self.root, self.name)
-        
+
     def get_documents(self):
         doc_names = ParserHelper.list_dirs(self.get_path())
         docs = []
         for doc_name in doc_names:
             docs.append(DocumentInfo(doc_name, self))
         return docs
-    
+
     def __str__(self):
         return "[Corpus: %s]" % self.get_path()
-    
+
+
 class DocumentInfo:
     def __init__(self, name, corpus):
         self.name = name
@@ -240,9 +244,10 @@ class DocumentInfo:
         for sentence_name in sentence_names:
             sentences.append(SentenceInfo(sentence_name, self))
         return sentences
-        
+
     def __str__(self):
-        return "[Document: %s]" % self.get_path()           
+        return "[Document: %s]" % self.get_path()
+
 
 class SentenceInfo:
     def __init__(self, name, document):
@@ -253,8 +258,9 @@ class SentenceInfo:
         return os.path.join(self.document.get_path(), self.name)
 
     def __str__(self):
-        return "[Sentence: %s]" % self.get_path()       
-        
+        return "[Sentence: %s]" % self.get_path()
+
+
 def pack_corpora(config):
     corpora = ParserHelper.list_dirs(os.path.join(config.output_folder))
     
@@ -276,38 +282,29 @@ def pack_corpora(config):
     while len(doc_queue) > 0:
         group = []
         for i in range(290):
-            if(len(doc_queue) >0):
+            if(len(doc_queue) > 0):
                 group.append(doc_queue.popleft())
         groups.append(group)
-    
+
     id = 1
     for group in groups:
         print("Packing ACL_pack%d: %d documents" % (id, len(group)))
         package_path = os.path.join(config.data_root, "acl_corpora", "corpora_acl%d.zip" % id)
-        
+
         with ZipFile(package_path, 'w') as acl_package:
             count = 0
             for document in group:
-                count+=1
+                count += 1
                 print("Package %d - doc %d/%d" % (id, count, len(group)))
                 sentences = document.get_sentences()
                 for sentence in sentences:
                     acl_package.write(sentence.get_path(), sentence.get_path().replace(sentence.document.corpus.get_path(), ''))
-                    #break # only the first sentence
-                #break # only the first document
-            #break #only the first group
+                    # break # only the first sentence
+                # break # only the first document
+            # break #only the first group
         id += 1
-    '''
-    # Sample of read code
-    with ZipFile(package_path, 'r') as myzip:
-    names = myzip.namelist()
-    for name in names:
-        print(name)
-        zipfile = StringIO.StringIO(myzip.read(name))
-        content = GzipFile(fileobj=zipfile, mode='rb').readlines()[0]
-        print(content)
-    '''
-    
+
+
 def list_zipped_corpus(config, package_path):
     if not os.path.isfile(package_path):
         package_path = os.path.join(config.data_root, package_path)
@@ -329,7 +326,8 @@ def list_zipped_corpus(config, package_path):
         sentences = doc.getAllSentences(document)
         print("Document: %s - %s sentences" % (document, len(sentences)))
     print("Total: %s documents" % len(documents))
-    
+
+
 def read_zipped_sentence(config, package_path, document_name, sentence_name):
     if not os.path.isfile(package_path):
         package_path = os.path.join(config.data_root, package_path)

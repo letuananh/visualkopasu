@@ -16,6 +16,8 @@ Zipped XML-based data access layer for VisualKopasu project.
 # You should have received a copy of the GNU General Public License 
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
+########################################################################
+
 import gzip
 import os.path
 import logging
@@ -27,9 +29,21 @@ from xml.etree import ElementTree as ETree
 
 from .models import Sentence, Interpretation, DMRS
 from .models import Node, SortInfo, Gpred, Link, RealPred, Post, Rargname
-"""
-XML Document repository 
-"""
+
+########################################################################
+
+__author__ = "Le Tuan Anh"
+__copyright__ = "Copyright 2012, Visual Kopasu"
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
+__license__ = "GPL"
+__version__ = "0.1"
+__maintainer__ = "Le Tuan Anh"
+__email__ = "tuananh.ke@gmail.com"
+__status__ = "Prototype"
+
+########################################################################
+
+
 class ZippedXMLDocumentDAO():
     """
     input: path to folder stores the Sentence files
@@ -104,9 +118,9 @@ class ZippedXMLDocumentDAO():
 
         result_set = []
         q = "interpretation[@id='" + interpretationID + "']" if interpretationID else "interpretation"
-        print(("Query = %s" % q))
+        logging.debug(("Query = %s" % q))
         elements = root.findall(q)
-        print(("Found element: %s" % len(elements)))
+        logging.debug(("Found element: %s" % len(elements)))
         # for each dmrs
         for element in elements:
             if dmrs_only:

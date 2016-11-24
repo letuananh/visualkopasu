@@ -5,16 +5,25 @@ Util for VisualKopasu project.
 
 # Copyright 2016, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+
+########################################################################
+
+import logging
+from xml.etree import ElementTree as ETree
+from .models import Sentence, Interpretation, DMRS
+from .models import Node, SortInfo, Link, Sense
+
+########################################################################
 
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2016, Visual Kopasu"
@@ -26,11 +35,6 @@ __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
 ########################################################################
-
-import logging
-from xml.etree import ElementTree as ETree
-from .models import Sentence, Interpretation, DMRS
-from .models import Node, SortInfo, Link, Sense
 
 
 def getDMRSFromXMLString(xmlcontent):
@@ -60,13 +64,13 @@ def getDMRSFromXML(dmrs_tag):
         sensegold_tag = node_tag.find('sensegold')
         if sensegold_tag is not None:
             # if we have sensegold, use it instead
-            print("Using gold")
             sense_info = Sense()
             sense_info.lemma = sensegold_tag.attrib['clemma']
             sense_info.synsetid = sensegold_tag.attrib['synset']
             sense_info.pos = sense_info.synsetid[-1]
             sense_info.score = '999'
             temp_node.sense = sense_info
+            logging.debug("Using gold => %s" % (sense_info.synsetid))
             pass
         else:
             sense_tag = node_tag.find('sense')

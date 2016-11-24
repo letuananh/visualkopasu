@@ -114,9 +114,6 @@ class TestDMRSDAO(unittest.TestCase):
             self.assertTrue(d.nodes)
             self.assertTrue(d.links)
             self.assertTrue(d.nodes[2].sense)
-            for n in d.nodes:
-                if n.sense:
-                    print(n.sense.synsetid)
 
     def test_xml_dao(self):
         print("Test ISF sense reading")

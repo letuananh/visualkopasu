@@ -16,6 +16,14 @@ A lite-weight ORM library
 # You should have received a copy of the GNU General Public License 
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
+########################################################################
+
+import logging
+import copy
+import sqlite3
+
+########################################################################
+
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2013"
 __license__ = "GPL"
@@ -24,18 +32,18 @@ __maintainer__ = "Le Tuan Anh"
 __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
-import copy
-import sqlite3
+########################################################################
+
 
 class ORMInfo:
-    def __init__(self, table_name, mapping, prototype, columnID = 'ID', orm_manager = None):
+    def __init__(self, table_name, mapping, prototype, columnID='ID', orm_manager=None):
         self.table_name = table_name
         self.mapping = mapping
         self.prototype = prototype
         self.columnID = columnID
         self.orm_manager = orm_manager
         if(not orm_manager):
-            print("There is no ORM manager for table %s" % table_name)
+            logging.debug("There is no ORM manager for table %s" % table_name)
         
     def create_instance(self):
         return copy.deepcopy(self.prototype)
@@ -67,7 +75,7 @@ class DBContext():
             self.conn.commit()
             LiteORM.clean(self.conn)
         except Exception as e:
-            print("Error while committing changes: %s" % e)
+            logging.debug("Error while committing changes: %s" % e)
             pass
         pass
  
@@ -88,7 +96,7 @@ class LiteORM():
             try:
                 conn.close()
             except Exception as e:
-                print("Error while closing %s" % e)
+                logging.debug("Error while closing %s" % e)
                 pass
         pass    
     
@@ -106,9 +114,9 @@ class LiteORM():
             conn.commit()
             return last_id
         except sqlite3.Error as e:
-            print("Query: %s" % query)
-            print("Params: %s" % params)
-            print("Error happened while trying to store a record: %s" % e)
+            logging.debug("Query: %s" % query)
+            logging.debug("Params: %s" % params)
+            logging.debug("Error happened while trying to store a record: %s" % e)
             pass
         finally:
             LiteORM.clean(conn)
@@ -138,7 +146,7 @@ class LiteORM():
             rows = cur.execute(query, params).fetchall()
             return rows
         except sqlite3.Error as e:
-            print("DB ERROR: %s" % e)
+            logging.debug("DB ERROR: %s" % e)
             pass
         finally:
             self.clean(conn)
@@ -172,8 +180,8 @@ class LiteORM():
                     , args = ','.join(['?'] * len(fields))
                     )
             
-            #print("Executing store_record: SQL = %s" % query)
-            #print("params = %s" % params)
+            #logging.debug("Executing store_record: SQL = %s" % query)
+            #logging.debug("params = %s" % params)
             
             cur.execute(query, params)
             last_id = cur.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -183,10 +191,10 @@ class LiteORM():
             if (not context) or (context.auto_commit):
                 conn.commit()
         except sqlite3.Error as e:
-            print("Error happened while trying to store a record: %s" % e)
+            logging.debug("Error happened while trying to store a record: %s" % e)
             if query:
-                print("Query: %s" % query)
-                print("Params: %s" % params)
+                logging.debug("Query: %s" % query)
+                logging.debug("Params: %s" % params)
             pass
         finally:
             if (not context) or (context.auto_close):
@@ -218,8 +226,8 @@ class LiteORM():
                 an_object.update_fields(mapping_info.mapping, dict(row))                
                 a_list.append(an_object)
         except sqlite3.Error as e:
-            print("Error happened while selecting records: %s" % e)
-            print("Current database file: %s" % self.db_path)
+            logging.debug("Error happened while selecting records: %s" % e)
+            logging.debug("Current database file: %s" % self.db_path)
             pass
         finally:
             self.clean(conn)
@@ -235,7 +243,7 @@ class LiteORM():
             if len(rows) == 1:
                 return dict(rows[0])
         except sqlite3.Error as e:
-            print("Error happened while selectRecord: %s" % e)
+            logging.debug("Error happened while selectRecord: %s" % e)
             pass
         finally:
             self.clean(conn)
@@ -270,7 +278,7 @@ class SmartRecord:
     def update_fields(self, map_info, a_dict):
         for pair in map_info:
             if type(pair) == list:
-                # print("using list mode for %s" % pair)
+                # logging.debug("using list mode for %s" % pair)
                 self.update_field(pair[1], pair[0], a_dict)
             elif type(pair) == str:
                 self.update_field(pair, pair, a_dict)

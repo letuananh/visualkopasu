@@ -32,6 +32,9 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
             });
             
             function initialise(){
+                $("#btnDelphinviz").button().click(function(){
+                    window.location = "{% url 'dev_viz' %}";           
+                });
                 $("#btnDevTest").button().click(function(){
                     window.location = "{% url 'dev_test' %}";           
                 });
@@ -69,7 +72,6 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
         <form id="form_search" action="{% url 'search' %}" method="POST">
         {% csrf_token %}
         <div id="toolbar" class="ui-corner-all">
-          <input type="button" id="btnDevTest" name="btnDevTest" value="Dev Test"/>
                 <button id="btnAdvanceSearch" name="btnAdvanceSearch" type="button">Advance Search</button>
                 <span id="effect" class="toolbar_label">Search</span>
                 <input id="user_query" name="user_query" />
@@ -103,6 +105,8 @@ along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
                 <span id="effect" class="toolbar_label">Sentence</span>
                 <input id="sentence" name="sentence" value='Some dogs bark.' />
                 <button type="submit" id="btnParse" name="btnParse">Parse</button>
+                <button type="button" id="btnDelphinviz" name="btnDelphinviz">Delphin-viz</button>
+                <button type="button" id="btnDevTest" name="btnDevTest">Dev</button>
             </div>
         </form>
         

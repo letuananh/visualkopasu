@@ -16,9 +16,20 @@ A simple DMRS search engine
 # You should have received a copy of the GNU General Public License 
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
+########################################################################
+
+import logging
+from collections import deque
+import threading
+import time
+
+from .liteorm import DBContext
+
+########################################################################
+
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = [ "Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying" ]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -27,11 +38,6 @@ __status__ = "Prototype"
 
 ########################################################################
 
-from collections import deque
-import threading
-import time
-
-from .liteorm import DBContext
 
 class QueryLink:
     def __init__(self, post=None, rargname=None, from_node=None, to_node=None, text=''):
@@ -223,7 +229,7 @@ class DMRSQueryParser:
     def parse(query_string):
         raw_parts = DMRSQueryParser.parse_raw(query_string)
         if raw_parts is None:
-            print("Cannot parse raw")
+            logging.debug("Cannot parse raw")
             return None
         parts = deque(raw_parts)
         
@@ -237,11 +243,11 @@ class DMRSQueryParser:
                     clause = []
                 else:
                     # error
-                    print("Invalid bracket")
+                    logging.debug("Invalid bracket")
                     return None
             elif part == ')':
                 if len(clause) < 1 or len(clause) > 3:
-                    print("Invalid clause (A clause must be either a node or a link)")
+                    logging.debug("Invalid clause (A clause must be either a node or a link)")
                     return None
                 else:
                     clauses.append(clause)
@@ -250,10 +256,10 @@ class DMRSQueryParser:
                     if len(parts) > 0:
                         next_part = parts.popleft()
                         if next_part.upper() not in ['AND']:
-                            print("Invalid or missing boolean operator")
+                            logging.debug("Invalid or missing boolean operator")
                             return None
                         if len(parts) == 0:
-                            print("Boolean keyword at the end of the query")
+                            logging.debug("Boolean keyword at the end of the query")
                             return None
             else:
                 if clause is not None:
@@ -265,16 +271,16 @@ class DMRSQueryParser:
                     if len(parts) > 0:
                         next_part = parts.popleft()
                         if next_part.upper() not in ['AND']:
-                            print("Invalid or missing boolean operator")
+                            logging.debug("Invalid or missing boolean operator")
                             return None
                         if len(parts) == 0:
-                            print("Boolean keyword at the end of the query")
+                            logging.debug("Boolean keyword at the end of the query")
                             return None
-                    #print("Invalid clause (missing bracket ?)")
+                    #logging.debug("Invalid clause (missing bracket ?)")
                     #return None
         # we shouldn't have any clause left in the queue
         if clause != None:
-            print("Incompleted query")
+            logging.debug("Incompleted query")
             return None
         return clauses
     
@@ -317,7 +323,7 @@ class DMRSQueryParser:
         else:
             parts = link.text.split("/")
             if len(parts) != 2:
-                print("Invalid link")
+                logging.debug("Invalid link")
                 return None
             post = parts[0]
             rargname = parts[1]
@@ -328,13 +334,13 @@ class DMRSQueryParser:
     def build_query_graph(clauses):
         for clause in clauses:
             if len(clause) == 1:
-                print("Node clause: [%s]" % DMRSQueryParser.parse_node(clause[0]))
+                logging.debug("Node clause: [%s]" % DMRSQueryParser.parse_node(clause[0]))
             elif len(clause) == 2:
-                print("Node with link: [%s] -- (%s)" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1])))
+                logging.debug("Node with link: [%s] -- (%s)" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1])))
             elif len(clause) == 3:
-                print("Node link to another node: [%s] -- (%s) -- [%s]" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1]), DMRSQueryParser.parse_node(clause[2])))
+                logging.debug("Node link to another node: [%s] -- (%s) -- [%s]" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1]), DMRSQueryParser.parse_node(clause[2])))
             else:
-                print("Invalid clause")
+                logging.debug("Invalid clause")
             pass
 
 class LiteSearchEngine:
@@ -357,9 +363,9 @@ class LiteSearchEngine:
                 return -1
             q.query = "SELECT COUNT(*) FROM (%s LIMIT ?)" % q.query
             q.params = q.params + [self.limit]
-            print(q)
+            logging.debug(q)
             rows = self.dao.query(q)
-            #print(rows)
+            #logging.debug(rows)
             if rows and len(rows) == 1 and len(rows[0]):
                 return rows[0][0]
         return -1
@@ -377,9 +383,9 @@ class LiteSearchEngine:
             ,params = dmrs_filter_query.params + [self.limit]
         )
         
-        #print(query)
+        #logging.debug(query)
         rows = self.dao.query(query)
-        #print(rows)
+        #logging.debug(rows)
         return rows
 
     def search(self, query_text):
@@ -395,7 +401,7 @@ class LiteSearchEngine:
         for clause in clauses:
             if len(clause) == 1:
                 node_queries.append(DMRSQueryParser.parse_node(clause[0]))
-                # print("Node clause: [%s]" % DMRSQueryParser.parse_node(clause[0]))
+                # logging.debug("Node clause: [%s]" % DMRSQueryParser.parse_node(clause[0]))
             elif len(clause) == 2:
                 #print"Node with link: [%s] -- (%s)" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1]))
                 # ignore for now
@@ -409,21 +415,21 @@ class LiteSearchEngine:
                 link_queries.append(link)
                 #print"Node link to another node: [%s] -- (%s) -- [%s]" % (DMRSQueryParser.parse_node(clause[0]), DMRSQueryParser.parse_link(clause[1]), DMRSQueryParser.parse_node(clause[2]))
             else:
-                #print("Invalid clause")
+                #logging.debug("Invalid clause")
                 pass
 
-        #print("Before: ")
-        # for node in node_queries: print(node)
+        #logging.debug("Before: ")
+        # for node in node_queries: logging.debug(node)
         
         # optimize node query order
         for node in node_queries:
             node.count = self.count_node([node])
             if node.count == -1:
-                print("remove %s" % (node,))
+                logging.debug("remove %s" % (node,))
                 node_queries.remove(node)
             # AND only optimization => any 0 will lead to nothing!
             if node.count == 0:
-                print("empty %s" % (node,))
+                logging.debug("empty %s" % (node,))
                 return []
         node_queries.sort()
         
@@ -449,13 +455,13 @@ class LiteSearchEngine:
             final_query.limit(self.limit)
             rows = self.get_dmrs(final_query)
             
-            print("~" * 20)
-            print(final_query)
+            logging.debug("~" * 20)
+            logging.debug(final_query)
             if rows:
-                print("Total found results: %s" % len(rows))
+                logging.debug("Total found results: %s" % len(rows))
             else:
-                print("None was found")
-            print("~" * 20)
+                logging.debug("None was found")
+            logging.debug("~" * 20)
 
             # Build search results
             results = self.dao.build_search_result(rows, True)
@@ -464,7 +470,7 @@ class LiteSearchEngine:
                     res.set_property("collection_name", self.dao.name)
             return results
         else:
-            print("Cannot form query")
+            logging.debug("Cannot form query")
             return None
 
 class SearchThread(threading.Thread):
@@ -475,7 +481,7 @@ class SearchThread(threading.Thread):
         self.results = None
     
     def run(self):
-        print("Searching on database: %s\nQuery: %s\n\n" % (self.engine.dao.orm_manager.db_path, self.query))
+        logging.debug("Searching on database: %s\nQuery: %s\n\n" % (self.engine.dao.orm_manager.db_path, self.query))
         self.results = self.engine.search(self.query)
 
 class SearchCluster():
@@ -491,17 +497,17 @@ class SearchCluster():
         self.engines.append(engine)
     
     def count_node(self, query_nodes):
-        print("\nCluster counting: %s\n" % (", ".join([str(node) for node in query_nodes])))
+        logging.debug("\nCluster counting: %s\n" % (", ".join([str(node) for node in query_nodes])))
         results = 0
         for engine in self.engines:
-            print("\nSearching on engine: %s\n" % engine.dao.name)
+            logging.debug("\nSearching on engine: %s\n" % engine.dao.name)
             result = engine.count_node(query_nodes)
             if result is not None and result > -1:
                 results += result
             if results > self.limit:
                 return results
             else:
-                print("Found %d so far ..." % results)
+                logging.debug("Found %d so far ..." % results)
         return results
     
     def search(self, query):
@@ -528,13 +534,13 @@ class SearchCluster():
                 thread.start()
             # Wait until all searches are finished
             for thread in running_threads:
-                print("Waiting for %s to reply" % thread.engine.name)
+                logging.debug("Waiting for %s to reply" % thread.engine.name)
                 thread.join()
                 # Aggregate results
                 if thread.results is not None:
                     results += thread.results
             if len(results) > self.limit:
                 return results
-            print("%s more clusters to be search" % len(threads))
+            logging.debug("%s more clusters to be search" % len(threads))
         # Done!
         return results
