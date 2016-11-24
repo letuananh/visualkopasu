@@ -1,0 +1,88 @@
+#container {
+    max-width: 900px;
+    margin: 2em auto;
+}
+
+#input-container {
+    /*width: 480px;*/
+    margin: auto;
+}
+
+#input-text {
+    width: 400px;
+}
+
+.input-line {
+    margin-top: 0.5em;
+}
+
+#text-input {
+    font-size: 2em;
+}
+
+
+#results-info {
+    text-align: center;
+}
+
+#results-container {
+    display: table;
+    width: 100%;
+    margin-top: 2em;
+}
+
+.result {
+    display: table-row;
+}
+
+.result-inner {
+    display: table-cell;
+    text-align: center;
+    padding: 1em 0;
+}
+
+.result .num {
+    font-size: 2em;
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    padding-right: 1em;
+}
+
+.viz {
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    margin: 1em 2em;
+}
+
+
+/* Styling for the save icons -- needs to be moved into the visualisations.  */
+
+.hidden {display: none}
+
+.tools {
+    position: absolute;
+    right: 0;
+}
+
+.save .icon {
+    display: inline-block;
+    vertical-align: middle;
+    background: url('content-save.png') no-repeat;
+    height: 24px;
+    width: 24px;
+}
+
+.save div {
+    display: inline-block;
+    vertical-align: middle;
+    font-family: sans-serif;
+    font-size: 0.65em;
+    font-weight: 600;
+}
+
+.save:hover {
+    cursor: pointer;
+}
+
