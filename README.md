@@ -25,10 +25,7 @@ Installation guide
 pip3 install django==1.9.6 numpy lxml pydelphin==0.5.1 nltk==3.2.1 fuzzywuzzy python-levenshtein
 
 * Extract the visual_kopasu.tar.gz to a folder (e.g. /home/user/visualkopasu)
-* Download sample dataset ("the Cathedral and the Bazaar") from: http://letuananh.dakside.org/home/download/cb.tgz
-* Copy all data files of "the Cathedral and the Bazaar" 
-	(non-wordnet with multiple DMRS & syntactic trees version)
-	```cp redwoods/cb/*.gz $(PROJECT_ROOT)/data/corpora/raw/redwoods/cb/```
+* Download sample dataset ("the Cathedral and the Bazaar") from: http://letuananh.dakside.org/home/download/test_minicb_cb100.tar.gz and extract to data folder. You should have something like this: /home/user/visualkopasu/data/raw/test/minicb/cb100/*.gz
 * Modify file config.py to point to actual project root
 	```PROJECT_ROOT = '/home/user/visualkopasu'```
 * From terminal run the following command:
