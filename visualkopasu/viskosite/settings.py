@@ -21,7 +21,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '$bjl_vm2l#$60mia@v$ef1pcq3-)rm36lbsz5076%xsexaxaso'
+SECRET_KEY = 'dev_key'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'visualkopasu.visko2',
+    'visualkopasu.visko1'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -56,7 +58,7 @@ ROOT_URLCONF = 'visualkopasu.viskosite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [ vkconfig.DJANGO_VIEW_DIR ],
+        'DIRS': [BASE_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -126,7 +128,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (
-    vkconfig.DJANGO_STATIC_DIR,
+    os.path.join(BASE_DIR, 'viskosite', 'static'),
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.

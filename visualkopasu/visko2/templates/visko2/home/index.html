@@ -1,0 +1,45 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+{% block content %}
+<h1 class="page-header">Integrated Semantic Framework</h1>
+
+<form method="POST">
+  {% csrf_token %}
+    <div class="input-group input-group-lg">
+      <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
+      <span class="input-group-btn">
+        <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Parse</button>
+      </span>
+    </div>
+</form>
+
+<h2 class="sub-header">Available Corpus</h2>
+
+{% for collection in collections %}
+<div class="panel panel-primary">
+  <div class="panel-heading">
+    <h3 class="panel-title">{{ collection.name }}</h3>
+  </div>
+  <div class="panel-body">
+    {% for corpus in collection.corpora %}
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{ corpus.name }}</h3>
+      </div>
+      <div class="panel-body">
+        <div class="list-group">
+          {% for doc in corpus.documents %}
+          <a href="#" class="list-group-item">
+            {{ doc.name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

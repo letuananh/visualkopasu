@@ -3,6 +3,9 @@ minicb.db*
 redwoods.db*
 *_debug.xml*
 *.py~
+*.html#
+*.css~
+*.txt~
 *.html~
 logs/
 erg.dat

@@ -17,7 +17,8 @@ from django.conf.urls import include, url
 from django.contrib import admin
 
 urlpatterns = [
-    url(r'^$', 'visualkopasu.visko_webui.views.home'),
-    url(r'^visko/', include('visualkopasu.visko_webui.urls')),
+    url(r'^$', 'visualkopasu.visko2.views.home'),
+    url(r'^visko1/', include('visualkopasu.visko1.urls', namespace="visko1"),),
+    url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
     url(r'^admin/', admin.site.urls),
 ]

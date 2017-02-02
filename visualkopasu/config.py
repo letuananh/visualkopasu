@@ -33,10 +33,7 @@ from visualkopasu.kopasu.dao import SQLiteCorpusCollection
 
 
 class ViskoConfig:
-    
     PROJECT_ROOT = os.path.expanduser('~/wk/visualkopasu')
-    DJANGO_VIEW_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/views/')
-    DJANGO_STATIC_DIR = os.path.join(PROJECT_ROOT, 'visualkopasu/visko_webui/static/')
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
 

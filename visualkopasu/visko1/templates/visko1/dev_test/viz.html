@@ -1,0 +1,143 @@
+{% load staticfiles %}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+{% comment %}
+Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
+This file is part of VisualKopasu.
+VisualKopasu is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+VisualKopasu is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License 
+along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+{% endcomment %}
+
+{% load staticfiles %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>{{title}}</title>
+        <link rel="stylesheet" href="{% static 'css/redmond/jquery-ui-1.9.0.custom.min.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/visualkopasu.css' %}" />
+        <script type="text/javascript" src="{% static 'js/jquery-1.8.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery-ui-1.9.0.custom.min.js' %}"></script>
+
+        <!-- Using delphin-viz -->
+        <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
+        <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
+        <script type="text/javascript" src="{% static 'viz/jquery-2.2.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/jquery-ui-1.11.4.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/lodash-4.11.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/svg-2.3.0.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/d3.v3.min.js' %}" charset="utf-8"></script>
+        <script type="text/javascript" src="{% static 'viz/demo.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
+        <script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
+        <!-- End of using delphin-viz -->
+        
+        <script type="text/javascript">
+            $(document).ready(function() {
+                initialise();
+            });
+            
+            function initialise(){
+            $('#btnReset').button().click(function(){
+              window.location = "{% url 'visko1:dev_viz' %}";           
+            });
+              $('#btnHome').button().click(function(){
+                window.location = "{% url 'visko1:home' %}";           
+            });
+
+                $("#btnDevTest").button().click(function(){
+                  window.location = "{% url 'visko1:dev_test' %}";           
+                });
+
+              $("#btnAdvanceSearch").button().click(function(){
+                window.location = "{% url 'visko1:search' %}";         
+            });
+
+                $('#btnParse').button().click(function(event) {
+        $.ajax({
+            url: RESOURCES[$('#input-grammar')[0].value],
+            dataType: 'json',
+            data: {
+                'derivation': $('#input-tree').prop('checked') ? 'json' : "null",
+                'mrs': $('#input-mrs').prop('checked') ? 'json' : "null",
+                'dmrs': $('#input-dmrs').prop('checked') ? 'json' : "null",
+                'input': $('#input-text').val(),
+                'results': $('#input-results').val()
+            },
+            dataFilter: function(data) {
+                return data.replace(/([^,]) "pedges"/, '$1, "pedges"');
+            },
+            success: function(data){
+                doResults(data);
+                updateUrl();
+            },
+            error: function(data){
+                alert("Error");
+            }
+        });
+    });
+
+
+            $('.corpus_name').tooltip();
+            $('.collection_name').tooltip({position: {
+              my: "right bottom+50"
+          },
+          tooltipClass: "entry-tooltip-positioner"});
+            }
+        </script>       
+    </head>
+
+    <body>
+        <div id="banner" class="ui-widget-header ui-corner-all">
+        {{header}}
+        </div>
+        <!--<h1>Delphin-viz demo</h1>-->
+        <form action="#" method="post" onsubmit="return false;">
+          {% csrf_token %}
+          <div id="toolbar" class="ui-corner-all">
+            <button type="button" id="btnHome" name="btnHome">Home</button>
+            <button type="button" id="btnReset" name="btnReset">Reset</button>
+              <input id="input-text" type="text" value="Some dogs bark.">
+              <button id="btnParse" type="submit" value="Parse">Parse</button>
+              <span id="effect" class="toolbar_label">Grammar:</span>
+              <select id="input-grammar">
+                <option value="erg-local">ERG (local)</option>
+                <option value="virgo-local">VIRGO (local)</option>
+              </select>
+              <span id="effect" class="toolbar_label">Results</span>
+              <select id="input-results">
+                <option value="1">1</option>
+                <option value="5" selected="selected">5</option>
+                <option value="10">10</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="500">500</option>
+              </select>
+              <span id="effect" class="toolbar_label">Tree</span>
+              <input id="input-tree" type="checkbox" checked="checked">
+              <span id="effect" class="toolbar_label">MRS</span>
+              <input id="input-mrs" type="checkbox" checked='checked'>
+              <span id="effect" class="toolbar_label">DMRS</span>
+              <input id="input-dmrs" type="checkbox" checked="checked">
+          </div>
+        </form>
+
+        <div id="results-info"></div>
+        <div style="overflow-y: auto; height: 500px;">
+        <div id="results-container"></div>
+        <div id="tooltip" class="tooltip"></div>
+        </div>
+        
+    </body>
+</html>    
+

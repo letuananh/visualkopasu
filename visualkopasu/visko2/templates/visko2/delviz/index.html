@@ -1,0 +1,109 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+{% block content %}
+<h1 class="page-header">Delphin-viz</h1>
+
+<form class="form-inline form-panel">
+  <label class="mr-sm-2" for="inlineFormCustomSelect">Server</label>
+  <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="input-grammar">
+    <option value="erg-local">ERG (local)</option>
+    <option value="erg-cl">ERG (cl)</option>
+    <option value="virgo-local">VIRGO (local)</option>
+  </select>
+
+  <label class="mr-sm-2" for="inlineFormCustomSelect">Results</label>
+  <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="input-results">
+    <option value="1">1</option>
+    <option value="5" selected="selected">5</option>
+    <option value="10">10</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+    <option value="500">500</option>
+  </select>
+  
+  <label class="custom-control custom-checkbox mb-2 mr-sm-2 mb-sm-0">
+    <input type="checkbox" id="input-tree" class="custom-control-input" checked="checked">
+    <span class="custom-control-indicator"></span>
+    <span class="custom-control-description">Tree</span>
+  </label>
+
+  <label class="custom-control custom-checkbox mb-2 mr-sm-2 mb-sm-0">
+    <input type="checkbox" id="input-mrs" class="custom-control-input" checked="checked">
+    <span class="custom-control-indicator"></span>
+    <span class="custom-control-description">MRS</span>
+  </label>  
+
+  <label class="custom-control custom-checkbox mb-2 mr-sm-2 mb-sm-0">
+    <input type="checkbox" id="input-dmrs" class="custom-control-input" checked="checked">
+    <span class="custom-control-indicator"></span>
+    <span class="custom-control-description">DMRS</span>
+  </label>  
+</form>
+
+<form>
+    <div class="input-group input-group-lg">
+      <input class="form-control input-lg" id="input_text" placeholder="Some dogs bark." value="{{ input_sentence|default:'Some dogs bark.' }}" type="text">
+      <span class="input-group-btn">
+        <button class="btn btn-default btn-lg" id="btnParse" type="button">Parse</button>
+      </span>
+    </div>
+</form>
+
+<div id="results-info"></div>
+<div style="overflow-y: auto; height: 500px;">
+  <div id="results-container"></div>
+  <div id="tooltip" class="tooltip"></div>
+</div>
+
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" src="{% static 'viz/lodash-4.11.2.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/svg-2.3.0.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/d3.v3.min.js' %}" charset="utf-8"></script>
+<script type="text/javascript" src="{% static 'viz/demo.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
+
+<script>
+ $(document).ready(function(){
+   $("#btnParse").on('click', function(e){
+     var grammar_url = RESOURCES[$('#input-grammar')[0].value];
+     var sentence = $('#input_text').val();
+     /* console.log('debug\n' + sentence + '\n' + grammar_url);
+      * console.log('derivation tree: ' + $('#input-tree').prop('checked'));
+      * console.log('MRS: ' + $('#input-mrs').prop('checked'));
+      * console.log('DMRS: ' + $('#input-dmrs').prop('checked'));
+      * console.log('Results: ' + $('#input-results').val());*/
+     $.ajax({
+       url: grammar_url,
+       dataType: 'json',
+       data: {
+         'derivation': $('#input-tree').prop('checked') ? 'json' : "null",
+         'mrs': $('#input-mrs').prop('checked') ? 'json' : "null",
+         'dmrs': $('#input-dmrs').prop('checked') ? 'json' : "null",
+         'input': sentence,
+         'results': $('#input-results').val()
+       },
+       dataFilter: function(data) {
+         return data.replace(/([^,]) "pedges"/, '$1, "pedges"');
+       },
+       success: function(data){
+         doResults(data);
+         updateUrl();
+       },
+       error: function(data){
+         alert("Error");
+       }
+     });
+   });
+ });
+</script>
+{% endblock %}

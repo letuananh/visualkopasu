@@ -173,7 +173,7 @@ class ObjectCache():
         return self.cacheMapByID[ID]
 
 
-class SQLiteCorpusCollection:
+class SQLiteCorpusCollection(object):
     def __init__(self, path):
         self.path = path
 

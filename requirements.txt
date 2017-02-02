@@ -1,0 +1,8 @@
+django==1.9.6
+numpy
+lxml
+pydelphin==0.5.1
+nltk==3.2.1
+fuzzywuzzy
+python-levenshtein
+
