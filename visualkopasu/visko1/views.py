@@ -55,8 +55,6 @@ from .clientutil import DataUtil
 # ISF support
 from coolisf.main import PredSense
 from coolisf.util import Grammar
-from coolisf.gold_extract import sentence_to_xml
-from coolisf.gold_extract import prettify_xml
 
 from .apps import ViskoWebuiConfig
 
@@ -512,7 +510,7 @@ def isf_parse(request):
     sentence_text = request.POST.get('sentence', None)
     parse_result = Grammar().txt2dmrs(sentence_text)
     # with sense tags
-    sentence_xml_node = sentence_to_xml(parse_result)
+    sentence_xml_node = parse_result.to_xml_node()
 
     sentence = Sentence(text=sentence_text)
     js_dmrses = []
