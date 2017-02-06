@@ -47,8 +47,6 @@ import os
 import unittest
 
 from coolisf.util import Grammar
-from coolisf.gold_extract import sentence_to_xml
-from coolisf.gold_extract import sentence_to_xmlstring
 
 from visualkopasu.config import Biblioteca
 from visualkopasu.config import ViskoConfig as vkconfig
@@ -118,11 +116,10 @@ class TestDMRSDAO(unittest.TestCase):
     def test_xml_dao(self):
         print("Test ISF sense reading")
         ERG = Grammar()
-        result = ERG.txt2dmrs('The dog barks.')
-        sent_node = sentence_to_xml(result)
-        self.assertTrue(sent_node)
+        sent = ERG.txt2dmrs('The dog barks.')
 
-        sent_string = sentence_to_xmlstring(result)
+        sent_node = sent.to_xml_node()
+        sent_string = sent.to_xml_str()
         with open('data/test_coolisf.xml', 'w') as outfile:
             outfile.write(sent_string)
 

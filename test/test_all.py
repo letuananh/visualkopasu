@@ -33,7 +33,33 @@ from test.test_setup import *
 from test.test_dmrs_query import *
 from test.test_search import *
 
+from coolisf.model import Sentence
+
+from visualkopasu.config import Biblioteca
+from visualkopasu.kopasu.util import RawXML
+
 ########################################################################
+
+
+class TestMain(unittest.TestCase):
+
+    testbib = Biblioteca('test')
+    corpus_name = 'minicb'
+    doc_name = 'cb100'
+
+    def test_process_raw(self):
+        cbdao = self.testbib.textdao.getCorpusDAO(self.corpus_name).getDocumentDAO(self.doc_name)
+        sentences = cbdao.getSentences()
+        self.assertEqual(len(sentences), 100)
+        raw = RawXML(cbdao.getSentenceRaw(sentences[0]))
+        self.assertIsNotNone(raw)
+        self.assertEqual(len(raw), 1)
+        self.assertEqual(raw.text, 'The Cathedral and the Bazaar')
+        # rebuild ISF sentence from this?
+        sent_isf = Sentence(raw.text)
+        sent_isf.add_from_xml(raw.parses[0].dmrs_str())
+        print(sent_isf.mrses[0].mrs_json())
+        print(sent_isf.mrses[0].dmrs_json())
 
 def main():
     unittest.main()
