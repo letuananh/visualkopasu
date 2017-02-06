@@ -19,7 +19,7 @@ Util for VisualKopasu project.
 ########################################################################
 
 import logging
-from xml.etree import ElementTree as ETree
+from lxml import etree
 from .models import Sentence, Interpretation, DMRS
 from .models import Node, SortInfo, Link, Sense
 
@@ -37,8 +37,51 @@ __status__ = "Prototype"
 ########################################################################
 
 
+class RawXML(object):
+    ''' Visko sentence in RAW XML format (preprocessor)
+    '''
+
+    def __init__(self, raw):
+        self.raw = raw
+        self.text = ''
+        self.xml = None
+        self.parses = []
+        if self.raw:
+            self.parse()
+
+    def parse(self):
+        self.xml = etree.XML(self.raw)
+        self.text = self.xml.find('text').text
+        for p in self.xml.findall('interpretation'):
+            mrs = p.findall('mrs')
+            dmrs = p.findall('dmrs')
+            parse = RawParse(p)
+            if mrs and len(mrs) > 0:
+                parse.mrs = mrs[0]
+            if dmrs and len(dmrs) > 0:
+                parse.dmrs = dmrs[0]
+            self.parses.append(parse)
+
+    def __len__(self):
+        return len(self.parses)
+
+
+class RawParse(object):
+
+    def __init__(self, node=None, mrs=None, dmrs=None):
+        self.node = node  # interpretation node
+        self.mrs = mrs
+        self.dmrs = dmrs
+
+    def mrs_str(self):
+        return etree.tostring(self.mrs).decode('utf-8') if self.mrs is not None else ''
+
+    def dmrs_str(self):
+        return etree.tostring(self.dmrs).decode('utf-8') if self.dmrs is not None else ''
+
+
 def getDMRSFromXMLString(xmlcontent):
-    root = ETree.fromstring(xmlcontent)
+    root = etree.XML(xmlcontent)
     if root.tag == 'interpretation':
         root = root.findall('dmrs')[0]
     return getDMRSFromXML(root)
@@ -136,26 +179,22 @@ def getDMRSFromXML(dmrs_tag):
 
 
 def getSentenceFromXMLString(xmlcontent):
-    root = ETree.fromstring(xmlcontent)
+    raw = RawXML(xmlcontent)
 
     # Build Sentence object
-    sid = root.attrib['id']
-    text = root.find('text').text
+    sid = raw.xml.attrib['id']
+    text = raw.xml.find('text').text
     sentence = Sentence(sid, text)
 
-    for interpretation_tag in root.findall('interpretation'):
+    for parse in raw.parses:
         interpretation = Interpretation()
-        interpretation.update_field("rid", "id", interpretation_tag.attrib)
-        interpretation.update_field("mode", "", interpretation_tag.attrib)
+        interpretation.update_field("rid", "id", parse.node.attrib)
+        interpretation.update_field("mode", "", parse.node.attrib)
         # interpretation.update_from(interpretation_tag.attrib)
         sentence.interpretations.append(interpretation)
         # XXX: parse all synthetic trees
 
         # parse all DMRS
-        dmrs_list = interpretation_tag.findall('dmrs')
-        for dmrs_tag in dmrs_list:
-            dmrs = getDMRSFromXML(dmrs_tag)
+        dmrs = getDMRSFromXML(parse.dmrs)
         interpretation.dmrs.append(dmrs)
-        # add interpretation to Sentence
-    # Return
     return sentence

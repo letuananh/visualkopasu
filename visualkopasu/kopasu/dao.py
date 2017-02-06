@@ -530,7 +530,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             if interpretationIDs and len(interpretationIDs) > 0:
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
                 params = params + interpretationIDs
-                
+
             self.Interpretation.select(conditions, params, a_sentence.interpretations)
             for a_interpretation in a_sentence.interpretations:
                 if not skip_details:
