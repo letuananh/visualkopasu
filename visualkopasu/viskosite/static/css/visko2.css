@@ -44,6 +44,37 @@ code {
 }
 
 /*
+ * DMRS visualisation
+ */
+
+.dmrs_sentence_text {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.sentence_text_normal {
+    font-family: monospace, 'Courier New';
+    font-size: 14px;
+    color: black;
+}
+
+.sentence_text_highlight {
+    font-family: monospace, 'Courier New';
+    font-size: 14px;
+    color: #FFFFFF;
+    padding: 3px;
+    font-weight: bold;
+    background-color: #FF3300;
+}
+
+.original_xml_box {
+    border: 1px solid #AAAAAA;
+    padding: 5px;
+    font-family: monospace, 'Courier New';
+    font-size: 14px;
+}
+
+/*
  * Top navigation
  * Hide default border to remove 1px line.
  */

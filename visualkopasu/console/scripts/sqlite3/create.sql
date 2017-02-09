@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS "interpretation" (
     , FOREIGN KEY(sentenceID) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS "parse_raw" (
+    "ID" INTEGER PRIMARY KEY  NOT NULL 
+    , "ident" VARCHAR 
+    , "text" TEXT
+    , "rtype" VARCHAR NOT NULL
+    , "interpretationID" INTEGER NOT NULL
+    , FOREIGN KEY(interpretationID) REFERENCES interpretation(ID) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS "dmrs" (
     "ID" INTEGER PRIMARY KEY  NOT NULL 
     , "ident" VARCHAR NOT NULL 
@@ -123,6 +132,7 @@ CREATE TABLE IF NOT EXISTS "dmrs_node_gpred_value" (
 
 CREATE INDEX IF NOT EXISTS "sentence_|_documentID" ON "sentence" ("documentID" ASC);
 CREATE INDEX IF NOT EXISTS "interpretation_|_sentenceID" ON "interpretation" ("sentenceID" ASC);
+CREATE INDEX IF NOT EXISTS "parse_raw_|_interpretationID" ON "parse_raw" ("interpretationID" DESC);
 CREATE INDEX IF NOT EXISTS "dmrs_|_interpretationID" ON "dmrs" ("interpretationID" DESC);
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_dmrsID" ON "dmrs_node" ("dmrsID" ASC);
 

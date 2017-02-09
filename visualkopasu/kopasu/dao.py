@@ -19,12 +19,14 @@ Data access layer for VisualKopasu project.
 ########################################################################
 
 import os.path
+import logging
 from visualkopasu.util import getLogger
 from .models import Corpus
 from .models import Document
 from .models import Sentence
 from .models import Interpretation
 from .models import DMRS
+from .models import ParseRaw
 from .models import Node
 from .models import Sense
 from .models import SortInfo
@@ -64,6 +66,7 @@ class CorpusORMSchema(object):
         self.Sentence = ORMInfo('sentence', ['ID', 'ident', 'text', 'documentID'], Sentence(), orm_manager=self.orm_manager)
         self.Interpretation = ORMInfo('interpretation', ['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
         self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
+        self.ParseRaw = ORMInfo('parse_raw', ['ID', 'ident', 'text', 'rtype', 'interpretationID'], ParseRaw(), orm_manager=self.orm_manager)
         # Node related tables
         self.Node = ORMInfo('dmrs_node',
                             [
@@ -216,7 +219,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
 
     def getDocumentByName(self, doc_name):
         return self.Document.select('name=?', [doc_name])
-    
+
     def getSentences(self, docID):
         return self.Sentence.select('documentID=?', (docID,))
 
@@ -244,6 +247,10 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 # Update sentenceID
                 interpretation.sentenceID = a_sentence.ID
                 self.Interpretation.save(interpretation, context=context)
+                # Save raw
+                for raw in interpretation.raws:
+                    raw.interpretationID = interpretation.ID
+                    self.ParseRaw.save(raw, context=context)
                 # Save DMRS
                 for dmrs in interpretation.dmrs:
                     dmrs.interpretationID = interpretation.ID
@@ -484,7 +491,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         logger.debug(("Params: %s" % params))
         rows = self.orm_manager.selectRows(query, params)
         return self.build_search_result(rows)
-            
+
     def getInterpretation(self, a_interpretation):
         # retrieve all DMRSes
         self.DMRS.select('interpretationID=?', [a_interpretation.ID], a_interpretation.dmrs)
@@ -517,10 +524,20 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 a_link.toNode = a_dmrs.getNodeById(a_link.toNodeID, True)[0]
         return a_interpretation
 
-    def getSentence(self, sentenceID, mode = None, interpretationIDs = None, skip_details=None):
-        a_sentence = self.Sentence.getByID(sentenceID)
-        
-        if a_sentence:
+    def saveParseRaw(self, a_raw, context=None):
+        self.ParseRaw.save(a_raw, context=context)
+
+    def get_raw(self, interpretationID, interpretation=None):
+        raws = self.ParseRaw.select('interpretationID=?', (interpretationID,))
+        if interpretation is not None:
+            for raw in raws:
+                raw.interpretationID = interpretation.ID
+                interpretation.raws.append(raw)
+        return raws
+
+    def getSentence(self, sentenceID, mode=None, interpretationIDs=None, skip_details=False, get_raw=True):
+        a_sentence = self.Sentence.getByID(str(sentenceID))
+        if a_sentence is not None:
             # retrieve all interpretations
             conditions = 'sentenceID=?'
             params = [a_sentence.ID]
@@ -530,11 +547,13 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             if interpretationIDs and len(interpretationIDs) > 0:
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
                 params = params + interpretationIDs
-
             self.Interpretation.select(conditions, params, a_sentence.interpretations)
             for a_interpretation in a_sentence.interpretations:
+                if get_raw:
+                    self.get_raw(a_interpretation.ID, a_interpretation)
                 if not skip_details:
                     self.getInterpretation(a_interpretation)
+        else:
+            logging.debug("No sentence with ID={} was found".format(sentenceID))
         # Return
-        return a_sentence   
-
+        return a_sentence

@@ -18,7 +18,6 @@ Parse count: {{ sentence.interpretations|length }}
   <li  class="active"><a data-toggle="tab" href="#delviz">Semantics</a></li>
   <li><a data-toggle="tab" href="#home">RAW</a></li>
 </ul>
-
 <div class="tab-content">
   <div id="delviz" class="tab-pane fade in active">
     <div id="dmrs_text_holder" class="dmrs_sentence_text"></div>
@@ -32,7 +31,6 @@ Parse count: {{ sentence.interpretations|length }}
 {% endblock %}
 
 
-
 {% block css %}
 <style>
  .tab-pane {
@@ -42,6 +40,7 @@ Parse count: {{ sentence.interpretations|length }}
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 {% endblock %}
+
 
 {% block script %}
 <script type="text/javascript" src="{% static 'viz/lodash-4.11.2.min.js' %}"></script>

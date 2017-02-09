@@ -5,15 +5,15 @@ Test Visual Kopasu
 
 # Copyright 2016, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 __author__ = "Le Tuan Anh"
@@ -60,8 +60,10 @@ class TestMain(unittest.TestCase):
         print(sent_isf.mrses[0].mrs_json_str())
         print(sent_isf.mrses[0].dmrs_json_str())
 
+
 def main():
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

@@ -73,6 +73,12 @@ class Sentence(SmartRecord):
     def getActiveInterpretation(self):
         return [repr for repr in self.interpretations if repr.mode == "active"]
 
+    def __len__(self):
+        return len(self.interpretations)
+
+    def __getitem__(self, key):
+        return self.interpretations[key]
+
     def __str__(self):
         return "[ID=" + self.ident + "]" + self.text
 
@@ -82,16 +88,37 @@ class Interpretation(SmartRecord):
     INACTIVE = 0
     ACTIVE = 1
 
-    def __init__(self, rid='', mode='', ID=None, dmrs=None, trees=None):
+    def __init__(self, rid='', mode='', ID=None, dmrs=None, trees=None, raws=None):
         self.ID = ID
         self.rid = rid
         self.mode = mode
         self.dmrs = dmrs if dmrs else list()
         self.parse_trees = trees if trees else list()
         self.sentenceID = None
+        self.raws = raws if raws else list()
 
     def __str__(self):
         return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
+
+
+class ParseRaw(SmartRecord):
+
+    JSON = 'json'
+    XML = 'xml'
+    MRS = 'mrs'  # MRS string - e.g. ACE output
+
+    def __init__(self, text='', ID=None, ident='', rtype=JSON):
+        self.ID = ID
+        self.ident = ident
+        self.text = text
+        self.rtype = rtype
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        txt = self.text if len(self.text) < 50 else self.text[:25] + '...' + self.text[-25:]
+        return "[{}:{}]".format(self.rtype, txt)
 
 
 class ParseTree:

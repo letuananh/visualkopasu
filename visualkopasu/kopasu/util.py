@@ -18,9 +18,10 @@ Util for VisualKopasu project.
 
 ########################################################################
 
+import codecs
 import logging
 from lxml import etree
-from .models import Sentence, Interpretation, DMRS
+from .models import Sentence, Interpretation, DMRS, ParseRaw
 from .models import Node, SortInfo, Link, Sense
 
 from coolisf.model import Sentence as ISFSentence
@@ -44,7 +45,7 @@ class RawXML(object):
     '''
 
     def __init__(self, raw):
-        self.raw = raw
+        self.raw = raw  # XML string
         self.text = ''
         self.xml = None
         self.parses = []
@@ -58,20 +59,38 @@ class RawXML(object):
             mrs = p.findall('mrs')
             dmrs = p.findall('dmrs')
             parse = RawParse(p)
-            if mrs and len(mrs) > 0:
+            if mrs and len(mrs) == 1:
                 parse.mrs = mrs[0]
-            if dmrs and len(dmrs) > 0:
+            else:
+                logging.warning("Multiple MRS nodes")
+            if dmrs and len(dmrs) == 1:
                 parse.dmrs = dmrs[0]
+            else:
+                logging.warning("Multiple DMRS nodes")
             self.parses.append(parse)
+
+    def __iter__(self):
+        return iter(self.parses)
 
     def __len__(self):
         return len(self.parses)
+
+    def __getitem__(self, key):
+        return self.parses[key]
+
+    def __str__(self):
+        return "{} ({} parse(s))".format(self.text, len(self))
 
     def to_isf(self):
         sent = ISFSentence(self.text)
         for p in self.parses:
             sent.add_from_xml(p.dmrs_str())
         return sent
+
+    @staticmethod
+    def from_file(filename):
+        with codecs.open(filename, encoding='utf-8') as infile:
+            return RawXML(infile.read())
 
 
 class RawParse(object):
@@ -194,10 +213,16 @@ def getSentenceFromXMLString(xmlcontent):
     text = raw.xml.find('text').text
     sentence = Sentence(sid, text)
 
-    for parse in raw.parses:
+    for idx, parse in enumerate(raw):
         interpretation = Interpretation()
         interpretation.update_field("rid", "id", parse.node.attrib)
         interpretation.update_field("mode", "", parse.node.attrib)
+        if parse.mrs is not None:
+            # add raw MRS
+            interpretation.raws.append(ParseRaw(parse.mrs.text, rtype=ParseRaw.MRS))
+        if parse.dmrs is not None:
+            interpretation.raws.append(ParseRaw(parse.dmrs_str(), rtype=ParseRaw.XML))
+
         # interpretation.update_from(interpretation_tag.attrib)
         sentence.interpretations.append(interpretation)
         # XXX: parse all synthetic trees

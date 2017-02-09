@@ -42,7 +42,6 @@ __status__ = "Prototype"
 
 ########################################################################
 
-import sys
 import os
 import unittest
 
@@ -54,10 +53,28 @@ from visualkopasu.console.setup import prepare_database
 from visualkopasu.kopasu.util import getSentenceFromXMLString
 from visualkopasu.kopasu.util import getDMRSFromXMLString
 from visualkopasu.kopasu.util import getDMRSFromXML
+from visualkopasu.kopasu.util import RawXML
 from visualkopasu.kopasu.models import Corpus
 from visualkopasu.kopasu.models import Document
+from visualkopasu.kopasu.models import ParseRaw
 
 ########################################################################
+
+
+TEST_FILE = 'data/speckled_10565.xml'
+
+
+class TestRawXML(unittest.TestCase):
+
+    def test_read_from_xml(self):
+        raw = RawXML.from_file(TEST_FILE)
+        self.assertEqual(raw.text, 'I took a step forward.')
+        self.assertEqual(len(raw), 1)
+        # should have both MRS and DMRS
+        self.assertGreater(len(raw[0].mrs_str()), 0)
+        # print(raw[0].mrs.text)
+        self.assertGreater(len(raw[0].dmrs_str()), 0)
+        # print(raw[0].dmrs_str())
 
 
 class TestDMRSDAO(unittest.TestCase):
@@ -84,7 +101,7 @@ class TestDMRSDAO(unittest.TestCase):
     def test_sql_dao(self):
         print("test sql DAO")
         corpusdao = self.testbib.sqldao
-        # get document 
+        # get document
         cb = corpusdao.getDocumentByName(self.doc_name)[0]
         sentences = corpusdao.getSentences(cb.ID)
         self.assertTrue(sentences)
@@ -101,7 +118,7 @@ class TestDMRSDAO(unittest.TestCase):
 
     def test_xml_file_to_dmrs(self):
         print("Test XML parser")
-        with open('data/speckled_10565.xml') as testfile:
+        with open(TEST_FILE) as testfile:
             xmlstr = testfile.read()
             # print(">>>", xmlstr)
             sentobj = getSentenceFromXMLString(xmlstr)
@@ -112,6 +129,8 @@ class TestDMRSDAO(unittest.TestCase):
             self.assertTrue(d.nodes)
             self.assertTrue(d.links)
             self.assertTrue(d.nodes[2].sense)
+            # there should be 2 raw (MRS in str mode and DMRS in xml mode)
+            self.assertEqual(len(i.raws), 2)
 
     def test_xml_dao(self):
         print("Test ISF sense reading")
@@ -163,6 +182,33 @@ class TestDMRSSQLite(unittest.TestCase):
     def tearDownClass(cls):
         print("Cleaning up")
 
+    def ensure_corpus(self):
+        ''' Ensure that testcorpus exists'''
+        c = self.bib.sqldao.getCorpus(self.corpus_name)
+        if not c:
+            c = self.bib.sqldao.createCorpus(self.corpus_name)
+        return self.bib.sqldao.getCorpus(self.corpus_name)[0]
+
+    def ensure_doc(self):
+        ''' Ensure that testcorpus exists'''
+        corpus = self.ensure_corpus()
+        docs = self.bib.sqldao.getDocumentByName(self.doc_name)
+        if not docs:
+            doc = Document(name=self.doc_name, corpusID=corpus.ID)
+            self.bib.sqldao.saveDocument(doc)
+        return self.bib.sqldao.getDocumentByName(self.doc_name)[0]
+
+    def ensure_sent(self):
+        doc = self.ensure_doc()
+        with open(self.sentence_xml_file) as testfile:
+            xmlstr = testfile.read()
+            sentence = getSentenceFromXMLString(xmlstr)
+            sentence.documentID = doc.ID
+        sent = self.bib.sqldao.getSentence(sentenceID=1)
+        if sent is None:
+            self.bib.sqldao.saveSentence(sentence)
+        return self.bib.sqldao.getSentence(sentenceID=1)
+
     def test_create_a_corpus(self):
         print("Test creating a new corpus")
         self.bib.sqldao.createCorpus(self.corpus_name)
@@ -174,7 +220,7 @@ class TestDMRSSQLite(unittest.TestCase):
 
     def test_create_document(self):
         print("Test creating document")
-        corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
+        corpus = self.ensure_corpus()
         doc = Document(name=self.doc_name, corpusID=corpus.ID)
         self.bib.sqldao.saveDocument(doc)
 
@@ -189,10 +235,8 @@ class TestDMRSSQLite(unittest.TestCase):
             xmlstr = testfile.read()
         sentence = getSentenceFromXMLString(xmlstr)
         self.assertTrue(sentence.interpretations)
-        print(sentence)
 
-        # test save sentence
-        doc = self.bib.sqldao.getDocumentByName(self.doc_name)[0]
+        doc = self.ensure_doc()
         sentence.documentID = doc.ID
         sentence = self.bib.sqldao.saveSentence(sentence)
 
@@ -200,13 +244,39 @@ class TestDMRSSQLite(unittest.TestCase):
         actual_sentence = self.bib.sqldao.getSentence(sentenceID=sentence.ID)
         self.assertIsNotNone(actual_sentence.ID)
         self.assertEqual(actual_sentence.text, sentence.text)
-        self.assertTrue(actual_sentence.interpretations)
+        self.assertGreater(len(actual_sentence), 0)
+        self.assertEqual(len(actual_sentence[0].raws), 2)
+        self.assertEqual(actual_sentence[0].raws[0].rtype, ParseRaw.MRS)
+        self.assertEqual(actual_sentence[0].raws[1].rtype, ParseRaw.XML)
+        self.assertGreater(len(actual_sentence[0].raws[0].text), 0)
+        self.assertGreater(len(actual_sentence[0].raws[1].text), 0)
+        self.assertEqual(str(actual_sentence[0].raws[0]), '[mrs:[ LTOP: h0 INDEX: e2 [ e ...CONS: < e21 topic x16 > ]]')
+        self.assertEqual(str(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...st>H</post></link></dmrs>]')
 
+    def test_storing_parse_raw(self):
+        # Test creating parse_raw object
+        raw = ParseRaw('<xml></xml>', rtype=ParseRaw.XML)
+        self.assertEqual(raw.rtype, ParseRaw.XML)
+        jraw = ParseRaw()
+        self.assertEqual(jraw.rtype, ParseRaw.JSON)
+
+        # Test empty select
+        sent = self.ensure_sent()
+        self.assertIsNotNone(sent)
+        self.assertGreater(len(sent), 0)
+        raw.interpretationID = sent[0].ID
+        self.bib.sqldao.saveParseRaw(raw)
+        raws = self.bib.sqldao.get_raw(sent[0].ID)
+        self.assertGreater(len(raws), 0)
+        print(raws)
+        pass
 
 ########################################################################
 
+
 def main():
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

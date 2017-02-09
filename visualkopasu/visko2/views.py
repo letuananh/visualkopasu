@@ -60,7 +60,7 @@ def getAllCollections():
     return vkconfig.Biblioteche
 
 ##########################################################################
-# COOLISF
+# DEV
 ##########################################################################
 
 
@@ -93,20 +93,30 @@ def delviz(request):
     return render(request, "visko2/delviz/index.html", c)
 
 
+# Maximum parses
+RESULTS = (1, 5, 10, 50, 100, 500)
+
+
 def isf(request):
     c = Context({"title": "Integrated Semantic Framework",
                  "header": "Visual Kopasu 2.0"})
-    c.update(csrf(request))
+    input_results = int(request.POST.get('input_results', 5))
+    if input_results not in RESULTS:
+        input_results = 5
     sentence_text = request.POST.get('input_sentence', None)
-    print("Input sentence: {}".format(sentence_text))
     if sentence_text:
-        sent = Grammar().txt2dmrs(sentence_text)
-        sent_xml = sent.to_xml_str()
-        print(sent.mrses[0].dmrs_str())
-        c.update({'input_sentence': sentence_text, 'sxml': sent_xml, 'sent': sent})
+        print("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
+        sent = Grammar().txt2dmrs(sentence_text, parse_count=input_results)
+        print("sent.text = " + sent.text)
+        c.update({'sent': sent})
     else:
-        c.update({'input_sentence': 'Three musketeers walk into a bar.'})
-
+        sentence_text = 'Three musketeers walk into a bar.'
+    # -------
+    # render
+    c.update(csrf(request))
+    c.update({'input_sentence': sentence_text,
+              'input_results': input_results,
+              'RESULTS': RESULTS})
     return render(request, "visko2/isf/index.html", c)
 
 ##########################################################################
