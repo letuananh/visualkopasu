@@ -56,10 +56,9 @@ class TestMain(unittest.TestCase):
         self.assertEqual(len(raw), 1)
         self.assertEqual(raw.text, 'The Cathedral and the Bazaar')
         # rebuild ISF sentence from this?
-        sent_isf = Sentence(raw.text)
-        sent_isf.add_from_xml(raw.parses[0].dmrs_str())
-        print(sent_isf.mrses[0].mrs_json())
-        print(sent_isf.mrses[0].dmrs_json())
+        sent_isf = raw.to_isf()
+        print(sent_isf.mrses[0].mrs_json_str())
+        print(sent_isf.mrses[0].dmrs_json_str())
 
 def main():
     unittest.main()

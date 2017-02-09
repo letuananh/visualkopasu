@@ -36,6 +36,7 @@ link_folder `readlink -f ./modules/puchikarui/puchikarui` puchikarui
 
 link_folder `readlink -f ./modules/intsem.fx/lelesk` lelesk
 link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
+link_folder `readlink -f ./modules/intsem.fx/yawlib` yawlib
 
 # Grammars
 link_file `readlink -f ~/workspace/grammars/erg.dat` data/erg.dat

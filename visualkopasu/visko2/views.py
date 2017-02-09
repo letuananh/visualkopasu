@@ -5,7 +5,7 @@ Visko 2.0 - Views
 @author: Le Tuan Anh
 '''
 
-# Copyright 2016, Le Tuan Anh (tuananh.ke@gmail.com)
+# Copyright 2017, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
 # VisualKopasu is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,12 +32,16 @@ __status__ = "Prototype"
 
 import os
 
+from lxml import etree
+
 from django.template import Context
 from django.shortcuts import render
 from django.core.context_processors import csrf
 
-from visualkopasu.config import ViskoConfig as vkconfig
+from coolisf.util import Grammar
 
+from visualkopasu.config import ViskoConfig as vkconfig
+from visualkopasu.kopasu.util import RawXML
 
 ########################################################################
 
@@ -55,9 +59,22 @@ def getAllCollections():
                 doc.corpus = corpus
     return vkconfig.Biblioteche
 
+##########################################################################
+# COOLISF
+##########################################################################
+
+
+def dev(request):
+    c = Context({"title": "Test Bed @ Visual Kopasu 2.0",
+                 "header": "Visual Kopasu 2.0",
+                 "collections": getAllCollections()})
+    c.update(csrf(request))
+
+    return render(request, "visko2/dev/index.html", c)
+
 
 ##########################################################################
-# VIEWS
+# COOLISF
 ##########################################################################
 
 
@@ -74,3 +91,98 @@ def delviz(request):
                  "header": "Visual Kopasu 2.0"})
     c.update(csrf(request))
     return render(request, "visko2/delviz/index.html", c)
+
+
+def isf(request):
+    c = Context({"title": "Integrated Semantic Framework",
+                 "header": "Visual Kopasu 2.0"})
+    c.update(csrf(request))
+    sentence_text = request.POST.get('input_sentence', None)
+    print("Input sentence: {}".format(sentence_text))
+    if sentence_text:
+        sent = Grammar().txt2dmrs(sentence_text)
+        sent_xml = sent.to_xml_str()
+        print(sent.mrses[0].dmrs_str())
+        c.update({'input_sentence': sentence_text, 'sxml': sent_xml, 'sent': sent})
+    else:
+        c.update({'input_sentence': 'Three musketeers walk into a bar.'})
+
+    return render(request, "visko2/isf/index.html", c)
+
+##########################################################################
+# CORPUS
+##########################################################################
+
+
+def list_collection(request):
+    c = Context({"title": "Visual Kopasu 2.0",
+                 "header": "Visual Kopasu 2.0",
+                 "collections": getAllCollections()})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/index.html", c)
+
+
+def list_corpus(request, collection_name):
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    corpora = dao.getCorpora()
+    for corpus in corpora:
+        # fetch docs
+            corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
+            for doc in corpus.documents:
+                doc.corpus = corpus
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpora': corpora})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/collection.html", c)
+
+
+def list_doc(request, collection_name, corpus_name):
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    corpus = dao.getCorpus(corpus_name)[0]
+    corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
+    for doc in corpus.documents:
+        doc.corpus = corpus
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpus': corpus})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/corpus.html", c)
+
+
+def list_sent(request, collection_name, corpus_name, doc_id):
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    corpus = dao.getCorpus(corpus_name)[0]
+    doc = dao.getDocument(doc_id)
+    sentences = dao.getSentences(doc_id)
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpus': corpus,
+                 'doc': doc,
+                 'sentences': sentences})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/document.html", c)
+
+
+def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
+    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    corpus = dao.getCorpus(corpus_name)[0]
+    doc = dao.getDocument(doc_id)
+    sent = dao.getSentence(sent_id)
+    # retrieve raw XML
+    txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+    raw = RawXML(txtdao.getSentenceRaw(sent.ident))
+    isfsent = raw.to_isf()
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpus': corpus,
+                 'doc': doc,
+                 'sentence': sent,
+                 'raw': raw,
+                 'isfsent': isfsent})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/sentence.html", c)

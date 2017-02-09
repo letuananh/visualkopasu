@@ -1,0 +1,32 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+{% block content %}
+
+<ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collection</a></li>
+  <li class="breadcrumb-item active">{{ collection_name }}</li>
+</ol>
+
+<h1 class="page-header">{{ collection_name }}</h1>
+
+<div class="panel-body">
+  {% for corpus in corpora %}
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title"><a href="{% url 'visko2:list_doc' collection_name=collection_name corpus_name=corpus.name %}">{{ corpus.name }}</a></h3>
+    </div>
+    <div class="panel-body">
+      <div class="list-group">
+        {% for doc in corpus.documents %}
+        <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
+          {{ doc.name }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

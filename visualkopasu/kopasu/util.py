@@ -23,6 +23,8 @@ from lxml import etree
 from .models import Sentence, Interpretation, DMRS
 from .models import Node, SortInfo, Link, Sense
 
+from coolisf.model import Sentence as ISFSentence
+
 ########################################################################
 
 __author__ = "Le Tuan Anh"
@@ -64,6 +66,12 @@ class RawXML(object):
 
     def __len__(self):
         return len(self.parses)
+
+    def to_isf(self):
+        sent = ISFSentence(self.text)
+        for p in self.parses:
+            sent.add_from_xml(p.dmrs_str())
+        return sent
 
 
 class RawParse(object):

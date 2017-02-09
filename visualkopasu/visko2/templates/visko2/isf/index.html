@@ -1,0 +1,24 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+{% block content %}
+<h1 class="page-header">Integrated Semantic Framework</h1>
+
+<form method="POST" action="{% url 'visko2:isf' %}">
+  {% csrf_token %}
+    <div class="input-group input-group-lg">
+      <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
+      <span class="input-group-btn">
+        <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Parse</button>
+      </span>
+    </div>
+</form>
+
+{% if sxml %}
+<code><pre>
+{{ sxml }}
+{{ sent.mrses.0.dmrs_json }}
+</pre></code>
+{% endif %}
+
+{% endblock %}

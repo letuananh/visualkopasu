@@ -7,3 +7,6 @@
 [submodule "modules/puchikarui"]
 	path = modules/puchikarui
 	url = https://github.com/letuananh/puchikarui
+[submodule "modules/yawlib"]
+	path = modules/yawlib
+	url = https://github.com/letuananh/yawlib

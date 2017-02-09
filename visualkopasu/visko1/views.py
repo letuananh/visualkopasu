@@ -526,8 +526,8 @@ def isf_parse(request):
         dmrs_js = dmrs_to_js(sentence_text, DMRS_obj)
         dmrs_js.dmrs_str = mrs.dmrs_str()
         dmrs_js.mrs_str = mrs.mrs_str()
-        dmrs_js.dmrs_json = mrs.dmrs_json()
-        dmrs_js.mrs_json = mrs.mrs_json()
+        dmrs_js.dmrs_json = mrs.dmrs_json_str()
+        dmrs_js.mrs_json = mrs.mrs_json_str()
         js_dmrses.append(dmrs_js)
 
     c = Context({'title': sentence.text,
@@ -550,8 +550,8 @@ def dev_test(request):
     text = 'Dogs are funnier than Asian tiger mosquitoes.'
     results = Grammar().txt2dmrs(text)
     mrs = results.mrses[0]
-    mrs_json = mrs.mrs_json()
-    dmrs_json = mrs.dmrs_json()
+    mrs_json = mrs.mrs_json_str()
+    dmrs_json = mrs.dmrs_json_str()
     mrs_str = mrs.mrs_str()
     dmrs_str = mrs.dmrs_str()
 

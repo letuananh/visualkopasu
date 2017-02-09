@@ -58,15 +58,16 @@
         <div class="col-sm-3 col-md-2 sidebar">
           <ul class="nav nav-sidebar">
             <li><a href="{% url 'visko2:home' %}">Home</a></li>
-            <li><a href="#">Corpus</a></li>
+            <li><a href="{% url 'visko2:list_collection' %}">Corpus</a></li>
           </ul>
           <ul class="nav nav-sidebar">
-            <li><a href="{% url 'visko2:home' %}">ISF</a></li>
+            <li><a href="{% url 'visko2:isf' %}">ISF</a></li>
             <li><a href="{% url 'visko2:delviz' %}">Delphin-viz</a></li>
           </ul>
           <ul class="nav nav-sidebar">
-            <li><a href="{% url 'visko1:home' %}">Visko 1.0</a></li>
+            <li><a href="{% url 'visko1:home' %}" target="_blank">Visko 1.0</a></li>
             <li><a href="{% url 'visko2:home' %}">Visko 2.0</a></li>
+            <li><a href="{% url 'visko2:dev' %}">Test bed</a></li>
           </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
