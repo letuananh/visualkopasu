@@ -5,15 +5,15 @@ A lite-weight ORM library
 
 # Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of ChibiORM.
-# ChibiORM is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# ChibiORM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# ChibiORM is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# ChibiORM is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 ########################################################################
@@ -44,29 +44,30 @@ class ORMInfo:
         self.orm_manager = orm_manager
         if(not orm_manager):
             logging.debug("There is no ORM manager for table %s" % table_name)
-        
+
     def create_instance(self):
         return copy.deepcopy(self.prototype)
-    
-    def getByID(self, id, updateTo = None):
+
+    def getByID(self, id, updateTo=None):
         if self.orm_manager:
             return self.orm_manager.selectRecordByID(self,id, updateTo)
         else:
             return None
-        
-    def select(self, condition = '', args = [], fillTo = None):
+
+    def select(self, condition='', args=[], fillTo=None):
         return self.orm_manager.selectRecords(self, condition, args, fillTo)
-    
-    def save(self, record, context = None, update_back = False):
+
+    def save(self, record, context=None, update_back=False):
         return self.orm_manager.store_record(self, record, context=context)
-  
+
+
 class DBContext():
-    def __init__(self, conn = None, cur = None, auto_commit = False, auto_close = False):
+    def __init__(self, conn=None, cur=None, auto_commit=False, auto_close=False):
         self.conn = conn
-        self.cur = conn.cursor() if(conn and cur == None) else cur
+        self.cur = conn.cursor() if conn and cur is None else cur
         self.auto_commit = auto_commit
         self.auto_close = auto_close
-        
+
     '''
     Commit and clean
     '''
@@ -78,15 +79,16 @@ class DBContext():
             logging.debug("Error while committing changes: %s" % e)
             pass
         pass
- 
+
+
 class LiteORM():
     def __init__(self, db_path):
         self.db_path = db_path
-        
+
     def getConnection(self):
-        connection=sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path)
         return connection
-        
+
     '''
     Close connection after use
     '''
@@ -136,7 +138,7 @@ class LiteORM():
             self.clean(conn)
         # otherwise, failed
         return None
-    
+
     def selectRows(self, query, params):
         try:
             conn = self.getConnection()
@@ -173,16 +175,15 @@ class LiteORM():
                 else:
                     fields.append(attribute)
                     params.append(record.__dict__[attribute])
-            
+
             query = 'INSERT INTO {table_name} ({fields}) VALUES ({args})'.format(
-                    table_name = mapping_info.table_name
-                    , fields = ','.join(fields)
-                    , args = ','.join(['?'] * len(fields))
-                    )
-            
-            #logging.debug("Executing store_record: SQL = %s" % query)
-            #logging.debug("params = %s" % params)
-            
+                    table_name=mapping_info.table_name,
+                    fields=','.join(fields),
+                    args=','.join(['?'] * len(fields)))
+
+            logging.debug("Executing store_record: SQL = %s" % query)
+            logging.debug("params = %s" % params)
+
             cur.execute(query, params)
             last_id = cur.execute('SELECT last_insert_rowid()').fetchone()[0]
             # TODO: Fix this!
@@ -191,7 +192,7 @@ class LiteORM():
             if (not context) or (context.auto_commit):
                 conn.commit()
         except sqlite3.Error as e:
-            logging.debug("Error happened while trying to store a record: %s" % e)
+            logging.error("Error happened while trying to store a record: %s" % e)
             if query:
                 logging.debug("Query: %s" % query)
                 logging.debug("Params: %s" % params)

@@ -16,17 +16,15 @@ XML-based data access layer for VisualKopasu project.
 # You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
-import gzip
 import os.path
+import shutil
+import gzip
 from xml.etree import ElementTree as ETree
 
+from chirptext.leutile import FileTool
 from visualkopasu.util import getLogger
-# from .models import Sentence
-# from .models import Interpretation
-# from .models import Node
-# from .models import SortInfo
-# from .models import Link
-from .util import getSentenceFromXMLString
+from .util import RawXML
+from .util import getSentenceFromFile
 
 logger = getLogger('visko.dao')
 
@@ -50,6 +48,7 @@ class XMLBiblioteche:
         bibpath = os.path.join(self.root, collection_name)
         return XMLCorpusCollection(bibpath, collection_name)
 
+
 class XMLCorpusCollection:
     def __init__(self, path, name):
         """
@@ -62,10 +61,14 @@ class XMLCorpusCollection:
         corpus_path = os.path.join(self.path, corpus_name)
         return XMLCorpusDAO(corpus_path, corpus_name)
 
+    def createCorpus(self, corpus_name):
+        FileTool.create_dir(os.path.join(self.path, corpus_name))
+
     def getCorpora(self):
         ''' Get all available corpora
         '''
         return self.getSubFolders(self.path)
+
 
 class XMLCorpusDAO:
 
@@ -73,23 +76,38 @@ class XMLCorpusDAO:
         self.path = path
         self.name = name
         self.collection = collection
-        
+
     def getDocumentDAO(self, doc_name):
         doc_path = os.path.join(self.path, doc_name)
-        return XMLDocumentDAO(doc_path, doc_name) 
+        return XMLDocumentDAO(doc_path, doc_name)
+
+    def create_doc(self, doc_name):
+        FileTool.create_dir(os.path.join(self.path, doc_name))
 
 
 class XMLDocumentDAO:
-    
+
     def __init__(self, path, name, corpus=None):
         self.path = path
         self.name = name
         self.corpus = corpus
-    
+
     def getSentences(self):
         all_files = [f.split('.')[0] for f in getFiles(self.path)]
         all_files.sort()
         return all_files
+
+    def add_sentence(self, sent_path, sentid=None):
+        fname = '{}.xml.gz'.format(sentid) if sentid else os.path.basename(sent_path)
+        target = os.path.join(self.path, fname)
+        shutil.copy2(sent_path, target)
+
+    def delete_sent(self, sentenceID):
+        file_path = self.getPath(sentenceID)
+        if not file_path:
+            raise Exception("Sentence {s} does not exist (path={p})".format(s=sentenceID, p=file_path))
+        else:
+            os.unlink(file_path)
 
     def getPath(self, sentenceID=None):
         if not sentenceID:
@@ -111,38 +129,11 @@ class XMLDocumentDAO:
         # Parse the file
         full_path = self.getPath(sentenceID)
         logger.debug(full_path)
-        content = gzip.open(full_path, 'r').read()
-        return content
-
-    def getDMRSRaw(self, sentenceID, interpretationID, dmrs_only=True):
-        # Read raw text from file
-        full_path = self.getPath(sentenceID)
-        if not full_path:
-            raise Exception("Sentence %s does not exist" % (sentenceID,))
-        content = gzip.open(full_path, 'r').read()
-        # Parse the file
-        root = ETree.fromstring(content)
-
-        result_set = []
-        q = "interpretation[@id='%s']" % (interpretationID,) if interpretationID else "interpretation"
-        logger.info(("Query = %s" % q))
-        elements = root.findall(q)
-        logger.info(("Found element: %s" % len(elements)))
-        # for each dmrs
-        for element in elements:
-            if dmrs_only:
-                for child in list(element):
-                    if child.tag != 'dmrs':
-                        element.remove(child)
-            # Convert element to XML text
-            element_xml = ETree.tostring(element, encoding="utf-8", method="xml").decode('utf-8')
-            element_xml = element_xml.replace('</dmrs><', '</dmrs>\n<').replace('><dmrs', '>\n<dmrs')
-            result_set.append(element_xml)
-        return result_set
+        with gzip.open(full_path, 'r') as gzfile:
+            return gzfile.read()
 
     def getSentence(self, sentenceID):
         # Read raw text from file
         full_path = self.getPath(sentenceID)
         # Parse the file
-        xmlcontent = gzip.open(full_path, 'r').read()
-        return getSentenceFromXMLString(xmlcontent)
+        return getSentenceFromFile(full_path)

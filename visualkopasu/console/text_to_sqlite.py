@@ -23,6 +23,7 @@ import time
 import datetime
 import sqlite3
 import os
+import logging
 # import shutil
 
 from chirptext.leutile import Timer
@@ -53,7 +54,8 @@ timer = Timer()
 
 def readscript(filename):
     script_location = os.path.join(vkconfig.SETUP_SCRIPTS_ROOT, 'sqlite3', filename)
-    return open(script_location, 'r').read()
+    with open(script_location, 'r') as script_file:
+        return script_file.read()
 
 
 def backup_database(location_target):
@@ -71,7 +73,7 @@ def backup_database(location_target):
         os.rename(location_target, backup_file)
 
 
-def prepare_database(corpora_root, database_file):
+def prepare_database(corpora_root, database_file, backup=True):
     location = os.path.join(corpora_root, database_file + '_temp.db')
     location_target = os.path.join(corpora_root, database_file + '.db')
     script_file_create = readscript('create.sql')
@@ -92,7 +94,10 @@ def prepare_database(corpora_root, database_file):
     finally:
         if conn:
             conn.close()
-    backup_database(location_target)
+    if backup:
+        backup_database(location_target)
+    else:
+        logging.warning("DB file {} is being overwritten".format(location_target))
     print("Renaming file %s --> %s ..." % (location, location_target))
     os.rename(location, location_target)
     print("--")

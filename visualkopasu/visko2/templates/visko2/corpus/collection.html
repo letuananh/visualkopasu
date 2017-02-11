@@ -10,6 +10,7 @@
 
 <h1 class="page-header">{{ collection_name }}</h1>
 
+{% if corpora %}
 <div class="panel-body">
   {% for corpus in corpora %}
   <div class="panel panel-default">
@@ -28,5 +29,8 @@
   </div>
   {% endfor %}
 </div>
+{% else %}
+There is no corpus.
+{% endif %}
 
 {% endblock %}

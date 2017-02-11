@@ -18,8 +18,10 @@ Util for VisualKopasu project.
 
 ########################################################################
 
+import os
 import codecs
 import logging
+import gzip
 from lxml import etree
 from .models import Sentence, Interpretation, DMRS, ParseRaw
 from .models import Node, SortInfo, Link, Sense
@@ -44,16 +46,19 @@ class RawXML(object):
     ''' Visko sentence in RAW XML format (preprocessor)
     '''
 
-    def __init__(self, raw):
+    def __init__(self, raw=None, xml=None):
         self.raw = raw  # XML string
         self.text = ''
-        self.xml = None
+        self.xml = xml
         self.parses = []
-        if self.raw:
+        if self.raw is not None or self.xml is not None:
             self.parse()
 
     def parse(self):
-        self.xml = etree.XML(self.raw)
+        if self.raw:
+            self.xml = etree.XML(self.raw)
+        else:
+            self.raw = etree.tostring(self.xml, encoding='utf-8', pretty_print=True).decode('utf-8')
         self.text = self.xml.find('text').text
         for p in self.xml.findall('interpretation'):
             mrs = p.findall('mrs')
@@ -89,8 +94,14 @@ class RawXML(object):
 
     @staticmethod
     def from_file(filename):
-        with codecs.open(filename, encoding='utf-8') as infile:
-            return RawXML(infile.read())
+        ''' Read RawXML from .xml file or .gz file
+        '''
+        if filename.endswith('.gz'):
+            with gzip.open(filename, 'rt', encoding='utf-8') as gzfile:
+                return RawXML(gzfile.read())
+        else:
+            with codecs.open(filename, encoding='utf-8') as infile:
+                return RawXML(infile.read())
 
 
 class RawParse(object):
@@ -108,6 +119,9 @@ class RawParse(object):
 
 
 def getDMRSFromXMLString(xmlcontent):
+    '''
+        Get DMRS object from XML string
+    '''
     root = etree.XML(xmlcontent)
     if root.tag == 'interpretation':
         root = root.findall('dmrs')[0]
@@ -115,6 +129,8 @@ def getDMRSFromXMLString(xmlcontent):
 
 
 def getDMRSFromXML(dmrs_tag):
+    ''' Get DMRS from XML node
+    '''
     dmrs = DMRS()
     dmrs.ident = dmrs_tag.attrib['ident'] if 'ident' in dmrs_tag.attrib else ''
     dmrs.cfrom = dmrs_tag.attrib['cfrom'] if 'cfrom' in dmrs_tag.attrib else ''
@@ -205,13 +221,31 @@ def getDMRSFromXML(dmrs_tag):
     return dmrs
 
 
-def getSentenceFromXMLString(xmlcontent):
-    raw = RawXML(xmlcontent)
+def getSentenceFromFile(file_path):
+    raw = RawXML.from_file(file_path)  # supports both .xml file and .gz file now
+    filename = os.path.basename(file_path)
+    return getSentenceFromRawXML(raw, filename)
 
+
+def getSentenceFromXMLString(xmlcontent):
+    if isinstance(xmlcontent, etree._Element):
+        raw = RawXML(xml=xmlcontent)
+    else:
+        raw = RawXML(raw=xmlcontent)
+    return getSentenceFromRawXML(raw)
+
+
+def getSentenceFromXML(xml_node):
+    return getSentenceFromRawXML(RawXML(xml=xml_node))
+
+
+def getSentenceFromRawXML(raw, filename=None):
     # Build Sentence object
     sid = raw.xml.attrib['id']
     text = raw.xml.find('text').text
     sentence = Sentence(sid, text)
+    if filename:
+        sentence.filename = filename
 
     for idx, parse in enumerate(raw):
         interpretation = Interpretation()

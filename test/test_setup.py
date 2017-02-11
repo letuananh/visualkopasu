@@ -20,20 +20,20 @@ References:
 # Copyright (c) 2016, Le Tuan Anh <tuananh.ke@gmail.com>
 #
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 __author__ = "Le Tuan Anh <tuananh.ke@gmail.com>"
 __copyright__ = "Copyright 2016, visualkopasu"
-__credits__ = [ "Le Tuan Anh" ]
+__credits__ = []
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -56,6 +56,7 @@ from .test_dmrs_dao import validate_sentence
 
 ########################################################################
 
+
 class TestConsoleSetup(unittest.TestCase):
 
     def test_setup(self):
@@ -72,8 +73,8 @@ class TestConsoleSetup(unittest.TestCase):
         # Make sure that the test SQLite collection does not exist before this test
         if os.path.isfile(testbib.sqldao.db_path):
             os.unlink(testbib.sqldao.db_path)
-        # prepare_database(testbib.root, collection_name) 
-        
+        # prepare_database(testbib.root, collection_name)
+
         # clean file before convert
         print("Make sure that we deleted sentence 1010 before test parsing")
         cb100dao = testbib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
@@ -81,7 +82,7 @@ class TestConsoleSetup(unittest.TestCase):
         print("sent1010_path = %s" % (sent1010_path,))
         if sent1010_path and os.path.isfile(sent1010_path):
             os.unlink(sent1010_path)
-        
+
         parse_document(raw_folder, testbib.textdao.path, corpus_name, doc_name)
 
         print("Test generated XML file")
@@ -99,6 +100,7 @@ class TestConsoleSetup(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

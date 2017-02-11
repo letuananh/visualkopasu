@@ -5,20 +5,20 @@ Global config file for VisualKopasu
 
 # Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = [ "Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying" ]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -60,9 +60,13 @@ class Biblioteca:
     def __init__(self, name, root=ViskoConfig.BIBLIOTECHE_ROOT):
         self.name = name
         self.root = root
-        self.textdao = ViskoConfig.TextCorpora.getCorpusCollection(name)
-        self.sqldao = ViskoConfig.SqliteCorpora.getCorpusDAO(name)
+        self.textdao = XMLBiblioteche(root).getCorpusCollection(name)
+        self.sqldao = SQLiteCorpusCollection(root).getCorpusDAO(name)
         self.corpora = []
+
+    def create_corpus(self, corpus_name):
+        self.sqldao.createCorpus(corpus_name)
+        self.textdao.createCorpus(corpus_name)
 
     def get_sql_corpora(self):
         self.corpora = self.sqldao.getCorpora()

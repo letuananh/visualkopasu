@@ -10,24 +10,53 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
 </ol>
 
-<h1 class="page-header">{{ sentence.text }}</h1>
+{% if sent %}
+<div class="dmrs_sentence_text">Parse count: {{ sent.mrses|length }}</div>
+<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ input_sentence }}</div>
 
-Parse count: {{ sentence.interpretations|length }}
-
-<ul class="nav nav-tabs">
-  <li  class="active"><a data-toggle="tab" href="#delviz">Semantics</a></li>
-  <li><a data-toggle="tab" href="#home">RAW</a></li>
-</ul>
-<div class="tab-content">
-  <div id="delviz" class="tab-pane fade in active">
-    <div id="dmrs_text_holder" class="dmrs_sentence_text"></div>
-    <div id='viszone'></div>    
-  </div>
-  <div id="home" class="tab-pane fade">
-    <code><pre>{% autoescape on %}{{ raw.parses.0.dmrs_str }}{% endautoescape %}</pre></code>
+<div style="overflow-y: auto; height: 500px;">
+  <ul class="nav nav-tabs">
+    <li><a data-toggle="tab" href="#visko">DMRS</a></li>
+    <li class="active"><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
+    <li><a data-toggle="tab" href="#raw">RAW</a></li>
+    <li><a data-toggle="tab" href="#xml">XML</a></li>
+    <li><a data-toggle="tab" href="#json">JSON</a></li>
+  </ul>
+  <div class="tab-content">
+    <div id="visko" class="tab-pane">
+      <h3>Visko</h3>
+      {% for parse in sent.mrses %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <div id='dmrs_canvas{{forloop.counter}}'></div>
+      {% endfor %}
+    </div>
+    <div id="delviz" class="tab-pane active">
+      {% for parse in sent.mrses %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <div id='viszone{{forloop.counter}}'></div>
+      {% endfor %}
+    </div>
+    <div id="raw" class="tab-pane">
+      {% for parse in sent.mrses %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <pre><code>{{ parse.dmrs_str }}</code></pre>
+      {% endfor %}
+    </div>
+    <div id="xml" class="tab-pane">
+      <pre><code>{{ sent.to_xml_str }}</code></pre>
+    </div>
+    <div id="json" class="tab-pane">
+      {% for parse in sent.mrses %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <h4>MRS</h4>
+      <pre><code>{{ parse.mrs_json_str }}</code></pre>
+      <h4>DMRS</h4>
+      <pre><code>{{ parse.sense_tag_json_str }}</code></pre>
+      {% endfor %}
+    </div>
   </div>
 </div>
-
+{% endif %}
 {% endblock %}
 
 
@@ -37,8 +66,10 @@ Parse count: {{ sentence.interpretations|length }}
    overflow: auto;
  }
 </style>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
+<link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
 {% endblock %}
 
 
@@ -50,6 +81,13 @@ Parse count: {{ sentence.interpretations|length }}
 <script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
+<script src="{% static 'js/visualisation_v3.js' %}"></script>
+<script src="{% static 'js/raphael.js' %}"></script>
+<script src="{% static 'js/kajika.js' %}"></script>
+<script src="{% static 'js/testutil.js' %}"></script>
+<script src="{% static 'js/shinchan.js' %}"></script>
+<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
+
 
 <script>
  function visualize(divid, text, dmrs_json, mrs_json){
@@ -60,15 +98,55 @@ Parse count: {{ sentence.interpretations|length }}
    var $viz = $(Templates.viz({vizType:'dmrs'})).appendTo($vizdiv);
    dmrs = DMRS($viz[0], dmrs_json);
    var $viz = $(Templates.viz({vizType:'mrs'})).appendTo($vizdiv);
-   self.dmrs = MRS($viz[0], mrs_json, vizdivtext, '{{sentence_text}}');
+   self.dmrs = MRS($viz[0], mrs_json, vizdivtext, '{{sent.text}}');
  }
- 
+
+ var console;
  $(document).ready(function(){
+   {% if sent %}
+   // MRS JSON data
    {% autoescape off %}
-   dmrs_json = {{isfsent.mrses.0.dmrs_json_str}};
-   mrs_json = {{isfsent.mrses.0.mrs_json_str}};
+   // All parses
+   {% for parse in sent.mrses %}
+   //   Parse #{{forloop.counter}}
+   dmrs_json{{forloop.counter}} = {{parse.sense_tag_json_str}};
+   mrs_json{{forloop.counter}} = {{parse.mrs_json_str}};
+   {% endfor %}
    {% endautoescape %}
-   visualize('viszone', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json, mrs_json);
+   // visualise delviz
+   {% for parse in sent.mrses %}
+   visualize('viszone{{forloop.counter}}', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json{{forloop.counter}}, mrs_json{{forloop.counter}});
+   {% endfor %}
+   
+   // visualise Visko
+   // but only when activated ...
+   console = new Console('console');
+   {% for parse in sent.mrses %}
+   visko_dmrs{{forloop.counter}} = json2visko(dmrs_json{{forloop.counter}}, "{{ sent.text }}");
+   visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(visko_dmrs{{forloop.counter}}, "dmrs_canvas{{forloop.counter}}", "dmrs_text_holder");
+   {% endfor %}
+   visko_visualised = false;
+   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+     var target = $(e.target).attr("href");
+     if(target == '#visko'){
+       if (!visko_visualised){
+         visko_visualised = true;
+         {% for parse in sent.mrses %}
+         visual_dmrs{{forloop.counter}}.visualise();
+         {% endfor %}
+       }
+     }
+     else if (target == '#delviz'){
+       // rerender delviz?
+     }
+     else{
+       $(target).find('pre code').each(function(i, block) {
+         hljs.highlightBlock(block);
+       });
+     }
+   });
+   {% endif %}
+   
  });
 </script>
 {% endblock %}

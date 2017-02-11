@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dmrs cfrom="-1" cto="-1">
-    <node cfrom="0" cto="4" nodeid="10000"><realpred lemma="some" pos="q" /><sortinfo /></node>
-    <node cfrom="5" cto="9" nodeid="10001"><realpred lemma="dog" pos="n" sense="1" /><sortinfo cvarsort="x" ind="+" num="pl" pers="3" /><sense lemma="dog" pos="n" score="42" synsetid="02084071-n" /></node>
-    <node cfrom="10" cto="15" nodeid="10002"><realpred lemma="bark" pos="v" sense="1" /><sortinfo cvarsort="e" mood="indicative" perf="-" prog="-" sf="prop" tense="pres" /><sense lemma="bark" pos="v" score="1" synsetid="01047596-v" /></node>
-    <link from="0" to="10002"><rargname /><post>H</post></link>
-    <link from="10000" to="10001"><rargname>RSTR</rargname><post>H</post></link>
-    <link from="10002" to="10001"><rargname>ARG1</rargname><post>NEQ</post></link>
-</dmrs>

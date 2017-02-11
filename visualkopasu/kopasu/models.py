@@ -57,13 +57,14 @@ class Document(SmartRecord):
 
 
 class Sentence(SmartRecord):
-    
+
     def __init__(self, ident=0, text='', documentID=None):
         self.ID = None
         self.ident = ident
         self.text = text
         self.documentID = documentID
         self.interpretations = []
+        self.filename = None
         # self.dmrs = []
         # self.parseTrees = []
 
@@ -118,7 +119,7 @@ class ParseRaw(SmartRecord):
 
     def __str__(self):
         txt = self.text if len(self.text) < 50 else self.text[:25] + '...' + self.text[-25:]
-        return "[{}:{}]".format(self.rtype, txt)
+        return "[{}:{}]".format(self.rtype, txt.strip())
 
 
 class ParseTree:

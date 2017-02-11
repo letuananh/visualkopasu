@@ -238,6 +238,8 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         """
         Complicated queries
         """
+        if a_sentence is None:
+            raise Exception("Sentence object cannot be None")
         if context is None:
             context = self.buildContext()
         if not a_sentence.ID:

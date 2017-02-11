@@ -32,8 +32,6 @@ __status__ = "Prototype"
 
 import os
 
-from lxml import etree
-
 from django.template import Context
 from django.shortcuts import render
 from django.core.context_processors import csrf
@@ -60,8 +58,16 @@ def getAllCollections():
     return vkconfig.Biblioteche
 
 ##########################################################################
-# DEV
+# MAIN
 ##########################################################################
+
+
+def home(request):
+    c = Context({"title": "Visual Kopasu 2.0",
+                 "header": "Visual Kopasu 2.0",
+                 "collections": getAllCollections()})
+    c.update(csrf(request))
+    return render(request, "visko2/home/index.html", c)
 
 
 def dev(request):
@@ -76,14 +82,6 @@ def dev(request):
 ##########################################################################
 # COOLISF
 ##########################################################################
-
-
-def home(request):
-    c = Context({"title": "Visual Kopasu 2.0",
-                 "header": "Visual Kopasu 2.0",
-                 "collections": getAllCollections()})
-    c.update(csrf(request))
-    return render(request, "visko2/home/index.html", c)
 
 
 def delviz(request):
@@ -135,11 +133,12 @@ def list_collection(request):
 def list_corpus(request, collection_name):
     dao = vkconfig.BibliotecheMap[collection_name].sqldao
     corpora = dao.getCorpora()
-    for corpus in corpora:
-        # fetch docs
-            corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
-            for doc in corpus.documents:
-                doc.corpus = corpus
+    if corpora:
+        for corpus in corpora:
+            # fetch docs
+                corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
+                for doc in corpus.documents:
+                    doc.corpus = corpus
     c = Context({'title': 'Corpus',
                  'header': 'Visual Kopasu - 2.0',
                  'collection_name': collection_name,
@@ -182,17 +181,42 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sent = dao.getSentence(sent_id)
-    # retrieve raw XML
-    txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-    raw = RawXML(txtdao.getSentenceRaw(sent.ident))
-    isfsent = raw.to_isf()
     c = Context({'title': 'Corpus',
                  'header': 'Visual Kopasu - 2.0',
                  'collection_name': collection_name,
                  'corpus': corpus,
                  'doc': doc,
-                 'sentence': sent,
-                 'raw': raw,
-                 'isfsent': isfsent})
+                 'sent': sent})
+    # retrieve original XML
+    try:
+        txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+        raw = RawXML(txtdao.getSentenceRaw(sent.ident))
+        isfsent = raw.to_isf()
+        c.update({'raw': raw, 'sent': isfsent})
+    except:
+        pass
+
     c.update(csrf(request))
     return render(request, "visko2/corpus/sentence.html", c)
+
+
+def list_parse_new(request, collection_name, corpus_name, doc_id, sent_id):
+    c = Context({"title": "Integrated Semantic Framework",
+                 "header": "Visual Kopasu 2.0"})
+    try:
+        dao = vkconfig.BibliotecheMap[collection_name].sqldao
+        doc = dao.getDocument(doc_id)
+        sent = dao.getSentence(sent_id)
+        txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+        raw = RawXML(txtdao.getSentenceRaw(sent.ident))
+        isfsent = raw.to_isf()
+        c.update({'raw': raw, 'sent': isfsent})
+    except:
+        pass
+    # -------
+    # render
+    c.update(csrf(request))
+    c.update({'input_sentence': isfsent.text,
+              'input_results': 5,
+              'RESULTS': RESULTS})
+    return render(request, "visko2/isf/index.html", c)
