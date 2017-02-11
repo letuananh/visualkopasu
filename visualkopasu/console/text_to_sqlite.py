@@ -32,7 +32,7 @@ from visualkopasu.util import getLogger
 # from visualkopasu.kopasu.dao import SQLiteCorpusDAO
 # from visualkopasu.kopasu.xmldao import XMLDocumentDAO
 from visualkopasu.config import ViskoConfig as vkconfig
-from visualkopasu.config import Biblioteca
+from visualkopasu.kopasu.bibman import Biblioteca
 from visualkopasu.kopasu.models import Document
 
 ########################################################################
@@ -52,57 +52,6 @@ logger = getLogger('visko.setup')
 timer = Timer()
 
 
-def readscript(filename):
-    script_location = os.path.join(vkconfig.SETUP_SCRIPTS_ROOT, 'sqlite3', filename)
-    with open(script_location, 'r') as script_file:
-        return script_file.read()
-
-
-def backup_database(location_target):
-    '''
-    Prepare database
-    '''
-    print("Backing up existing database file ...")
-    if os.path.isfile(location_target):
-        i = 0
-        backup_file = location_target + ".bak." + str(i)
-        while os.path.isfile(backup_file):
-            i = i + 1
-            backup_file = location_target + ".bak." + str(i)
-        print("Renaming file %s --> %s" % (location_target, backup_file))
-        os.rename(location_target, backup_file)
-
-
-def prepare_database(corpora_root, database_file, backup=True):
-    location = os.path.join(corpora_root, database_file + '_temp.db')
-    location_target = os.path.join(corpora_root, database_file + '.db')
-    script_file_create = readscript('create.sql')
-    print("Converting document from XML into SQLite3 database")
-    print("Database path     : %s" % location_target)
-    print("Temp database path: %s" % location)
-    try:
-        conn = sqlite3.connect(location)
-        cur = conn.cursor()
-        print("Creating database ...")
-        timer.start()
-        cur.executescript(script_file_create)
-        timer.end()
-        print("Database has been created")
-    except sqlite3.Error as e:
-        print('Error: %s', e)
-        pass
-    finally:
-        if conn:
-            conn.close()
-    if backup:
-        backup_database(location_target)
-    else:
-        logging.warning("DB file {} is being overwritten".format(location_target))
-    print("Renaming file %s --> %s ..." % (location, location_target))
-    os.rename(location, location_target)
-    print("--")
-
-
 class ParseContext:
     def __init__(self, corpora_root='', corpus_name='', doc_name='', dbname='', textDAO=None, sqliteDAO=None, context=None, auto_flush=False, verbose=False, iszip=False):
         if textDAO:
@@ -120,7 +69,7 @@ class ParseContext:
         self.auto_flush=auto_flush
         self.verbose=verbose
         self.iszip = iszip
-    
+
     def set_doc_name(self, doc_name):
         self.doc_name = doc_name
         self.textDAO.config['document'] = doc_name

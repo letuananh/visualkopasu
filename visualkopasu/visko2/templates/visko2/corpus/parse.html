@@ -8,12 +8,13 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=collection_name %}">{{ collection_name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=collection_name corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item">Sent #{{ sent_id }}</li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id %}">Sent #{{ sent_id }}</a></li>
+  <li class="breadcrumb-item">Parse #{{parse.ident}}</li>
 </ol>
 
 {% if sent %}
-<div class="dmrs_sentence_text">Parse count: {{ sent.mrses|length }}</div>
-<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ input_sentence }}</div>
+<h3>Sentence #{{sent_id}} | Parse #{{parse.ident}}</h3>
+<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ sent.text }}</div>
 
 <div style="overflow-y: auto; height: 500px;">
   <ul class="nav nav-tabs">
@@ -27,52 +28,31 @@
   <div class="tab-content">
     <div id="visko" class="tab-pane">
       <h3>Visko</h3>
-      {% for parse in sent.mrses %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <div id='dmrs_canvas{{forloop.counter}}'></div>
-      {% endfor %}
+      <div id='dmrs_canvas'></div>
     </div>
     <div id="delviz" class="tab-pane active">
-      {% for parse in sent.mrses %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <div id='viszone{{forloop.counter}}'></div>
-      {% endfor %}
+      <div id='viszone'></div>
     </div>
     <div id="raw" class="tab-pane">
-      {% for parse in sent.mrses %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
       <pre><code>{{ parse.dmrs_str }}</code></pre>
-      {% endfor %}
     </div>
     <div id="xml" class="tab-pane">
-      <pre><code>{{ sent.to_xml_str }}</code></pre>
+      <pre><code>{{ parse.dmrs_xml_str }}</code></pre>
     </div>
     <div id="json" class="tab-pane">
-      {% for parse in sent.mrses %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
       <h4>MRS</h4>
       <pre><code>{{ parse.mrs_json_str }}</code></pre>
       <h4>DMRS</h4>
       <pre><code>{{ parse.sense_tag_json_str }}</code></pre>
-      {% endfor %}
     </div>
     <div id="edit" class="tab-pane">
       <h3>Edit</h3>
-      <form method="POST" action="{% url 'visko2:reparse_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id %}" style="padding-bottom: 20px;">
-        {% csrf_token %}
-        <div class="input-group input-group-lg">         
-          <span class="input-group-addon">Parse Count</span>
-          <select id="input_results" name="input_results" class="form-control input-small" title="Maximum parses">
-            {% for r in RESULTS %}
-            <option {% if r == input_results %}selected="selected"{% endif %} value="{{r}}">{{r}}</option>
-            {% endfor %}
-          </select>
-          <span class="input-group-btn">
-            <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Re-parse</button>
-          </span>
+      <form>
+        <div class="form-group">
+          <label for="comment">DMRS RAW</label>
+          <textarea class="form-control" rows="10" id="comment">{{parse.dmrs_str}}</textarea>
         </div>
       </form>
-
     </div>
   </div>
 </div>
@@ -84,6 +64,9 @@
 <style>
  .tab-pane {
    overflow: auto;
+ }
+ textarea {
+   font-family: "Courier New", Courier, monospace;
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
@@ -127,33 +110,24 @@
    // MRS JSON data
    {% autoescape off %}
    // All parses
-   {% for parse in sent.mrses %}
-   //   Parse #{{forloop.counter}}
-   dmrs_json{{forloop.counter}} = {{parse.sense_tag_json_str}};
-   mrs_json{{forloop.counter}} = {{parse.mrs_json_str}};
-   {% endfor %}
+   dmrs_json = {{parse.sense_tag_json_str}};
+   mrs_json = {{parse.mrs_json_str}};
    {% endautoescape %}
    // visualise delviz
-   {% for parse in sent.mrses %}
-   visualize('viszone{{forloop.counter}}', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json{{forloop.counter}}, mrs_json{{forloop.counter}});
-   {% endfor %}
+   visualize('viszone', '{% autoescape off %}{{ sent.text }}{% endautoescape %}', dmrs_json, mrs_json);
    
    // visualise Visko
    // but only when activated ...
    console = new Console('console');
-   {% for parse in sent.mrses %}
-   visko_dmrs{{forloop.counter}} = json2visko(dmrs_json{{forloop.counter}}, "{{ sent.text }}");
-   visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(visko_dmrs{{forloop.counter}}, "dmrs_canvas{{forloop.counter}}", "dmrs_text_holder");
-   {% endfor %}
+   visko_dmrs = json2visko(dmrs_json, "{{ sent.text }}");
+   visual_dmrs = new VisualKopasu.DMRSCanvas(visko_dmrs, "dmrs_canvas", "dmrs_text_holder");
    visko_visualised = false;
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      var target = $(e.target).attr("href");
      if(target == '#visko'){
        if (!visko_visualised){
          visko_visualised = true;
-         {% for parse in sent.mrses %}
-         visual_dmrs{{forloop.counter}}.visualise();
-         {% endfor %}
+         visual_dmrs.visualise();
        }
      }
      else if (target == '#delviz'){

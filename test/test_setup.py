@@ -46,15 +46,30 @@ __status__ = "Prototype"
 import os
 import unittest
 
-from visualkopasu.config import Biblioteca
+from visualkopasu.kopasu import Biblioteca
 
-from visualkopasu.console.setup import prepare_database
 from visualkopasu.console.setup import parse_document
 from visualkopasu.console.setup import get_raw_doc_folder
 from visualkopasu.console.setup import convert_document
-from .test_dmrs_dao import validate_sentence
+from test.test_dmrs_dao import validate_sentence
+from visualkopasu.kopasu.util import is_valid_name
 
 ########################################################################
+
+
+class TestName(unittest.TestCase):
+
+    def test_valid_name(self):
+        self.assertTrue(is_valid_name('test'))
+        self.assertTrue(is_valid_name('test123'))
+        self.assertTrue(is_valid_name('1'))
+        self.assertTrue(is_valid_name('1234'))
+        self.assertTrue(is_valid_name('12_34'))
+        # invalid names
+        self.assertFalse(is_valid_name(''))
+        self.assertFalse(is_valid_name(None))
+        self.assertFalse(is_valid_name('a.b'))
+        self.assertFalse(is_valid_name('ABC123'))
 
 
 class TestConsoleSetup(unittest.TestCase):

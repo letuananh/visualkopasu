@@ -28,12 +28,13 @@ __status__ = "Prototype"
 ########################################################################
 
 import unittest
-from visualkopasu.config import ViskoConfig as vkconfig
-from visualkopasu.kopasu.dmrs_search import DMRSQueryParser
+from test.test_dmrs_dao import TestDAOBase
+from visualkopasu.kopasu import Biblioteche, Biblioteca
+# from visualkopasu.kopasu.dmrs_search import DMRSQueryParser
 from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
 
 
-class TestDMRSSearch(unittest.TestCase):
+class TestDMRSSearch(TestDAOBase):
 
     DEFAULT_LIMIT = 10000
 
@@ -41,7 +42,10 @@ class TestDMRSSearch(unittest.TestCase):
         pass
 
     def test_search_lemma(self):
-        engine = LiteSearchEngine(vkconfig.Biblioteche[0].sqldao, limit=self.DEFAULT_LIMIT)
+        bibs = Biblioteche.list_all(self.bibroot)
+        self.assertEqual(len(bibs), 1)
+        bib = Biblioteca(self.bibroot)
+        engine = LiteSearchEngine(bib.sqldao, limit=self.DEFAULT_LIMIT)
         print(engine.dao.db_path)
         sentences = engine.search('act')
         print(sentences)
@@ -49,8 +53,10 @@ class TestDMRSSearch(unittest.TestCase):
 
 ########################################################################
 
+
 def main():
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

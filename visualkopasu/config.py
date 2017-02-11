@@ -28,56 +28,16 @@ __status__ = "Prototype"
 ########################################################################
 
 import os
-from visualkopasu.kopasu.xmldao import XMLBiblioteche
-from visualkopasu.kopasu.dao import SQLiteCorpusCollection
 
 
 class ViskoConfig:
-    PROJECT_ROOT = os.path.expanduser('~/wk/visualkopasu')
+    PROJECT_ROOT = os.path.expanduser('~/workspace/visualkopasu')
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
 
-    # available corpora
-    AvailableBiblioteche = ('redwoods','test', 'isf')
-    TextCorpora = XMLBiblioteche(BIBLIOTECHE_ROOT)
-    SqliteCorpora = SQLiteCorpusCollection(BIBLIOTECHE_ROOT)
-
-    Biblioteche = []
-    BibliotecheMap = {}
     # Setup scripts root
     SETUP_SCRIPTS_ROOT = os.path.join(PROJECT_ROOT, 'visualkopasu', 'console', 'scripts')
 
     # Django database - DO NOT CHANGE THIS!
     DATABASES_default_ENGINE = 'django.db.backends.sqlite3'
     DATABASES_default_NAME = os.path.join(PROJECT_ROOT, 'data/visko.db')
-
-
-class Biblioteca:
-    ''' One biblioteca contains many corpora
-        It's a collection of documents
-    '''
-
-    def __init__(self, name, root=ViskoConfig.BIBLIOTECHE_ROOT):
-        self.name = name
-        self.root = root
-        self.textdao = XMLBiblioteche(root).getCorpusCollection(name)
-        self.sqldao = SQLiteCorpusCollection(root).getCorpusDAO(name)
-        self.corpora = []
-
-    def create_corpus(self, corpus_name):
-        self.sqldao.createCorpus(corpus_name)
-        self.textdao.createCorpus(corpus_name)
-
-    def get_sql_corpora(self):
-        self.corpora = self.sqldao.getCorpora()
-        for corpus in self.corpora:
-            corpus.documents = self.sqldao.getDocumentOfCorpus(corpus.ID)
-            for doc in corpus.documents:
-                doc.corpus = corpus
-
-# TODO: This should not be hardcoded
-if not ViskoConfig.Biblioteche:
-    for corpus in ViskoConfig.AvailableBiblioteche:
-        cdao = Biblioteca(corpus)
-        ViskoConfig.Biblioteche.append(cdao)
-        ViskoConfig.BibliotecheMap[corpus] = cdao

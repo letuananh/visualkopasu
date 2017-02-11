@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 
+
 urlpatterns = [
     url(r'^$', 'visualkopasu.visko2.views.home'),
     url(r'^visko1/', include('visualkopasu.visko1.urls', namespace="visko1"),),

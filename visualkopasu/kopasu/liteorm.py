@@ -119,12 +119,17 @@ class LiteORM():
             logging.debug("Query: %s" % query)
             logging.debug("Params: %s" % params)
             logging.debug("Error happened while trying to store a record: %s" % e)
-            pass
+            raise
         finally:
             LiteORM.clean(conn)
         # otherwise, failed
         return None
-    
+
+    def execute(self, query, params):
+        with self.getConnection() as conn:
+            cur = conn.cursor()
+            cur.execute(query, params)
+
     def selectScalar(self, query, params):
         try:
             conn = self.getConnection()

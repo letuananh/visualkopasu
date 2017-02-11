@@ -18,9 +18,13 @@ Data access layer for VisualKopasu project.
 
 ########################################################################
 
+import os
 import os.path
 import logging
+import sqlite3
+from chirptext.leutile import Timer
 from visualkopasu.util import getLogger
+from visualkopasu.kopasu.util import is_valid_name
 from .models import Corpus
 from .models import Document
 from .models import Sentence
@@ -134,7 +138,7 @@ class ObjectCache():
         self.cache_by_field = cache_by_field
         if auto_fill:
             instances = self.orm_config.select()
-            if instances != None:
+            if instances is not None:
                 for instance in instances:
                     self.cache(instance)
 
@@ -145,7 +149,7 @@ class ObjectCache():
                 self.cacheMap[key] = instance
             else:
                 logger.debug(("Cache error: key [%s] exists!" % key))
-                
+
             key = instance.__dict__[self.orm_config.columnID]
             if key not in self.cacheMapByID:
                 self.cacheMapByID[key] = instance
@@ -185,13 +189,72 @@ class SQLiteCorpusCollection(object):
         return SQLiteCorpusDAO(collection_db_path, collection_name, auto_fill)
 
 
+def backup_database(location_target):
+    '''
+    Prepare database
+    '''
+    print("Backing up existing database file ...")
+    if os.path.isfile(location_target):
+        i = 0
+        backup_file = location_target + ".bak." + str(i)
+        while os.path.isfile(backup_file):
+            i = i + 1
+            backup_file = location_target + ".bak." + str(i)
+        print("Renaming file %s --> %s" % (location_target, backup_file))
+        os.rename(location_target, backup_file)
+
+
+def readscript(filename):
+    ''' Read a script file
+    '''
+    script_location = os.path.join(os.path.dirname(__file__), 'scripts', 'sqlite3', filename)
+    with open(script_location, 'r') as script_file:
+        return script_file.read()
+
+
 class SQLiteCorpusDAO(CorpusORMSchema):
-    
+
     def __init__(self, db_path, name, auto_fill):
         super().__init__(db_path)
         self.name = name
         self.lemmaCache = ObjectCache(self.orm_manager, self.Lemma, "lemma", auto_fill=auto_fill)
         self.gpredCache = ObjectCache(self.orm_manager, self.GpredValue, "value", auto_fill=auto_fill)
+
+    def prepare(self, backup=True, silent=False):
+        location = self.db_path + '_temp.db'
+        script_file_create = readscript('create.sql')
+        if not silent:
+            print("Converting document from XML into SQLite3 database")
+            print("Database path     : %s" % self.db_path)
+            print("Temp database path: %s" % location)
+        try:
+            conn = sqlite3.connect(location)
+            cur = conn.cursor()
+            if not silent:
+                print("Creating database ...")
+            if not silent:
+                timer = Timer()
+                timer.start()
+            cur.executescript(script_file_create)
+            if not silent:
+                timer.end()
+            if not silent:
+                print("Database has been created")
+        except sqlite3.Error as e:
+            logging.error('Error: %s', e)
+            pass
+        finally:
+            if conn:
+                conn.close()
+        if backup:
+            backup_database(self.db_path)
+        else:
+            logging.warning("DB file {} is being overwritten".format(self.db_path))
+        if not silent:
+            print("Renaming file %s --> %s ..." % (location, self.db_path))
+            print("--")
+        os.rename(location, self.db_path)
+        pass
 
     def getCorpora(self):
         return self.Corpus.select()
@@ -203,9 +266,13 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         return self.Corpus.select('ID=?', (corpusID,))[0]
 
     def createCorpus(self, corpus_name, context=None):
+        if not is_valid_name(corpus_name):
+            raise Exception("Invalid corpus name (provided: {}".format(corpus_name))
         return self.Corpus.save(Corpus(corpus_name), context=context)
 
     def saveDocument(self, a_document, context=None):
+        if not is_valid_name(a_document.name):
+            raise Exception("Invalid doc name (provided: {}".format(a_document.name))
         self.Document.save(a_document, context=context)
 
     def getDocumentOfCorpus(self, corpusID):
@@ -220,8 +287,25 @@ class SQLiteCorpusDAO(CorpusORMSchema):
     def getDocumentByName(self, doc_name):
         return self.Document.select('name=?', [doc_name])
 
-    def getSentences(self, docID):
-        return self.Sentence.select('documentID=?', (docID,))
+    def getSentences(self, docID, add_dummy_parses=True):
+        if add_dummy_parses:
+            query = '''
+            SELECT sentence.*, count(interpretation.ID) AS 'parse_count'
+            FROM sentence LEFT JOIN interpretation
+            ON sentence.ID = interpretation.sentenceID
+            WHERE documentID = ?
+            GROUP BY sentenceID ORDER BY sentence.ID;
+            '''
+            rows = self.orm_manager.selectRows(query, (docID,))
+            sents = []
+            for row in rows:
+                sent = Sentence(row['ident'], row['text'], row['documentID'])
+                sent.ID = row['ID']
+                sent.interpretations = [None] * row['parse_count']
+                sents.append(sent)
+            return sents
+        else:
+            return self.Sentence.select('documentID=?', (docID,))
 
     def buildContext(self):
         context = DBContext(self.orm_manager.getConnection())
@@ -548,7 +632,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 params.append(mode)
             if interpretationIDs and len(interpretationIDs) > 0:
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
-                params = params + interpretationIDs
+                params.extend(interpretationIDs)
             self.Interpretation.select(conditions, params, a_sentence.interpretations)
             for a_interpretation in a_sentence.interpretations:
                 if get_raw:
@@ -559,3 +643,6 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             logging.debug("No sentence with ID={} was found".format(sentenceID))
         # Return
         return a_sentence
+
+    def delete_sent(self, sentenceID):
+        self.orm_manager.execute("DELETE FROM Sentence WHERE ID=?", (sentenceID,))

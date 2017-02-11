@@ -20,15 +20,15 @@ References:
 # Copyright (c) 2016, Le Tuan Anh <tuananh.ke@gmail.com>
 #
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 ########################################################################
@@ -39,7 +39,7 @@ import logging
 
 __author__ = "Le Tuan Anh <tuananh.ke@gmail.com>"
 __copyright__ = "Copyright 2016, visualkopasu"
-__credits__ = ["Le Tuan Anh"]
+__credits__ = []
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Le Tuan Anh"
@@ -49,7 +49,7 @@ __status__ = "Prototype"
 ########################################################################
 
 
-def getLogger(name):
+def getLogger(name, level=logging.INFO):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     return logger

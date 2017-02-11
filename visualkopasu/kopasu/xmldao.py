@@ -19,22 +19,16 @@ XML-based data access layer for VisualKopasu project.
 import os.path
 import shutil
 import gzip
-from xml.etree import ElementTree as ETree
+import lxml
 
 from chirptext.leutile import FileTool
 from visualkopasu.util import getLogger
-from .util import RawXML
 from .util import getSentenceFromFile
+from .util import getSubFolders
+from .util import getFiles
+from .util import is_valid_name
 
 logger = getLogger('visko.dao')
-
-
-def getSubFolders(a_folder):
-    return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
-
-
-def getFiles(a_folder):
-    return [child for child in os.listdir(a_folder) if os.path.isfile(os.path.join(a_folder, child))]
 
 
 class XMLBiblioteche:
@@ -62,12 +56,14 @@ class XMLCorpusCollection:
         return XMLCorpusDAO(corpus_path, corpus_name)
 
     def createCorpus(self, corpus_name):
+        if not is_valid_name(corpus_name):
+            raise Exception("Invalid corpus name (provided: {}".format(corpus_name))
         FileTool.create_dir(os.path.join(self.path, corpus_name))
 
     def getCorpora(self):
         ''' Get all available corpora
         '''
-        return self.getSubFolders(self.path)
+        return getSubFolders(self.path)
 
 
 class XMLCorpusDAO:
@@ -82,6 +78,8 @@ class XMLCorpusDAO:
         return XMLDocumentDAO(doc_path, doc_name)
 
     def create_doc(self, doc_name):
+        if not is_valid_name(doc_name):
+            raise Exception("Invalid doc name (provided: {}".format(doc_name))
         FileTool.create_dir(os.path.join(self.path, doc_name))
 
 
@@ -97,10 +95,24 @@ class XMLDocumentDAO:
         all_files.sort()
         return all_files
 
-    def add_sentence(self, sent_path, sentid=None):
+    def copy_sentence(self, sent_path, sentid=None):
+        if sentid is not None and (not is_valid_name(sentid)):
+            raise Exception("Invalid sentenceID (provided: {}".format(sentid))
         fname = '{}.xml.gz'.format(sentid) if sentid else os.path.basename(sent_path)
         target = os.path.join(self.path, fname)
         shutil.copy2(sent_path, target)
+
+    def save_sentence(self, xmlcontent, sentid, pretty_print=True):
+        if not is_valid_name(sentid):
+            raise Exception("Invalid sentenceID (provided: {})".format(sentid))
+        sent_path = os.path.join(self.path, str(sentid) + '.xml.gz')
+        print("Saving to {}".format(sent_path))
+        with gzip.open(sent_path, 'wb') as output_file:
+            if isinstance(xmlcontent, lxml.etree._Element):
+                xmlcontent = lxml.etree.tostring(xmlcontent, pretty_print=pretty_print, encoding='utf-8')
+            else:
+                xmlcontent = xmlcontent.encode('utf-8')
+            output_file.write(xmlcontent)
 
     def delete_sent(self, sentenceID):
         file_path = self.getPath(sentenceID)

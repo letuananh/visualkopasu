@@ -19,6 +19,7 @@ Data models for VisualKopasu project.
 ########################################################################
 
 from .liteorm import SmartRecord
+from coolisf.model import Sentence as ISFSentence
 
 ########################################################################
 
@@ -74,14 +75,43 @@ class Sentence(SmartRecord):
     def getActiveInterpretation(self):
         return [repr for repr in self.interpretations if repr.mode == "active"]
 
+    def has_raw(self):
+        ''' Check if there is at least one interpretations and
+        all interpretations has raw inside'''
+        has_raw = len(self) > 0
+        for i in self.interpretations:
+            has_raw = has_raw and len(i.raws) > 0
+        return has_raw
+
     def __len__(self):
         return len(self.interpretations)
 
     def __getitem__(self, key):
         return self.interpretations[key]
 
+    def __iter__(self):
+        return iter(self.interpretations)
+
     def __str__(self):
         return "[ID=" + self.ident + "]" + self.text
+
+    def to_isf(self):
+        ''' Convert Visko Sentence to ISF sentence'''
+        isfsent = ISFSentence(self.text, self.ID)
+        for i in self:
+            mrs_raw = i.find_raw(ParseRaw.MRS)
+            if mrs_raw:
+                p = isfsent.add(mrs_raw.text)
+                p.ID = i.ID  # parse ID should have the same ID as interpretation obj
+                p.ident = i.rid
+            else:
+                # try XML ...
+                xml_raw = i.find_raw(ParseRaw.XML)
+                if xml_raw:
+                    p = isfsent.add_from_xml(xml_raw.text)
+                    p.ID = i.ID  # parse ID should have the same ID as interpretation obj
+                    p.ident = i.rid
+        return isfsent
 
 
 class Interpretation(SmartRecord):
@@ -100,6 +130,12 @@ class Interpretation(SmartRecord):
 
     def __str__(self):
         return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
+
+    def find_raw(self, rtype):
+        for r in self.raws:
+            if r.rtype == rtype:
+                return r
+        return None
 
 
 class ParseRaw(SmartRecord):

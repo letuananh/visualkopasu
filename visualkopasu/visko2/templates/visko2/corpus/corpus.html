@@ -4,12 +4,22 @@
 {% block content %}
 
 <ol class="breadcrumb">
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collection</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=collection_name %}">{{ collection_name }}</a></li>
   <li class="breadcrumb-item active">{{ corpus.name }}</li>
 </ol>
 
 <h1 class="page-header">{{ corpus.name }}</h1>
+
+<form method="POST" action="{% url 'visko2:create_doc' collection_name=collection_name corpus_name=corpus.name %}" style="padding-bottom: 20px;">
+  {% csrf_token %}
+  <div class="input-group input-group-lg">
+    <input class="form-control input-lg" name="doc_name" id="doc_name" placeholder="New Document (only alphanumeric or underscore characters are allowed)" value="{{ doc_name|default:'' }}" type="text">
+    <span class="input-group-btn">
+      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Create</button>
+    </span>
+  </div>
+</form>
 
 {% if corpus and corpus.documents %}
 <div class="list-group">

@@ -19,6 +19,7 @@ Util for VisualKopasu project.
 ########################################################################
 
 import os
+import re
 import codecs
 import logging
 import gzip
@@ -40,6 +41,14 @@ __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
 ########################################################################
+
+
+def getSubFolders(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
+
+
+def getFiles(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isfile(os.path.join(a_folder, child))]
 
 
 class RawXML(object):
@@ -265,3 +274,11 @@ def getSentenceFromRawXML(raw, filename=None):
         dmrs = getDMRSFromXML(parse.dmrs)
         interpretation.dmrs.append(dmrs)
     return sentence
+
+
+# Visko only accept names using alphanumeric characters
+NAME_RE = re.compile('^[a-z0-9_]+$')
+
+
+def is_valid_name(a_name):
+    return NAME_RE.match(str(a_name)) if a_name is not None else False

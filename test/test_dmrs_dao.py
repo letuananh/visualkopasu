@@ -43,24 +43,23 @@ __status__ = "Prototype"
 ########################################################################
 
 import os
+import logging
 import unittest
 
 from chirptext.leutile import FileTool
 from coolisf.util import Grammar
 
-from visualkopasu.config import Biblioteca
-from visualkopasu.console import prepare_database
-from visualkopasu.kopasu.util import getSentenceFromXMLString
 from visualkopasu.kopasu.util import getSentenceFromRawXML
 from visualkopasu.kopasu.util import getSentenceFromFile
 from visualkopasu.kopasu.util import getDMRSFromXML
 from visualkopasu.kopasu.util import RawXML
+from visualkopasu.kopasu.bibman import Biblioteche, Biblioteca
 from visualkopasu.kopasu.models import Document
 from visualkopasu.kopasu.models import ParseRaw
 
 ########################################################################
 
-
+logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TEST_FILE = os.path.join(TEST_DIR, 'speckled_10565.xml')
 
@@ -73,9 +72,9 @@ class TestRawXML(unittest.TestCase):
         self.assertEqual(len(raw), 1)
         # should have both MRS and DMRS
         self.assertGreater(len(raw[0].mrs_str()), 0)
-        # print(raw[0].mrs.text)
+        logging.debug(raw[0].mrs.text)
         self.assertGreater(len(raw[0].dmrs_str()), 0)
-        # print(raw[0].dmrs_str())
+        logging.debug(raw[0].dmrs_str())
 
 
 class TestDAOBase(unittest.TestCase):
@@ -89,18 +88,21 @@ class TestDAOBase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        logging.info("Preparing test class")
         # prepare bibroot directory
         FileTool.create_dir(cls.bibroot)
         db_path = cls.bib.sqldao.db_path
-        print("Setting up database file at %s" % (db_path,))
-        # make sure we recreate the test DB every we run the test
+        logging.debug("Setting up database file at %s" % (db_path,))
         if os.path.isfile(db_path):
-            os.unlink(db_path)
-        prepare_database(cls.bibroot, cls.bibname, backup=False)
+            # make sure we recreate the test DB every we run the test
+            # os.unlink(db_path)
+            pass
+        else:
+            prepare_database(cls.bibroot, cls.bibname, backup=False, silent=True)
 
     @classmethod
     def tearDownClass(cls):
-        print("Cleaning up")
+        logging.debug("Cleaning up")
 
 
 class TestDMRSDAO(TestDAOBase):
@@ -118,10 +120,10 @@ class TestDMRSDAO(TestDAOBase):
         for sentid in sentids:
             ddao.delete_sent(sentid)
         # create sentences
-        ddao.add_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'))
-        ddao.add_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'))
-        ddao.add_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'), 1)
-        ddao.add_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'), 2)
+        ddao.copy_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'))
+        ddao.copy_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'))
+        ddao.copy_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'), 1)
+        ddao.copy_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'), 2)
         sentids = ddao.getSentences()
         self.assertEqual(len(sentids), 4)
         # now delete 2 of them
@@ -132,11 +134,11 @@ class TestDMRSDAO(TestDAOBase):
         self.assertEqual(len(sentids), 2)
 
         # test first sentence
-        sentence = ddao.getSentence(sentid[0])
+        sentence = ddao.getSentence(sentids[0])
         validate_sentence(self, sentence)
 
     def test_parse_xml_file(self):
-        print("Test XML parser")
+        logging.info("Test XML parser")
         sent = getSentenceFromFile(TEST_FILE)
         self.assertTrue(sent)
         self.assertTrue(sent.interpretations)
@@ -148,10 +150,10 @@ class TestDMRSDAO(TestDAOBase):
         # there should be 2 raw (MRS in str mode and DMRS in xml mode)
         self.assertEqual(len(i.raws), 2)
         for raw in i.raws:
-            print(raw)
+            logging.debug(raw)
 
     def test_xml_dao(self):
-        print("Test ISF sense reading")
+        logging.info("Test ISF sense reading")
         ERG = Grammar()
         sent = ERG.txt2dmrs('The dog barks.')
         # ISF sentence can be exported to visko directly
@@ -175,7 +177,7 @@ class TestDMRSDAO(TestDAOBase):
         self.assertTrue(dmrs_obj)
         for node in dmrs_obj.nodes:
             if node.sense:
-                print(node.sense)
+                logging.debug(node.sense)
         #
         # test parse the whole  sentence
         sent = getSentenceFromRawXML(raw)
@@ -191,14 +193,14 @@ def validate_sentence(self, sentence):
     self.assertTrue(sentence.interpretations)
     self.assertTrue(sentence.interpretations[0])
     self.assertTrue(sentence.interpretations[0].dmrs[0])
-    print(sentence)
+    logging.debug(sentence)
 
 
 class TestDMRSSQLite(TestDAOBase):
 
     def ensure_corpus(self):
         ''' Ensure that testcorpus exists'''
-        print("Test bib loc: {}".format(self.bib.sqldao.db_path))
+        logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
         self.bib.create_corpus(self.corpus_name)
         c = self.bib.sqldao.getCorpus(self.corpus_name)
         return c[0]
@@ -222,10 +224,10 @@ class TestDMRSSQLite(TestDAOBase):
         return self.bib.sqldao.getSentence(sentenceID=1)
 
     def test_create_a_corpus(self):
-        print("Test creating a new corpus")
+        logging.info("Test creating a new corpus")
         self.bib.create_corpus(self.corpus_name)
         # test retriving created corpus
-        print("Connecting to {}".format(self.bib.sqldao.db_path))
+        logging.debug("Connecting to {}".format(self.bib.sqldao.db_path))
         corpora = self.bib.sqldao.getCorpus(self.corpus_name)
         self.assertIsNotNone(corpora)
         self.assertGreater(len(corpora), 0)
@@ -234,14 +236,14 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertTrue(os.path.isfile(self.bib.sqldao.db_path))
         # and a directory to store XML files
         # text collection must exist
-        print("XMLCorpusCollection loc: {}".format(self.bib.textdao.path))
+        logging.debug("XMLCorpusCollection loc: {}".format(self.bib.textdao.path))
         self.assertTrue(os.path.isdir(self.bib.textdao.path))
         # corpus folder must exist as well
         cdao = self.bib.textdao.getCorpusDAO(self.corpus_name)
         self.assertTrue(os.path.isdir(cdao.path))
 
     def test_create_document(self):
-        print("Test creating document")
+        logging.info("Test creating document")
         corpus = self.ensure_corpus()
         doc = Document(name=self.doc_name, corpusID=corpus.ID)
         self.bib.sqldao.saveDocument(doc)
@@ -273,6 +275,14 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(str(actual_sentence[0].raws[0]), '[mrs:[ LTOP: h0 INDEX: e2 [ e ...10 qeq h12 > ICONS: < > ]]')
         self.assertEqual(str(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
 
+    def test_get_sentences_with_dummy(self):
+        self.ensure_sent()
+        doc = self.bib.sqldao.getDocumentByName(self.doc_name)[0]
+        sents = self.bib.sqldao.getSentences(doc.ID, True)
+        self.assertGreater(len(sents), 0)
+        self.assertEqual(len(sents[0]), 1)
+        self.assertIsNone(sents[0][0])
+
     def test_storing_parse_raw(self):
         # Test creating parse_raw object
         raw = ParseRaw('<xml></xml>', rtype=ParseRaw.XML)
@@ -288,8 +298,18 @@ class TestDMRSSQLite(TestDAOBase):
         self.bib.sqldao.saveParseRaw(raw)
         raws = self.bib.sqldao.get_raw(sent[0].ID)
         self.assertGreater(len(raws), 0)
-        print(raws)
+        logging.debug(raws)
         pass
+
+
+class TestBiblioteche(TestDAOBase):
+
+    def test_list_collections(self):
+        bibs = Biblioteche.list_all(self.bibroot)
+        self.assertEqual(len(bibs), 1)
+        self.assertEqual(bibs[0], self.bibname)
+        pass
+
 
 ########################################################################
 

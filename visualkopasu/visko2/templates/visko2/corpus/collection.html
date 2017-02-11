@@ -4,11 +4,22 @@
 {% block content %}
 
 <ol class="breadcrumb">
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collection</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
   <li class="breadcrumb-item active">{{ collection_name }}</li>
 </ol>
 
 <h1 class="page-header">{{ collection_name }}</h1>
+
+<form method="POST" action="{% url 'visko2:create_corpus' collection_name=collection_name %}">
+  {% csrf_token %}
+  <div class="input-group input-group-lg">
+    <input class="form-control input-lg" name="corpus_name" id="corpus_name" placeholder="New Corpus (only alphanumeric or underscore characters are allowed)" value="{{ corpus_name|default:'' }}" type="text">
+    <span class="input-group-btn">
+      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Create</button>
+    </span>
+  </div>
+</form>
+
 
 {% if corpora %}
 <div class="panel-body">

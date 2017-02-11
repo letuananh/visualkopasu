@@ -25,8 +25,8 @@ import os
 import argparse
 
 from visualkopasu.config import ViskoConfig as vkconfig
+from visualkopasu.kopasu import Biblioteca
 from .simple_parser import parse_document
-from .text_to_sqlite import prepare_database
 from .text_to_sqlite import convert
 
 ########################################################################
@@ -73,13 +73,14 @@ def convert_document(collection_name, corpus_name, doc_name, answer=None, active
         parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     # Convert XML to SQLite3
     draw_separator()
-    db_path = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name + '.db')
-    if os.path.exists(db_path):
-        print("Now, I'm going to alter the content of the database: %s" % db_path)
+    # create a bib
+    bib = Biblioteca(collection_name)
+    if os.path.exists(bib.sqldao.db_path):
+        print("Now, I'm going to alter the content of the database: %s" % bib.sqldao.db_path)
         if not (answer or confirm("Do you want to continue? (yes/no): ")):
             return False
     else:
-        prepare_database(vkconfig.BIBLIOTECHE_ROOT, collection_name)
+        bib.sqldao.prepare()
     convert(collection_name, corpus_name, doc_name)
     print("All Done!")
     draw_separator()

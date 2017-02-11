@@ -4,7 +4,7 @@
 {% block content %}
 
 <ol class="breadcrumb">
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collection</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=collection_name %}">{{ collection_name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=collection_name corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item active">{{ doc.name }}</li>
@@ -13,12 +13,84 @@
 
 <h1 class="page-header">{{ doc.name }}</h1>
 
+<form method="POST" action="{% url 'visko2:create_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" style="padding-bottom: 20px;">
+  {% csrf_token %}
+  <div class="input-group input-group-lg">
+    <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
+    <span class="input-group-addon">Parse Count</span>
+    <select id="input_results" name="input_results" class="form-control input-small" title="Maximum parses">
+      {% for r in RESULTS %}
+      <option {% if r == input_results %}selected="selected"{% endif %} value="{{r}}">{{r}}</option>
+      {% endfor %}
+    </select>
+    <span class="input-group-btn">
+      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Add sentence</button>
+    </span>
+  </div>
+</form>
+
 <div class="list-group">
-  {% for sentence in sentences %}
-  <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}" class="list-group-item">
-    {{ sentence.text }}
-  </a>
-  {% endfor %}
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>#</td>
+        <td>Sentence</td>
+        <td>Parse count</td>
+        <td>Actions</td>
+      </tr>
+    </thead>
+
+    {% for sentence in sentences %}
+    <tr>
+      <td>{{ sentence.ID }}</td>
+      <td>
+        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+      </td>
+      <td>{{ sentence|length}}</td>
+      <td>
+        <button class="btn btn-danger" data-txt="{{sentence.text}}" data-idx="{{sentence.ID}}" data-href="{% url 'visko2:delete_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}" data-toggle="modal" data-target="#confirm-delete">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
 </div>
 
+<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
+      </div>
+      
+      <div class="modal-body">
+        <p>You are about to delete the following sentence, this procedure is irreversible.</p>
+        <p>Do you want to proceed?</p>
+        <p class="debug-url"></p>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <a class="btn btn-danger btn-ok">Delete</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+ $('#confirm-delete').on('show.bs.modal', function(e) {
+   var lnk = $(e.relatedTarget).data('href');
+   var idx = $(e.relatedTarget).data('idx');
+   var txt = $(e.relatedTarget).data('txt');
+   $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+   
+   $('.debug-url').html('Delete URL: <strong>' + lnk + '</strong><br/>' + ' (Sentence #' + idx + ': ' + txt + ')');
+ });
+</script>
 {% endblock %}

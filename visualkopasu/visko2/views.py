@@ -31,31 +31,49 @@ __status__ = "Prototype"
 
 
 import os
+import lxml
+import logging
 
 from django.template import Context
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.core.context_processors import csrf
 
 from coolisf.util import Grammar
 
-from visualkopasu.config import ViskoConfig as vkconfig
-from visualkopasu.kopasu.util import RawXML
+from visualkopasu.util import getLogger
+from visualkopasu.kopasu import Biblioteche, Biblioteca
+from visualkopasu.kopasu.util import RawXML, getSentenceFromXML
+from visualkopasu.kopasu.models import Document
 
 ########################################################################
 
 
+logger = getLogger('visko2.ui', logging.DEBUG)  # level = INFO (default)
+
+
 def getAllCollections():
-    for collection in vkconfig.Biblioteche:
+    collections = Biblioteche.get_all()
+    for collection in collections:
         corpora = None
         if os.path.isfile(collection.sqldao.db_path):
+            # there is a collection with this name
             corpora = collection.sqldao.getCorpora()
-        collection.corpora = corpora if corpora else []
-        for corpus in collection.corpora:
-            corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
-            corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
-            for doc in corpus.documents:
-                doc.corpus = corpus
-    return vkconfig.Biblioteche
+            collection.corpora = corpora if corpora is not None else []
+            logger.debug("corpora of {}: {} | {}".format(collection.name, corpora, collection.corpora))
+            # get all available corpus inside
+            for corpus in collection.corpora:
+                corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
+                corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
+                for doc in corpus.documents:
+                    doc.corpus = corpus
+    for col in collections:
+        logger.debug(col.name, col.corpora)
+    return collections
+
+
+def get_bib(bibname):
+    return Biblioteca(bibname)
 
 ##########################################################################
 # MAIN
@@ -92,7 +110,7 @@ def delviz(request):
 
 
 # Maximum parses
-RESULTS = (1, 5, 10, 50, 100, 500)
+RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
 
 
 def isf(request):
@@ -103,9 +121,9 @@ def isf(request):
         input_results = 5
     sentence_text = request.POST.get('input_sentence', None)
     if sentence_text:
-        print("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
+        logger.info("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
         sent = Grammar().txt2dmrs(sentence_text, parse_count=input_results)
-        print("sent.text = " + sent.text)
+        logger.debug("sent.text = " + sent.text)
         c.update({'sent': sent})
     else:
         sentence_text = 'Three musketeers walk into a bar.'
@@ -122,6 +140,102 @@ def isf(request):
 ##########################################################################
 
 
+def create_collection(request):
+    bib_name = request.POST.get('collection_name', None)
+    try:
+        Biblioteche.create(bib_name)
+    except:
+        msg = "Cannot create biblioteca with name = {}".format(bib_name)
+        logger.error(msg)
+        messages.error(request, msg)
+    return redirect('visko2:list_collection')
+
+
+def create_corpus(request, collection_name):
+    corpus_name = request.POST.get('corpus_name', None)
+    bib = get_bib(collection_name)
+    try:
+        bib.create_corpus(corpus_name)
+        return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
+    except:
+        msg = "Cannot create corpus with name = {}".format(corpus_name)
+        logger.error(msg)
+        messages.error(request, msg)
+        return redirect('visko2:list_corpus', collection_name=collection_name)
+
+
+def create_doc(request, collection_name, corpus_name):
+    doc_name = request.POST.get('doc_name', None)
+    bib = get_bib(collection_name)
+    try:
+        # create SQLite doc
+        corpus = bib.sqldao.getCorpus(corpus_name)[0]
+        bib.sqldao.saveDocument(Document(doc_name, corpusID=corpus.ID))
+        # create XML doc
+        cdao = bib.textdao.getCorpusDAO(corpus_name)
+        cdao.create_doc(doc_name)
+        return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
+    except:
+        msg = "Cannot create corpus with name = {}".format(corpus_name)
+        logger.error(msg)
+        messages.error(request, msg)
+        return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
+
+
+def create_sent(request, collection_name, corpus_name, doc_id):
+    bib = get_bib(collection_name)
+    # corpus = dao.getCorpus(corpus_name)[0]
+    doc = bib.sqldao.getDocument(doc_id)
+    input_results = int(request.POST.get('input_results', 5))
+    if input_results not in RESULTS:
+        input_results = 5
+    sentence_text = request.POST.get('input_sentence', None)
+    if not sentence_text:
+        logger.error("Sentence text cannot be empty")
+    else:        
+        isent = Grammar().txt2dmrs(sentence_text, parse_count=input_results)
+        xsent = isent.to_visko_xml()
+        vsent = getSentenceFromXML(xsent)
+        # save to doc
+        vsent.documentID = doc.ID
+        try:
+            logger.debug("Visko sent: {} | length: {}".format(vsent, len(vsent)))
+            bib.sqldao.saveSentence(vsent)
+            # save XML
+            docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+            docdao.save_sentence(xsent, vsent.ID)
+            return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=vsent.ID)
+        except Exception as e:
+            logger.error("Cannot save sentence. Error = {}".format(e))
+    # default
+    return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
+
+
+def reparse_sent(request, collection_name, corpus_name, doc_id, sent_id):
+    input_results = int(request.POST.get('input_results', 0))
+    if not input_results:
+        logger.error("Invalid parse count (provided {})".format(input_results))
+    else:
+        dao = get_bib(collection_name).sqldao
+        # corpus = dao.getCorpus(corpus_name)[0]
+        # doc = dao.getDocument(doc_id)
+        sent = dao.getSentence(sent_id)
+        logger.debug("Reparse (parse count: {})=> Sent: {} | length: {}".format(input_results, sent, len(sent)))
+    return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id)
+
+
+def delete_sent(request, collection_name, corpus_name, doc_id, sent_id):
+    bib = get_bib(collection_name)
+    doc = bib.sqldao.getDocument(doc_id)
+    try:
+        bib.sqldao.delete_sent(sent_id)
+        docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+        docdao.delete_sent(sent_id)
+    except Exception as e:
+        logger.error("Cannot delete sentence. Error: {}".format(e))
+    return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
+
+
 def list_collection(request):
     c = Context({"title": "Visual Kopasu 2.0",
                  "header": "Visual Kopasu 2.0",
@@ -131,7 +245,7 @@ def list_collection(request):
 
 
 def list_corpus(request, collection_name):
-    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    dao = get_bib(collection_name).sqldao
     corpora = dao.getCorpora()
     if corpora:
         for corpus in corpora:
@@ -148,7 +262,7 @@ def list_corpus(request, collection_name):
 
 
 def list_doc(request, collection_name, corpus_name):
-    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
     for doc in corpus.documents:
@@ -162,7 +276,7 @@ def list_doc(request, collection_name, corpus_name):
 
 
 def list_sent(request, collection_name, corpus_name, doc_id):
-    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sentences = dao.getSentences(doc_id)
@@ -171,52 +285,72 @@ def list_sent(request, collection_name, corpus_name, doc_id):
                  'collection_name': collection_name,
                  'corpus': corpus,
                  'doc': doc,
-                 'sentences': sentences})
+                 'sentences': sentences,
+                 'input_results': 5,
+                 'RESULTS': RESULTS})
     c.update(csrf(request))
     return render(request, "visko2/corpus/document.html", c)
 
 
 def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
-    dao = vkconfig.BibliotecheMap[collection_name].sqldao
+    dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sent = dao.getSentence(sent_id)
+    logger.debug("Sent: {} | length: {}".format(sent, len(sent)))
     c = Context({'title': 'Corpus',
                  'header': 'Visual Kopasu - 2.0',
                  'collection_name': collection_name,
                  'corpus': corpus,
                  'doc': doc,
-                 'sent': sent})
+                 'sent': sent, 'sent_id': sent_id})
+    # update reparse count
+    input_results = RESULTS[-1]
+    for r in RESULTS:
+        if r < len(sent):
+            continue
+        input_results = r
+        break
+    c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # retrieve original XML
     try:
-        txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-        raw = RawXML(txtdao.getSentenceRaw(sent.ident))
-        isfsent = raw.to_isf()
-        c.update({'raw': raw, 'sent': isfsent})
-    except:
+        print("Has raw:", sent.has_raw())
+        if sent is not None and sent.has_raw():
+            # use built-in raws
+            isfsent = sent.to_isf()
+            print("ISF sent", isfsent)
+            pass
+        else:
+            txtdao = get_bib(collection_name).textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+            raw = RawXML(txtdao.getSentenceRaw(sent.ident))
+            isfsent = raw.to_isf()
+        c.update({'sent': isfsent})
+    except Exception as e:
+        print("Error: {}".format(e))
+        raise
         pass
-
     c.update(csrf(request))
     return render(request, "visko2/corpus/sentence.html", c)
 
 
-def list_parse_new(request, collection_name, corpus_name, doc_id, sent_id):
-    c = Context({"title": "Integrated Semantic Framework",
-                 "header": "Visual Kopasu 2.0"})
-    try:
-        dao = vkconfig.BibliotecheMap[collection_name].sqldao
-        doc = dao.getDocument(doc_id)
-        sent = dao.getSentence(sent_id)
-        txtdao = vkconfig.BibliotecheMap[collection_name].textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-        raw = RawXML(txtdao.getSentenceRaw(sent.ident))
-        isfsent = raw.to_isf()
-        c.update({'raw': raw, 'sent': isfsent})
-    except:
-        pass
-    # -------
-    # render
+def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id):
+    dao = get_bib(collection_name).sqldao
+    corpus = dao.getCorpus(corpus_name)[0]
+    doc = dao.getDocument(doc_id)
+    sent = dao.getSentence(sent_id, interpretationIDs=(parse_id,))
+    print("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpus': corpus,
+                 'doc': doc,
+                 'sent': sent, 'sent_id': sent_id})
+    # update reparse count
+    input_results = 5
+    c.update({'input_results': input_results, 'RESULTS': RESULTS})
+    # convert Visko Sentence into ISF to display
+    isfsent = sent.to_isf()
+    print(len(isfsent))
+    c.update({'sent': isfsent, 'parse': isfsent[0]})
     c.update(csrf(request))
-    c.update({'input_sentence': isfsent.text,
-              'input_results': 5,
-              'RESULTS': RESULTS})
-    return render(request, "visko2/isf/index.html", c)
+    return render(request, "visko2/corpus/parse.html", c)
