@@ -15,7 +15,6 @@
 <div class="dmrs_sentence_text">Parse count: {{ sent.mrses|length }}</div>
 <div id="dmrs_text_holder" class="dmrs_sentence_text">{{ input_sentence }}</div>
 
-<div style="overflow-y: auto; height: 500px;">
   <ul class="nav nav-tabs">
     <li><a data-toggle="tab" href="#visko">DMRS</a></li>
     <li class="active"><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
@@ -26,17 +25,20 @@
   </ul>
   <div class="tab-content">
     <div id="visko" class="tab-pane">
-      <h3>Visko</h3>
+      <div style="overflow-y: auto; height: 500px;">
       {% for parse in sent.mrses %}
       <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
       <div id='dmrs_canvas{{forloop.counter}}'></div>
       {% endfor %}
+      </div>
     </div>
     <div id="delviz" class="tab-pane active">
+      <div style="overflow-y: auto; height: 500px;">
       {% for parse in sent.mrses %}
       <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
       <div id='viszone{{forloop.counter}}'></div>
       {% endfor %}
+      </div>
     </div>
     <div id="raw" class="tab-pane">
       {% for parse in sent.mrses %}
@@ -75,7 +77,6 @@
 
     </div>
   </div>
-</div>
 {% endif %}
 {% endblock %}
 
