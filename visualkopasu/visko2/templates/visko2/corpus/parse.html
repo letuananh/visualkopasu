@@ -1,5 +1,6 @@
 {% extends 'visko2/base.html' %}
 {% load staticfiles %}
+{% load visko2_tags %}
 
 {% block content %}
 
@@ -37,7 +38,7 @@
       <pre><code>{{ parse.dmrs_str }}</code></pre>
     </div>
     <div id="xml" class="tab-pane">
-      <pre><code>{{ parse.dmrs_xml_str }}</code></pre>
+      <pre><code>{{ parse.dmrs_xml_str|pretty_xml }}</code></pre>
     </div>
     <div id="json" class="tab-pane">
       <h4>MRS</h4>
