@@ -22,10 +22,9 @@
 </form>
 
 {% if sent %}
-<div class="dmrs_sentence_text">Parse count: {{ sent.mrses|length }}</div>
+<div class="dmrs_sentence_text">Parse count: {{ sent|length }}</div>
 <div id="dmrs_text_holder" class="dmrs_sentence_text">{{ input_sentence }}</div>
 
-<div style="overflow-y: auto; height: 500px;">
 <ul class="nav nav-tabs">
   <li><a data-toggle="tab" href="#visko">DMRS</a></li>
   <li class="active"><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
@@ -35,37 +34,42 @@
 </ul>
 <div class="tab-content">
   <div id="visko" class="tab-pane">
-    <h3>Visko</h3>
-    {% for parse in sent.mrses %}
-    <h3>Parse #{{forloop.counter}}</h3>
-    <div id='dmrs_canvas{{forloop.counter}}'></div>
-    {% endfor %}
+    <div style="overflow-y: auto; height: 600px;">
+      {% for parse in sent %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <div id='dmrs_canvas{{forloop.counter}}'></div>
+      {% endfor %}
+    </div>
   </div>
   <div id="delviz" class="tab-pane active">
-    {% for parse in sent.mrses %}
-    <h3>Parse #{{forloop.counter}}</h3>
-    <div id='viszone{{forloop.counter}}'></div>
-    {% endfor %}
+    <div style="overflow-y: auto; height: 600px;">
+      {% for parse in sent %}
+      <h3>Parse #{{forloop.counter}}</h3>
+      <div id='viszone{{forloop.counter}}'></div>
+      {% endfor %}
+    </div>
   </div>
   <div id="raw" class="tab-pane">
-    {% for parse in sent.mrses %}
+    {% for parse in sent %}
     <h3>Parse #{{forloop.counter}}</h3>
-    <pre><code>{{ parse.dmrs_str }}</code></pre>
+    <h4>MRS</h4>
+    <pre><code>{{ parse.mrs.tostring }}</code></pre>
+    <h4>DMRS</h4>
+    <pre><code>{{ parse.dmrs.tostring }}</code></pre>
     {% endfor %}
   </div>
   <div id="xml" class="tab-pane">
     <pre><code>{{ sent.to_xml_str }}</code></pre>
   </div>
   <div id="json" class="tab-pane">
-    {% for parse in sent.mrses %}
+    {% for parse in sent %}
     <h3>Parse #{{forloop.counter}}</h3>
     <h4>MRS</h4>
-    <pre><code>{{ parse.mrs_json_str }}</code></pre>
+    <pre><code>{{ parse.mrs.json_str }}</code></pre>
     <h4>DMRS</h4>
-    <pre><code>{{ parse.sense_tag_json_str }}</code></pre>
+    <pre><code>{{ parse.dmrs.json_str }}</code></pre>
     {% endfor %}
   </div>
-</div>
 </div>
 {% endif %}
 {% endblock %}
@@ -118,21 +122,21 @@
    // MRS JSON data
    {% autoescape off %}
    // All parses
-   {% for parse in sent.mrses %}
+   {% for parse in sent %}
    //   Parse #{{forloop.counter}}
-   dmrs_json{{forloop.counter}} = {{parse.sense_tag_json_str}};
-   mrs_json{{forloop.counter}} = {{parse.mrs_json_str}};
+   dmrs_json{{forloop.counter}} = {{parse.dmrs.json_str}};
+   mrs_json{{forloop.counter}} = {{parse.mrs.json_str}};
    {% endfor %}
    {% endautoescape %}
    // visualise delviz
-   {% for parse in sent.mrses %}
+   {% for parse in sent %}
    visualize('viszone{{forloop.counter}}', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json{{forloop.counter}}, mrs_json{{forloop.counter}});
    {% endfor %}
    
    // visualise Visko
    // but only when activated ...
    console = new Console('console');
-   {% for parse in sent.mrses %}
+   {% for parse in sent %}
    visko_dmrs{{forloop.counter}} = json2visko(dmrs_json{{forloop.counter}}, "{{ sent.text }}");
    visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(visko_dmrs{{forloop.counter}}, "dmrs_canvas{{forloop.counter}}", "dmrs_text_holder");
    {% endfor %}
@@ -142,7 +146,7 @@
      if(target == '#visko'){
        if (!visko_visualised){
          visko_visualised = true;
-         {% for parse in sent.mrses %}
+         {% for parse in sent %}
          visual_dmrs{{forloop.counter}}.visualise();
          {% endfor %}
        }

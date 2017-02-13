@@ -332,64 +332,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             for interpretation in a_sentence.interpretations:
                 # Update sentenceID
                 interpretation.sentenceID = a_sentence.ID
-                self.Interpretation.save(interpretation, context=context)
-                # Save raw
-                for raw in interpretation.raws:
-                    raw.interpretationID = interpretation.ID
-                    self.ParseRaw.save(raw, context=context)
-                # Save DMRS
-                for dmrs in interpretation.dmrs:
-                    dmrs.interpretationID = interpretation.ID
-                    self.DMRS.save(dmrs, context=context)
-                    # save nodes
-                    for node in dmrs.nodes:
-                        nodeindex = NodeIndex()
-                        node.dmrsID = dmrs.ID
-                        # save realpred
-                        if node.rplemma:
-                            # Escape lemma
-                            lemma = self.lemmaCache.getByValue(node.rplemma, context=context)
-                            node.rplemmaID = lemma.ID
-                            nodeindex.lemmaID = lemma.ID
-                            nodeindex.pos = node.rppos
-                            nodeindex.sense = node.rpsense
-                        # save gpred
-                        if node.gpred:
-                            gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
-                            node.gpred_valueID = gpred_value.ID
-                            nodeindex.gpred_valueID = gpred_value.ID
-                        # save sense
-                        if node.sense:
-                            node.synsetid = node.sense.synsetid
-                            node.synset_score = node.sense.score
-                        self.Node.save(node, context=context)
-                        # save sortinfo
-                        node.sortinfo.dmrs_nodeID = node.ID
-                        self.SortInfo.save(node.sortinfo, context=context)
-                        # other nodeindex info
-                        nodeindex.nodeID = node.ID
-                        if node.carg:
-                            nodeindex.carg = node.carg
-                        nodeindex.dmrsID = dmrs.ID
-                        nodeindex.documentID = a_sentence.documentID
-                        self.NodeIndex.save(nodeindex, context=context)
-                    # save links
-                    for link in dmrs.links:
-                        link.dmrsID = dmrs.ID
-                        link.fromNodeID = link.fromNode.ID
-                        link.toNodeID = link.toNode.ID
-                        if link.rargname is None:
-                            link.rargname = ''
-                        # build link index
-                        linkindex = LinkIndex()
-                        linkindex.linkID = link.ID
-                        linkindex.fromNodeID = link.fromNode.ID
-                        linkindex.toNodeID = link.toNode.ID
-                        linkindex.post = link.post
-                        linkindex.rargname = link.rargname
-                        linkindex.dmrsID = dmrs.ID
-                        linkindex.documentID = a_sentence.documentID
-                        self.Link.save(link, context)
+                self.saveInterpretation(interpretation, doc_id=a_sentence.documentID, context=context, auto_flush=auto_flush)
             if auto_flush:
                 context.flush()
         else:
@@ -397,7 +340,83 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             pass
         # Select sentence
         return a_sentence
-    
+
+    def deleteInterpretation(self, interpretationID):
+        # delete all DMRS link, link_index, node, node_index
+        self.orm_manager.execute("DELETE FROM dmrs_link WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
+        self.orm_manager.execute("DELETE FROM dmrs_link_index WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
+        self.orm_manager.execute("DELETE FROM dmrs_node WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
+        self.orm_manager.execute("DELETE FROM dmrs_node_index WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
+        self.orm_manager.execute("DELETE FROM dmrs_node_sortinfo WHERE dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE interpretationID=?))", (interpretationID,))
+        # delete all DMRS
+        self.orm_manager.execute("DELETE FROM dmrs WHERE interpretationID=?", (interpretationID,))
+        # delete all parse_raw
+        self.orm_manager.execute("DELETE FROM parse_raw WHERE interpretationID=?", (interpretationID,))
+        self.orm_manager.execute("DELETE FROM interpretation WHERE ID=?", (interpretationID,))
+
+    def updateInterpretation(self, interpretation):
+        raise NotImplementedError
+
+    def saveInterpretation(self, interpretation, doc_id, context=None, auto_flush=True):
+        self.Interpretation.save(interpretation, context=context)
+        # Save raw
+        for raw in interpretation.raws:
+            raw.interpretationID = interpretation.ID
+            self.ParseRaw.save(raw, context=context)
+        # Save DMRS
+        for dmrs in interpretation.dmrs:
+            dmrs.interpretationID = interpretation.ID
+            self.DMRS.save(dmrs, context=context)
+            # save nodes
+            for node in dmrs.nodes:
+                nodeindex = NodeIndex()
+                node.dmrsID = dmrs.ID
+                # save realpred
+                if node.rplemma:
+                    # Escape lemma
+                    lemma = self.lemmaCache.getByValue(node.rplemma, context=context)
+                    node.rplemmaID = lemma.ID
+                    nodeindex.lemmaID = lemma.ID
+                    nodeindex.pos = node.rppos
+                    nodeindex.sense = node.rpsense
+                # save gpred
+                if node.gpred:
+                    gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
+                    node.gpred_valueID = gpred_value.ID
+                    nodeindex.gpred_valueID = gpred_value.ID
+                # save sense
+                if node.sense:
+                    node.synsetid = node.sense.synsetid
+                    node.synset_score = node.sense.score
+                self.Node.save(node, context=context)
+                # save sortinfo
+                node.sortinfo.dmrs_nodeID = node.ID
+                self.SortInfo.save(node.sortinfo, context=context)
+                # other nodeindex info
+                nodeindex.nodeID = node.ID
+                if node.carg:
+                    nodeindex.carg = node.carg
+                nodeindex.dmrsID = dmrs.ID
+                nodeindex.documentID = doc_id
+                self.NodeIndex.save(nodeindex, context=context)
+            # save links
+            for link in dmrs.links:
+                link.dmrsID = dmrs.ID
+                link.fromNodeID = link.fromNode.ID
+                link.toNodeID = link.toNode.ID
+                if link.rargname is None:
+                    link.rargname = ''
+                # build link index
+                linkindex = LinkIndex()
+                linkindex.linkID = link.ID
+                linkindex.fromNodeID = link.fromNode.ID
+                linkindex.toNodeID = link.toNode.ID
+                linkindex.post = link.post
+                linkindex.rargname = link.rargname
+                linkindex.dmrsID = dmrs.ID
+                linkindex.documentID = doc_id
+                self.Link.save(link, context)
+
     def searchInterpretations(self, mode=None, rargname=None, post=None, lemma=None, limit=50):
         query = '''
         SELECT interpretation.ID as interpretationID, sentenceID as sentenceID, text FROM interpretation
@@ -645,4 +664,9 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         return a_sentence
 
     def delete_sent(self, sentenceID):
+        # delete all interpretation
+        sent = self.getSentence(sentenceID, skip_details=True, get_raw=False)
+        if sent is not None:
+            for i in sent:
+                self.deleteInterpretation(i.ID)
         self.orm_manager.execute("DELETE FROM Sentence WHERE ID=?", (sentenceID,))

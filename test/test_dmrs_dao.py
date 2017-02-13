@@ -61,7 +61,7 @@ from visualkopasu.kopasu.models import ParseRaw
 
 logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TEST_FILE = os.path.join(TEST_DIR, 'speckled_10565.xml')
+TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
 
 
 class TestRawXML(unittest.TestCase):
@@ -93,12 +93,7 @@ class TestDAOBase(unittest.TestCase):
         FileTool.create_dir(cls.bibroot)
         db_path = cls.bib.sqldao.db_path
         logging.debug("Setting up database file at %s" % (db_path,))
-        if os.path.isfile(db_path):
-            # make sure we recreate the test DB every we run the test
-            # os.unlink(db_path)
-            pass
-        else:
-            prepare_database(cls.bibroot, cls.bibname, backup=False, silent=True)
+        cls.bib.sqldao.prepare(backup=False, silent=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -155,7 +150,7 @@ class TestDMRSDAO(TestDAOBase):
     def test_xml_dao(self):
         logging.info("Test ISF sense reading")
         ERG = Grammar()
-        sent = ERG.txt2dmrs('The dog barks.')
+        sent = ERG.parse('The dog barks.')
         # ISF sentence can be exported to visko directly
         sent_node = sent.to_visko_xml()
         self.assertIsNotNone(sent_node)
@@ -168,7 +163,7 @@ class TestDMRSDAO(TestDAOBase):
     def test_dmrs_from_coolisf(self):
         # use CoolISF to generate Visko sentence XML
         ERG = Grammar()
-        sent = ERG.txt2dmrs('I saw a girl with a telescope which is nice.', parse_count=10)
+        sent = ERG.parse('I saw a girl with a telescope which is nice.', parse_count=10)
         raw = RawXML(xml=sent.to_visko_xml())
         self.assertEqual(len(raw), 10)
         #
@@ -218,8 +213,8 @@ class TestDMRSSQLite(TestDAOBase):
         doc = self.ensure_doc()
         sent = getSentenceFromFile(TEST_FILE)
         sent.documentID = doc.ID
-        sent = self.bib.sqldao.getSentence(sentenceID=1)
-        if sent is None:
+        sent_obj = self.bib.sqldao.getSentence(sentenceID=1)
+        if sent_obj is None:
             self.bib.sqldao.saveSentence(sent)
         return self.bib.sqldao.getSentence(sentenceID=1)
 
@@ -272,7 +267,7 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(actual_sentence[0].raws[1].rtype, ParseRaw.XML)
         self.assertGreater(len(actual_sentence[0].raws[0].text), 0)
         self.assertGreater(len(actual_sentence[0].raws[1].text), 0)
-        self.assertEqual(str(actual_sentence[0].raws[0]), '[mrs:[ LTOP: h0 INDEX: e2 [ e ...10 qeq h12 > ICONS: < > ]]')
+        self.assertEqual(str(actual_sentence[0].raws[0]), '[mrs:[ TOP: h0\n  INDEX: e2 [ e...h6 qeq h4 h10 qeq h12 > ]]')
         self.assertEqual(str(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
 
     def test_get_sentences_with_dummy(self):

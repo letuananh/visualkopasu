@@ -18,7 +18,9 @@ Data models for VisualKopasu project.
 
 ########################################################################
 
+from lxml import etree
 from .liteorm import SmartRecord
+from delphin.mrs import Pred
 from coolisf.model import Sentence as ISFSentence
 
 ########################################################################
@@ -99,16 +101,17 @@ class Sentence(SmartRecord):
         ''' Convert Visko Sentence to ISF sentence'''
         isfsent = ISFSentence(self.text, self.ID)
         for i in self:
-            mrs_raw = i.find_raw(ParseRaw.MRS)
-            if mrs_raw:
-                p = isfsent.add(mrs_raw.text)
+            # we should use XML first as it has sense information
+            xml_raw = i.find_raw(ParseRaw.XML)
+            if xml_raw:
+                p = isfsent.add(dmrs_xml=xml_raw.text)
                 p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                 p.ident = i.rid
             else:
-                # try XML ...
-                xml_raw = i.find_raw(ParseRaw.XML)
-                if xml_raw:
-                    p = isfsent.add_from_xml(xml_raw.text)
+                # try MRS
+                mrs_raw = i.find_raw(ParseRaw.MRS)
+                if mrs_raw:
+                    p = isfsent.add(mrs_str=mrs_raw.text)
                     p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                     p.ident = i.rid
         return isfsent
@@ -201,21 +204,17 @@ class DMRS(SmartRecord):
             return [node for node in self.nodes if node.ID == nodeid]
         else:
             return [node for node in self.nodes if node.nodeid == nodeid]
-    
+
     def getLink(self, fromid=None, toid=None):
         return [link for link in self.links if 
             ((not fromid) or link.fromNode.nodeid == fromid)
             and ((not toid) or link.toNode.nodeid == toid)]
-        
+
     def __str__(self):
-        nodes = ''
-        for node in self.nodes:
-            nodes += str(node) + "\n"
-            
-        links = ''
-        for link in self.links:
-            links += str(link) + "\n"
-        return "DMRS: ident='{ident}', [{cfrom} : {to}], surface='{surface}'\n\n.:[Nodes]:.\n{nodes}\n.:[Links]:.\n{links}".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nodes=nodes, links=links)
+        nodes = [str(n) for n in self.nodes if str(n.nodeid) != '0']
+        links = [str(l) for l in self.links]
+
+        return "dmrs {{\n{nl}\n}} ".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nl=' ; \n'.join(nodes + links))
 
 
 class Node(SmartRecord):
@@ -244,8 +243,19 @@ class Node(SmartRecord):
         self.synsetid = None
         self.synset_score = None
 
+    def __repr__(self):
+        return str(self)
+
     def __str__(self):
-        return u"DMRS-Node: [ id={nodeid} [{cfrom}:{cto}] SORT_INFO={{{sortinfo}}} PRED={{{pred}}} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, pred=str(self.gpred) if self.gpred is not None else str(self.realpred))
+        if self.gpred:
+            pred = self.gpred
+        else:
+            pred = Pred.realpred(self.rplemma, self.rppos, self.rpsense if self.rpsense else None).short_form()
+        sensetag = ''
+        if self.sense:
+            sensetag = 'synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma, self.sense.score)
+        carg = 'CARG=+' if self.carg else ''
+        return "{nodeid} [ {pred}<{cfrom}:{cto}> {sortinfo} {sensetag} {carg} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, sensetag=sensetag, pred=pred, carg=carg)
 
 
 class NodeIndex(SmartRecord):
@@ -299,7 +309,11 @@ class SortInfo(SmartRecord):
         self.dmrs_nodeID = -1
 
     def __str__(self):
-        return str(',\t '.join('%s : %s' % (k, str(v)) for (k, v) in self.__dict__.items() if v))
+        valdict = [(k, self.__dict__[k]) for k in ['num', 'pers', 'gend', 'sf', 'tense', 'mood', 'prontype', 'prog', 'perf', 'ind'] if self.__dict__[k]]
+        if self.cvarsort:
+            return self.cvarsort + ' ' + ' '.join(('{}={}'.format(k.upper(), str(v)) for (k, v) in valdict))
+        else:
+            return ' '.join(('{}={}'.format(k.upper(), str(v)) for (k, v) in valdict))
 
 
 class GpredValue(SmartRecord):
@@ -324,7 +338,7 @@ class Link(SmartRecord):
     """
     DMRS links
     """
-    def __init__(self, fromNode=None, toNode=None, post=None, rargname=''):
+    def __init__(self, fromNode=None, toNode=None, post='', rargname=''):
         self.ID = None
         self.fromNodeID = -1
         self.toNodeID = -1
@@ -335,4 +349,4 @@ class Link(SmartRecord):
         self.rargname = rargname
 
     def __str__(self):
-        return "DMRS-Link:[Node: {fromNode}] => [Node: {toNode}] Post={post} Rargname={rargname}".format(fromNode=self.fromNode.nodeid, toNode=self.toNode.nodeid, post=self.post, rargname=self.rargname)
+        return "{fromNode}:{rargname}/{post} -> {toNode}".format(fromNode=self.fromNode.nodeid, toNode=self.toNode.nodeid, post=self.post if self.post else '', rargname=self.rargname if self.rargname else '')

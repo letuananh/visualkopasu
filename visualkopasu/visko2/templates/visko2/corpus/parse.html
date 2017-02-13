@@ -17,47 +17,73 @@
 <h3>Sentence #{{sent_id}} | Parse #{{parse.ident}}</h3>
 <div id="dmrs_text_holder" class="dmrs_sentence_text">{{ sent.text }}</div>
 
-<div style="overflow-y: auto; height: 500px;">
   <ul class="nav nav-tabs">
     <li><a data-toggle="tab" href="#visko">DMRS</a></li>
     <li class="active"><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
     <li><a data-toggle="tab" href="#raw">RAW</a></li>
     <li><a data-toggle="tab" href="#xml">XML</a></li>
     <li><a data-toggle="tab" href="#json">JSON</a></li>
-    <li><a data-toggle="tab" href="#edit">Edit</a></li>
   </ul>
   <div class="tab-content">
     <div id="visko" class="tab-pane">
-      <h3>Visko</h3>
-      <div id='dmrs_canvas'></div>
+      <div style="overflow-y: auto; height: 700px;">
+        <div id='dmrs_canvas'></div>
+      </div>
     </div>
     <div id="delviz" class="tab-pane active">
-      <div id='viszone'></div>
+      <div style="overflow-y: auto; height: 700px;">
+        <div id='viszone'></div>
+        <h3>Edit DMRS</h3>
+        <form method="POST" action="{% url 'visko2:edit_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID mode='edit' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <textarea class="form-control" rows="23" name="dmrs_raw" id="dmrs_raw">{{vdmrs}}</textarea>
+          </div>
+          <button type="submit" name="btn_action" value="parse" class="btn btn-lg btn-primary">Parse</button>
+          <button type="submit" name="btn_action" value="insert" class="btn btn-lg btn-primary">Save As New DMRS</button>
+          <button type="submit" name="btn_action" value="save" class="btn btn-lg btn-danger">Overwrite</button>
+          <button type="button" class="btn btn-lg btn-danger" data-idx="{{parse.ident}}" data-href="{% url 'visko2:edit_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID mode='delete' %}" data-toggle="modal" data-target="#confirm-delete">Delete</button>
+        </form>
+      </div>
     </div>
     <div id="raw" class="tab-pane">
-      <pre><code>{{ parse.dmrs_str }}</code></pre>
+      <h3>pydelphin DMRS</h3>
+      <pre><code>{{ parse.dmrs.tostring }}</code></pre>
     </div>
     <div id="xml" class="tab-pane">
-      <pre><code>{{ parse.dmrs_xml_str|pretty_xml }}</code></pre>
+      <pre><code>{{ parse.dmrs.xml_str|pretty_xml }}</code></pre>
     </div>
     <div id="json" class="tab-pane">
       <h4>MRS</h4>
-      <pre><code>{{ parse.mrs_json_str }}</code></pre>
+      <pre><code>{{ parse.mrs.json_str }}</code></pre>
       <h4>DMRS</h4>
-      <pre><code>{{ parse.sense_tag_json_str }}</code></pre>
-    </div>
-    <div id="edit" class="tab-pane">
-      <h3>Edit</h3>
-      <form>
-        <div class="form-group">
-          <label for="comment">DMRS RAW</label>
-          <textarea class="form-control" rows="10" id="comment">{{parse.dmrs_str}}</textarea>
-        </div>
-      </form>
+      <pre><code>{{ parse.dmrs.json_str }}</code></pre>
     </div>
   </div>
-</div>
-{% endif %}
+  {% endif %}
+
+  <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
+        </div>
+        
+        <div class="modal-body">
+          <p>You are about to delete the following parse, this procedure is irreversible.</p>
+          <p>Do you want to proceed?</p>
+          <p class="debug-url"></p>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <a class="btn btn-danger btn-ok">Delete</a>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 
@@ -111,8 +137,8 @@
    // MRS JSON data
    {% autoescape off %}
    // All parses
-   dmrs_json = {{parse.sense_tag_json_str}};
-   mrs_json = {{parse.mrs_json_str}};
+   dmrs_json = {{parse.dmrs.json_str}};
+   mrs_json = {{parse.mrs.json_str}};
    {% endautoescape %}
    // visualise delviz
    visualize('viszone', '{% autoescape off %}{{ sent.text }}{% endautoescape %}', dmrs_json, mrs_json);
@@ -142,6 +168,15 @@
    });
    {% endif %}
    
+ });
+</script>
+<script>
+ $('#confirm-delete').on('show.bs.modal', function(e) {
+   var lnk = $(e.relatedTarget).data('href');
+   var idx = $(e.relatedTarget).data('idx');
+   $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+   
+   $('.debug-url').html('Delete URL: <strong>' + lnk + '</strong><br/>' + ' (Sentence #' + idx + ')');
  });
 </script>
 {% endblock %}

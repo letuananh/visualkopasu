@@ -43,8 +43,9 @@ from coolisf.util import Grammar
 
 from visualkopasu.util import getLogger
 from visualkopasu.kopasu import Biblioteche, Biblioteca
-from visualkopasu.kopasu.util import RawXML, getSentenceFromXML
-from visualkopasu.kopasu.models import Document
+from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
+from visualkopasu.kopasu.util import dmrs_str_to_xml, xml_to_str
+from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation
 
 ########################################################################
 
@@ -122,7 +123,9 @@ def isf(request):
     sentence_text = request.POST.get('input_sentence', None)
     if sentence_text:
         logger.info("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
-        sent = Grammar().txt2dmrs(sentence_text, parse_count=input_results)
+        sent = Grammar().parse(sentence_text, parse_count=input_results)
+        # tag sentences
+        sent.tag(method='mfs')
         logger.debug("sent.text = " + sent.text)
         c.update({'sent': sent})
     else:
@@ -193,7 +196,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
     if not sentence_text:
         logger.error("Sentence text cannot be empty")
     else:        
-        isent = Grammar().txt2dmrs(sentence_text, parse_count=input_results)
+        isent = Grammar().parse(sentence_text, parse_count=input_results)
         xsent = isent.to_visko_xml()
         vsent = getSentenceFromXML(xsent)
         # save to doc
@@ -297,6 +300,9 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sent = dao.getSentence(sent_id)
+    # if len(sent) == 1:
+    #     # redirect to first parse to edit quicker
+    #     return redirect('visko2:edit_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id, parse_id=sent[0].ID, mode='edit')
     logger.debug("Sent: {} | length: {}".format(sent, len(sent)))
     c = Context({'title': 'Corpus',
                  'header': 'Visual Kopasu - 2.0',
@@ -314,17 +320,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # retrieve original XML
     try:
-        print("Has raw:", sent.has_raw())
-        if sent is not None and sent.has_raw():
-            # use built-in raws
-            isfsent = sent.to_isf()
-            print("ISF sent", isfsent)
-            pass
-        else:
-            txtdao = get_bib(collection_name).textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-            raw = RawXML(txtdao.getSentenceRaw(sent.ident))
-            isfsent = raw.to_isf()
-        c.update({'sent': isfsent})
+        c.update({'sent': sent.to_isf()})
     except Exception as e:
         print("Error: {}".format(e))
         raise
@@ -338,7 +334,7 @@ def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id)
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sent = dao.getSentence(sent_id, interpretationIDs=(parse_id,))
-    print("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
+    logger.info("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
     c = Context({'title': 'Corpus',
                  'header': 'Visual Kopasu - 2.0',
                  'collection_name': collection_name,
@@ -350,7 +346,69 @@ def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id)
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # convert Visko Sentence into ISF to display
     isfsent = sent.to_isf()
-    print(len(isfsent))
-    c.update({'sent': isfsent, 'parse': isfsent[0]})
+    c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
+    c.update(csrf(request))
+    return render(request, "visko2/corpus/parse.html", c)
+
+
+def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id, mode):
+    dao = get_bib(collection_name).sqldao
+    corpus = dao.getCorpus(corpus_name)[0]
+    doc = dao.getDocument(doc_id)
+    sent = dao.getSentence(sent_id, interpretationIDs=(parse_id,))
+    if mode == 'delete' and str(sent[0].ID) == parse_id:
+        try:
+            logging.warning("Deleting interpretation: {}".format(parse_id))
+            dao.deleteInterpretation(parse_id)
+        except Exception as e:
+            logger.error("Cannot delete parse ID={}. Error: {}".format(parse_id, e))
+        return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id)
+
+    # logger.info("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
+    c = Context({'title': 'Corpus',
+                 'header': 'Visual Kopasu - 2.0',
+                 'collection_name': collection_name,
+                 'corpus': corpus,
+                 'doc': doc,
+                 'sent_id': sent_id})
+    # update reparse count
+    input_results = 5
+    c.update({'input_results': input_results, 'RESULTS': RESULTS})
+    # try to parse DMRS from raw
+    #
+    action = request.POST.get('btn_action', None)
+    print("Action: ", action)
+    dmrs_raw = request.POST.get('dmrs_raw', None)
+    if dmrs_raw:
+        # replace current parse
+        logger.info("DMRS raw: {}".format(dmrs_raw))
+        dmrs_xml = dmrs_str_to_xml(dmrs_raw)
+        dmrs = getDMRSFromXML(dmrs_xml)
+        sent.mode = Interpretation.ACTIVE
+        sent.interpretations[0].dmrs = [dmrs]
+        sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+        # if action = insert (i.e. save as new DMRS)
+        if action in ('insert', 'save'):
+            if action == 'save':
+                # this will replace old (existing) DMRS
+                dao.deleteInterpretation(parse_id)
+            # assign a new ident to this new parse
+            sentinfo = dao.getSentence(sent.ID, skip_details=True, get_raw=False)
+            new_parse = Interpretation(rid='{}-manual'.format(len(sentinfo)), mode=Interpretation.ACTIVE)
+            new_parse.sentenceID = sent.ID
+            new_parse.dmrs.append(dmrs)
+            new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+            dao.saveInterpretation(new_parse, doc.ID)
+            if new_parse.ID:
+                return redirect('visko2:edit_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id, parse_id=new_parse.ID, mode='edit')
+            else:
+                raise Exception("Error occurred while creating interpretation")
+                pass
+    # convert Visko Sentence into ISF to display
+    #
+    isfsent = sent.to_isf()
+    print("Visko sent: {}".format(len(sent)))
+    print("ISF sent: {}".format(len(isfsent)))
+    c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
     c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)

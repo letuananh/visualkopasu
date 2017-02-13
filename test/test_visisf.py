@@ -42,13 +42,22 @@ __status__ = "Prototype"
 
 ########################################################################
 
+import os
+import logging
 from lxml import etree
 import unittest
 
 from coolisf.util import Grammar
 from visualkopasu.kopasu.util import getSentenceFromXML
+from visualkopasu.kopasu.util import getSentenceFromFile
+from visualkopasu.kopasu.util import parse_dmrs_str
+from visualkopasu.kopasu.util import dmrs_str_to_xml
 
 ########################################################################
+
+logging.basicConfig(level=logging.WARNING)  # change to DEBUG for more info
+TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
+TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
 
 
 class TestMain(unittest.TestCase):
@@ -57,7 +66,7 @@ class TestMain(unittest.TestCase):
         txt = 'Three musketeers and a giant walk into a bar.'
         # create a Grammar to parse text
         g = Grammar()
-        isent = g.txt2dmrs(txt, parse_count=10)
+        isent = g.parse(txt, parse_count=10)
         self.assertEqual(len(isent), 10)
         # convert ISF sentence into an XML node
         xsent = isent.to_visko_xml()
@@ -67,6 +76,31 @@ class TestMain(unittest.TestCase):
         self.assertEqual(vsent.text, txt)
         self.assertEqual(len(vsent), 10)
         self.assertEqual(len(vsent.interpretations[0].raws), 2)
+
+    def test_visko2isf(self):
+        g = Grammar()
+        isent = g.parse('I saw a girl with a telescope.', parse_count=10)
+        vsent = getSentenceFromXML(isent.to_visko_xml())
+        # convert back to isf
+        isent2 = vsent.to_isf()
+        self.assertIsNotNone(isent2)
+        self.assertEqual(len(isent), len(isent2))
+
+    def test_xml_to_txt(self):
+        sent = getSentenceFromFile(TEST_FILE)
+        logging.info("DMRS string: {}".format(sent[0].dmrs[0]))
+        # tokens = simplemrs.tokenize(str(sent[0].dmrs[0]))
+        # print(tokens)
+        d = sent[0].dmrs[0]
+        dmrs_dict = parse_dmrs_str(str(d))
+        logging.info("DMRS dict: {}".format(dmrs_dict))
+        # -1 because of root node (nodeid = 0)
+        self.assertEqual(len(d.nodes) - 1, len(dmrs_dict['nodes']))
+        self.assertEqual(len(d.links), len(dmrs_dict['links']))
+        #
+        dmrs_xml = dmrs_str_to_xml(str(d), sent.text)
+        logging.info("DMRS XML: {}".format(dmrs_xml))
+
 
 ########################################################################
 

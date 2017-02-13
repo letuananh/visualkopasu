@@ -44,6 +44,15 @@
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
             <li><a href="#">Settings</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Development <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="{% url 'visko2:dev' %}">Test bed</a></li>
+                <li role="separator" class="divider"></li>
+                <li class="dropdown-header">Legacy</li>
+                <li><a href="{% url 'visko1:home' %}" target="_blank">Visko 1.0</a></li>
+              </ul>
+            </li>
             <li><a href="https://github.com/letuananh/visualkopasu/wiki" target="_blank">Help</a></li>
           </ul>
           <form class="navbar-form navbar-right">
@@ -63,11 +72,6 @@
           <ul class="nav nav-sidebar">
             <li><a href="{% url 'visko2:isf' %}">ISF</a></li>
             <li><a href="{% url 'visko2:delviz' %}">Delphin-viz</a></li>
-          </ul>
-          <ul class="nav nav-sidebar">
-            <li><a href="{% url 'visko1:home' %}" target="_blank">Visko 1.0</a></li>
-            <li><a href="{% url 'visko2:home' %}">Visko 2.0</a></li>
-            <li><a href="{% url 'visko2:dev' %}">Test bed</a></li>
           </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">

@@ -88,7 +88,6 @@ class TestConsoleSetup(unittest.TestCase):
         # Make sure that the test SQLite collection does not exist before this test
         if os.path.isfile(testbib.sqldao.db_path):
             os.unlink(testbib.sqldao.db_path)
-        # prepare_database(testbib.root, collection_name)
 
         # clean file before convert
         print("Make sure that we deleted sentence 1010 before test parsing")

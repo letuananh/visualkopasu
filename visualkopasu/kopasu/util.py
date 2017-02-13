@@ -24,6 +24,7 @@ import codecs
 import logging
 import gzip
 from lxml import etree
+from delphin.mrs import simplemrs, Pred
 from .models import Sentence, Interpretation, DMRS, ParseRaw
 from .models import Node, SortInfo, Link, Sense
 
@@ -160,8 +161,8 @@ def getDMRSFromXML(dmrs_tag):
         if sensegold_tag is not None:
             # if we have sensegold, use it instead
             sense_info = Sense()
-            sense_info.lemma = sensegold_tag.attrib['clemma']
-            sense_info.synsetid = sensegold_tag.attrib['synset']
+            sense_info.lemma = sensegold_tag.attrib['lemma']
+            sense_info.synsetid = sensegold_tag.attrib['synsetid']
             sense_info.pos = sense_info.synsetid[-1]
             sense_info.score = '999'
             temp_node.sense = sense_info
@@ -282,3 +283,145 @@ NAME_RE = re.compile('^[a-z0-9_]+$')
 
 def is_valid_name(a_name):
     return NAME_RE.match(str(a_name)) if a_name is not None else False
+
+###############################################################
+# DMRS parser
+
+
+def xml_to_str(xml_node, pretty_print=True):
+    return etree.tostring(xml_node, pretty_print=True, encoding='utf-8').decode('utf-8')
+
+
+def dmrs_str_to_xml(dmrs_str, sent_text=None):
+    dmrs_dict = parse_dmrs_str(dmrs_str)
+    root = etree.Element('dmrs', cfrom='-1', cto='-1')
+    for node in dmrs_dict['nodes']:
+        # build node
+        cfrom = int(node['cfrom'])
+        cto = int(node['cto'])
+        xml_node = etree.SubElement(root, 'node', nodeid=node['nodeid'], cfrom=node['cfrom'], cto=node['cto'])
+        if 'carg' in node and node['carg'] == '+':
+            if sent_text is not None:
+                xml_node.attrib['carg'] = '"{}"'.format(sent_text[cfrom:cto])
+        if node['pred'].startswith('_'):
+            # realpred
+            p = Pred.string_or_grammar_pred(node['pred'])
+            if p.sense:
+                etree.SubElement(xml_node, 'realpred', lemma=p.lemma, pos=p.pos, sense=p.sense)
+            else:
+                etree.SubElement(xml_node, 'realpred', lemma=p.lemma, pos=p.pos)
+        else:
+            # gpred
+            gpred = etree.SubElement(xml_node, 'gpred')
+            gpred.text = node['pred']
+        # add sortinfo
+        xml_sortinfo = etree.SubElement(xml_node, 'sortinfo')
+        if 'sortinfo' in node:
+            for k, v in node['sortinfo'].items():
+                xml_sortinfo.attrib[k] = v
+        if 'sense' in node:
+            xml_sense = etree.SubElement(xml_node, 'sense')
+            for k, v in node['sense'].items():
+                xml_sense.attrib[k] = v
+        # add ISF sense
+    for link in dmrs_dict['links']:
+        xml_link = etree.SubElement(root, 'link')
+        xml_link.attrib['from'] = link['from']
+        xml_link.attrib['to'] = link['to']
+        etree.SubElement(xml_link, 'rargname').text = link['rargname']
+        etree.SubElement(xml_link, 'post').text = link['post']
+    return root
+    # return etree.tostring(root, pretty_print=True, encoding='utf-8').decode('utf-8')
+
+
+DMRS_SIG = 'dmrs'
+LIST_OPEN = '['
+LIST_CLOSE = ']'
+GROUP_OPEN = '{'
+GROUP_CLOSE = '}'
+ITEM_SEP = ';'
+CFROM = '<'
+FROMTOSEP = ':'
+CTO = '>'
+LINK_SIG = ':'
+
+
+def parse_dmrs_str(dmrs_str):
+    tokens = simplemrs.tokenize(dmrs_str)
+    if tokens.popleft() == DMRS_SIG and tokens.popleft() == GROUP_OPEN:
+        # parse dmrs
+        dmrs = parse_dmrs(tokens)
+        return dmrs
+    else:
+        raise Exception("Invalid DMRS string")
+
+
+def parse_dmrs(tokens):
+    dmrs = {'nodes': [], 'links': []}
+    while len(tokens) > 0:
+        nodeid = tokens.popleft()
+        next = tokens.popleft()
+        if next == LIST_OPEN:
+            node = parse_node(nodeid, tokens)
+            dmrs['nodes'].append(node)
+        elif next == LINK_SIG:
+            link = parse_link(nodeid, tokens)
+            dmrs['links'].append(link)
+        else:
+            break
+        next = tokens.popleft()
+        if next not in (ITEM_SEP, GROUP_CLOSE):
+            raise Exception("Junk tokens at the end")
+    return dmrs
+
+
+def expect(tokens, expected, message=None):
+    actual = tokens.popleft()
+    if actual != expected:
+        if message:
+            raise Exception(message)
+        else:
+            raise Exception("Expected {}, actual {}".format(expected, actual))
+    else:
+        return actual
+
+
+def parse_node(nodeid, tokens):
+    pred = tokens.popleft()
+    expect(tokens, CFROM)
+    cfrom = tokens.popleft()
+    expect(tokens, FROMTOSEP)
+    cto = tokens.popleft()
+    expect(tokens, CTO)
+    node = {'pred': pred, 'nodeid': nodeid, 'cfrom': cfrom, 'cto': cto}
+    if tokens[0] != LIST_CLOSE:
+        # next one should be cvarsort
+        node['sortinfo'] = {'cvarsort': tokens.popleft()}
+    while tokens[0] != LIST_CLOSE:
+        # parse sortinfo
+        token = tokens.popleft()
+        k, v = token.rsplit('=', 1)
+        if k == 'CARG':
+            # add carg to sortinfo
+            node['carg'] = v
+        elif k.startswith('synset'):
+            if 'sense' not in node:
+                node['sense'] = {}
+            if k == 'synsetid':
+                node['sense'][k] = v
+            else:
+                node['sense'][k[7:]] = v
+        else:
+            # add to sortinfo
+            node['sortinfo'][k.lower()] = v
+        pass
+    expect(tokens, LIST_CLOSE)
+    return node
+
+
+def parse_link(from_nodeid, tokens):
+    rargname, post = tokens.popleft().split('/')
+    expect(tokens, '-')
+    expect(tokens, '>')
+    to_nodeid = tokens.popleft()
+    return {'from': from_nodeid, 'to': to_nodeid, 'rargname': rargname, 'post': post}

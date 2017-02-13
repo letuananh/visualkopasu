@@ -217,9 +217,9 @@ def convert(collection_name, corpus_name, doc_name, dbname=None, context=None, a
 
 
 def main():
-    prepare_database(vkconfig.BIBLIOTECHE_ROOT, "test")
-    convert('test', "wn", "wndef")
+    print("This script will be removed in near future. Use visualkopasu.console.setup instead")
     pass
+
 
 if __name__ == '__main__':
     # Do NOT use this, use setup.py instead
