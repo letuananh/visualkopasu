@@ -31,7 +31,6 @@ __status__ = "Prototype"
 
 
 import os
-import lxml
 import logging
 
 from django.template import Context
@@ -39,6 +38,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.context_processors import csrf
 
+from chirptext.texttaglib import TagInfo
 from coolisf.util import Grammar
 
 from visualkopasu.util import getLogger
@@ -125,7 +125,7 @@ def isf(request):
         logger.info("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
         sent = Grammar().parse(sentence_text, parse_count=input_results)
         # tag sentences
-        sent.tag(method='mfs')
+        sent.tag(method=TagInfo.LELESK)
         logger.debug("sent.text = " + sent.text)
         c.update({'sent': sent})
     else:
