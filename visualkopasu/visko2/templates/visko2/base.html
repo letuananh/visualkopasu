@@ -43,10 +43,14 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
+            <li><a href="{% url 'visko2:home' %}">Home</a></li>
             <li><a href="#">Settings</a></li>
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Development <span class="caret"></span></a>
               <ul class="dropdown-menu">
+                <li><a href="{% url 'visko2:list_collection' %}">Corpus</a></li>
+                <li><a href="{% url 'visko2:isf' %}">ISF</a></li>
+                <li><a href="{% url 'visko2:delviz' %}">Delphin-viz</a></li>
                 <li><a href="{% url 'visko2:dev' %}">Test bed</a></li>
                 <li role="separator" class="divider"></li>
                 <li class="dropdown-header">Legacy</li>
