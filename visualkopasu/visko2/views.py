@@ -195,8 +195,9 @@ def create_sent(request, collection_name, corpus_name, doc_id):
     sentence_text = request.POST.get('input_sentence', None)
     if not sentence_text:
         logger.error("Sentence text cannot be empty")
-    else:        
+    else:
         isent = Grammar().parse(sentence_text, parse_count=input_results)
+        isent.tag(method='lelesk')
         xsent = isent.to_visko_xml()
         vsent = getSentenceFromXML(xsent)
         # save to doc
@@ -346,6 +347,7 @@ def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id)
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # convert Visko Sentence into ISF to display
     isfsent = sent.to_isf()
+    # print("vDMRS: {}".format(sent[0].raws[1]))
     c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
     c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)
@@ -409,6 +411,7 @@ def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id,
     isfsent = sent.to_isf()
     print("Visko sent: {}".format(len(sent)))
     print("ISF sent: {}".format(len(isfsent)))
+    # print("vdmrs: {}".format(sent[0].dmrs[0]))
     c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
     c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)

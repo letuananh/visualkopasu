@@ -35,6 +35,7 @@
     <thead>
       <tr>
         <td>#</td>
+        <td>ident</td>
         <td>Sentence</td>
         <td>Parse count</td>
         <td>Actions</td>
@@ -44,6 +45,7 @@
     {% for sentence in sentences %}
     <tr>
       <td>{{ sentence.ID }}</td>
+      <td>{{ sentence.ident }}</td>
       <td>
         <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
       </td>

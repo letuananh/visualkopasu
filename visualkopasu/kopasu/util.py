@@ -44,6 +44,10 @@ __status__ = "Prototype"
 ########################################################################
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
 def getSubFolders(a_folder):
     return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
 
@@ -65,7 +69,8 @@ class RawXML(object):
             self.parse()
 
     def parse(self):
-        if self.raw:
+        if self.raw is not None:
+            logger.debug("RawXML: creating XML object from XML string")
             self.xml = etree.XML(self.raw)
         else:
             self.raw = etree.tostring(self.xml, encoding='utf-8', pretty_print=True).decode('utf-8')
@@ -74,14 +79,14 @@ class RawXML(object):
             mrs = p.findall('mrs')
             dmrs = p.findall('dmrs')
             parse = RawParse(p)
-            if mrs and len(mrs) == 1:
+            if mrs is not None and len(mrs) == 1:
                 parse.mrs = mrs[0]
             else:
-                logging.warning("Multiple MRS nodes")
-            if dmrs and len(dmrs) == 1:
+                logger.warning("Multiple MRS nodes")
+            if dmrs is not None and len(dmrs) == 1:
                 parse.dmrs = dmrs[0]
             else:
-                logging.warning("Multiple DMRS nodes")
+                logger.warning("Multiple DMRS nodes")
             self.parses.append(parse)
 
     def __iter__(self):
@@ -99,7 +104,7 @@ class RawXML(object):
     def to_isf(self):
         sent = ISFSentence(self.text)
         for p in self.parses:
-            sent.add_from_xml(p.dmrs_str())
+            sent.add(mrs_str=p.mrs.text)
         return sent
 
     @staticmethod
@@ -118,8 +123,8 @@ class RawParse(object):
 
     def __init__(self, node=None, mrs=None, dmrs=None):
         self.node = node  # interpretation node
-        self.mrs = mrs
-        self.dmrs = dmrs
+        self.mrs = mrs  # from mrs string
+        self.dmrs = dmrs  # from dmrs_xml_str
 
     def mrs_str(self):
         return etree.tostring(self.mrs).decode('utf-8') if self.mrs is not None else ''

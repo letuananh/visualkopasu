@@ -48,6 +48,7 @@ import unittest
 
 from chirptext.leutile import FileTool
 from coolisf.util import Grammar
+from coolisf.model import Sentence, Parse, MRS, DMRS
 
 from visualkopasu.kopasu.util import getSentenceFromRawXML
 from visualkopasu.kopasu.util import getSentenceFromFile
@@ -62,6 +63,7 @@ from visualkopasu.kopasu.models import ParseRaw
 logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
+TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 
 
 class TestRawXML(unittest.TestCase):
@@ -75,6 +77,26 @@ class TestRawXML(unittest.TestCase):
         logging.debug(raw[0].mrs.text)
         self.assertGreater(len(raw[0].dmrs_str()), 0)
         logging.debug(raw[0].dmrs_str())
+
+    def test_read_10044(self):
+        raw = RawXML.from_file(TEST_FILE2)
+        # test RawXML.RawParse > DMRS and MRS
+        m = MRS(raw[0].mrs.text)
+        self.assertIsNotNone(m.obj())
+        self.assertIsNotNone(m.to_dmrs())
+        # save 10044 to XML file
+        x = raw[0].dmrs_str()
+        f = os.path.join(TEST_DIR, 'v10044.xml')
+        with open(f, 'w') as outfile:
+            outfile.write(x)
+        # read it back
+        print("Reading from {}".format(f))
+        with open(f, 'r') as infile:
+            x = infile.read()
+            print(len(x))
+            d = DMRS(x)
+            self.assertIsNotNone(d.obj())
+        # seems OK
 
 
 class TestDAOBase(unittest.TestCase):
@@ -267,8 +289,8 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(actual_sentence[0].raws[1].rtype, ParseRaw.XML)
         self.assertGreater(len(actual_sentence[0].raws[0].text), 0)
         self.assertGreater(len(actual_sentence[0].raws[1].text), 0)
-        self.assertEqual(str(actual_sentence[0].raws[0]), '[mrs:[ TOP: h0\n  INDEX: e2 [ e...h6 qeq h4 h10 qeq h12 > ]]')
-        self.assertEqual(str(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
+        self.assertEqual(repr(actual_sentence[0].raws[0]), '[mrs:[ TOP: h0\n  INDEX: e2 [ e...h6 qeq h4 h10 qeq h12 > ]]')
+        self.assertEqual(repr(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
 
     def test_get_sentences_with_dummy(self):
         self.ensure_sent()

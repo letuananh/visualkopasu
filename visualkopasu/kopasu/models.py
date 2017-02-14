@@ -18,6 +18,7 @@ Data models for VisualKopasu project.
 
 ########################################################################
 
+import logging
 from lxml import etree
 from .liteorm import SmartRecord
 from delphin.mrs import Pred
@@ -35,6 +36,9 @@ __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
 ########################################################################
+
+logger = logging.getLogger()
+logger.setLevel(logging.WARNING)
 
 
 class Corpus(SmartRecord):
@@ -99,18 +103,19 @@ class Sentence(SmartRecord):
 
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
-        isfsent = ISFSentence(self.text, self.ID)
+        isfsent = ISFSentence(self.text, str(self.ID))
         for i in self:
             # we should use XML first as it has sense information
             xml_raw = i.find_raw(ParseRaw.XML)
-            if xml_raw:
+            if xml_raw is not None:
+                logger.warning("Using DMRS XML raw")
                 p = isfsent.add(dmrs_xml=xml_raw.text)
                 p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                 p.ident = i.rid
             else:
                 # try MRS
                 mrs_raw = i.find_raw(ParseRaw.MRS)
-                if mrs_raw:
+                if mrs_raw is not None:
                     p = isfsent.add(mrs_str=mrs_raw.text)
                     p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                     p.ident = i.rid
@@ -154,11 +159,12 @@ class ParseRaw(SmartRecord):
         self.rtype = rtype
 
     def __repr__(self):
-        return str(self)
-
-    def __str__(self):
         txt = self.text if len(self.text) < 50 else self.text[:25] + '...' + self.text[-25:]
         return "[{}:{}]".format(self.rtype, txt.strip())
+
+    def __str__(self):
+        # return repr(self)
+        return self.text
 
 
 class ParseTree:
