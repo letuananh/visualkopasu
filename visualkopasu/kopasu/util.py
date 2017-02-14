@@ -363,7 +363,7 @@ def parse_dmrs_str(dmrs_str):
 
 def parse_dmrs(tokens):
     dmrs = {'nodes': [], 'links': []}
-    while len(tokens) > 0:
+    while len(tokens) > 2:
         nodeid = tokens.popleft()
         next = tokens.popleft()
         if next == LIST_OPEN:
@@ -377,6 +377,8 @@ def parse_dmrs(tokens):
         next = tokens.popleft()
         if next not in (ITEM_SEP, GROUP_CLOSE):
             raise Exception("Junk tokens at the end")
+    if len(tokens) > 0:
+        expect(tokens, GROUP_CLOSE)
     return dmrs
 
 
@@ -399,7 +401,7 @@ def parse_node(nodeid, tokens):
     cto = tokens.popleft()
     expect(tokens, CTO)
     node = {'pred': pred, 'nodeid': nodeid, 'cfrom': cfrom, 'cto': cto}
-    if tokens[0] != LIST_CLOSE:
+    if tokens[0] != LIST_CLOSE and tokens[0] in 'xeiu':
         # next one should be cvarsort
         node['sortinfo'] = {'cvarsort': tokens.popleft()}
     while tokens[0] != LIST_CLOSE:

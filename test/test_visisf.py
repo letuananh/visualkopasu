@@ -48,7 +48,7 @@ from lxml import etree
 import unittest
 
 from coolisf.util import Grammar
-from visualkopasu.kopasu.util import getSentenceFromXML
+from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
 from visualkopasu.kopasu.util import getSentenceFromFile
 from visualkopasu.kopasu.util import parse_dmrs_str
 from visualkopasu.kopasu.util import dmrs_str_to_xml
@@ -85,6 +85,25 @@ class TestMain(unittest.TestCase):
         isent2 = vsent.to_isf()
         self.assertIsNotNone(isent2)
         self.assertEqual(len(isent), len(isent2))
+
+    def test_str_to_dmrs(self):
+        dstr = '''dmrs {
+10000 [ generic_entity<0:4> x NUM=sg PERS=3 GEND=n   ] ; 
+10001 [ _this_q_dem<0:4>    ] ; 
+10002 [ _be_v_id<5:7> e SF=prop TENSE=pres MOOD=indicative PROG=- PERF=- synsetid=02604760-v synset_lemma=be synset_score=0  ] ; 
+10003 [ _a_q<8:9>  synsetid=13658027-n synset_lemma=a synset_score=0  ] ; 
+10005 [ udef_q<10:18>    ] ; 
+10007 [ _cart_n_1<10:19> x NUM=sg PERS=3 IND=+ synsetid=02970849-n synset_lemma=cart synset_score=0  ] ; 
+0:/H -> 10002 ; 
+10001:RSTR/H -> 10000 ; 
+10002:ARG1/NEQ -> 10000 ; 
+10002:ARG2/NEQ -> 10007 ; 
+10003:RSTR/H -> 10007 ; 
+10005:RSTR/H -> 10007 ;
+}'''
+        dxml = dmrs_str_to_xml(dstr)
+        d = getDMRSFromXML(dxml)
+        self.assertIsNotNone(d)
 
     def test_xml_to_txt(self):
         sent = getSentenceFromFile(TEST_FILE)

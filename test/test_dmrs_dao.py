@@ -51,7 +51,7 @@ from coolisf.util import Grammar
 from coolisf.model import Sentence, Parse, MRS, DMRS
 
 from visualkopasu.kopasu.util import getSentenceFromRawXML
-from visualkopasu.kopasu.util import getSentenceFromFile
+from visualkopasu.kopasu.util import getSentenceFromFile, getSentenceFromXML
 from visualkopasu.kopasu.util import getDMRSFromXML
 from visualkopasu.kopasu.util import RawXML
 from visualkopasu.kopasu.bibman import Biblioteche, Biblioteca
@@ -67,6 +67,8 @@ TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 
 
 class TestRawXML(unittest.TestCase):
+
+    ERG = Grammar()
 
     def test_read_from_xml(self):
         raw = RawXML.from_file(TEST_FILE)
@@ -107,6 +109,7 @@ class TestDAOBase(unittest.TestCase):
     corpus_name = 'testcorpus'
     doc_name = '1stdoc'
     bib = Biblioteca(bibname, root=bibroot)
+    ERG = Grammar()
 
     @classmethod
     def setUpClass(cls):
@@ -182,10 +185,18 @@ class TestDMRSDAO(TestDAOBase):
         with open(os.path.join(TEST_DIR, 'test_coolisf.xml'), 'w') as outfile:
             outfile.write(sent_string)
 
+    def test_dmrs_to_str(self):
+        # an extended DMRS string representation (with sense tag)
+        txt = 'It rains.'
+        s = self.ERG.parse(txt)
+        s.tag(method='mfs')  # fast tagging
+        # bring it to visko
+        vs = getSentenceFromXML(s.to_visko_xml())
+        print(vs[0].dmrs[0])
+
     def test_dmrs_from_coolisf(self):
         # use CoolISF to generate Visko sentence XML
-        ERG = Grammar()
-        sent = ERG.parse('I saw a girl with a telescope which is nice.', parse_count=10)
+        sent = self.ERG.parse('I saw a girl with a telescope which is nice.', parse_count=10)
         raw = RawXML(xml=sent.to_visko_xml())
         self.assertEqual(len(raw), 10)
         #

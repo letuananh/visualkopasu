@@ -19,7 +19,6 @@ Data models for VisualKopasu project.
 ########################################################################
 
 import logging
-from lxml import etree
 from .liteorm import SmartRecord
 from delphin.mrs import Pred
 from coolisf.model import Sentence as ISFSentence

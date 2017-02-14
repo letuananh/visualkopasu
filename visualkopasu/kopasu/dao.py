@@ -619,6 +619,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                     sense_info = Sense()
                     sense_info.synsetid = a_node.synsetid
                     sense_info.score = a_node.synset_score
+                    sense_info.lemma = a_node.rplemma
                     sense_info.pos = a_node.synsetid[-1]
                     a_node.sense = sense_info
             # retrieve all links

@@ -32,6 +32,7 @@ __status__ = "Prototype"
 
 import os
 import logging
+from lxml import etree
 
 from django.template import Context
 from django.shortcuts import render, redirect
@@ -347,7 +348,10 @@ def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id)
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # convert Visko Sentence into ISF to display
     isfsent = sent.to_isf()
-    # print("vDMRS: {}".format(sent[0].raws[1]))
+    print("vDMRS: {}".format(sent[0].dmrs[0]))
+    for n in sent[0].dmrs[0].nodes:
+        if str(n.nodeid) == '10007':
+            print(n, n.rplemma, n.rplemmaID)
     c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
     c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)
@@ -383,8 +387,9 @@ def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id,
     dmrs_raw = request.POST.get('dmrs_raw', None)
     if dmrs_raw:
         # replace current parse
-        logger.info("DMRS raw: {}".format(dmrs_raw))
+        # logger.info("DMRS raw: {}".format(dmrs_raw))
         dmrs_xml = dmrs_str_to_xml(dmrs_raw)
+        # logger.info("DMRS xml: {}".format(etree.tostring(dmrs_xml)))
         dmrs = getDMRSFromXML(dmrs_xml)
         sent.mode = Interpretation.ACTIVE
         sent.interpretations[0].dmrs = [dmrs]
