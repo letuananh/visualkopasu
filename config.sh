@@ -22,23 +22,13 @@ function link_file {
 
 git submodule sync && git submodule init && git submodule update
 
-cd modules/intsem.fx
-git submodule sync && git submodule init && git submodule update
-bash ./config.sh
-cd ../../
-
-link_folder `readlink -f ../beautifulsoup/bs4-python3` bs4
-# link_folder `readlink -f ../pydelphin/delphin` delphin
-# link_folder `readlink -f ../nltk/nltk` nltk
-
 link_folder `readlink -f ./modules/chirptext/chirptext` chirptext
 link_folder `readlink -f ./modules/puchikarui/puchikarui` puchikarui
-
-link_folder `readlink -f ./modules/intsem.fx/lelesk` lelesk
 link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
-link_folder `readlink -f ./modules/intsem.fx/yawlib` yawlib
-
-# Grammars
-link_file `readlink -f ~/workspace/grammars/erg.dat` data/erg.dat
+link_folder `readlink -f ./modules/yawlib/yawlib` yawlib
+cd modules/intsem.fx/
+git submodule init && git submodule update
+cd ../../
+link_folder `readlink -f ./modules/intsem.fx/modules/lelesk/lelesk` lelesk
 
 ./manage.py migrate

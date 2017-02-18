@@ -1,4 +1,5 @@
 django==1.9.6
+bs4
 numpy
 lxml
 pydelphin==0.6.0
