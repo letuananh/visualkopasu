@@ -32,7 +32,6 @@ __status__ = "Prototype"
 
 import os
 import logging
-from lxml import etree
 
 from django.template import Context
 from django.shortcuts import render, redirect
@@ -85,7 +84,8 @@ def get_bib(bibname):
 def home(request):
     c = Context({"title": "Visual Kopasu 2.0",
                  "header": "Visual Kopasu 2.0",
-                 "collections": getAllCollections()})
+                 "collections": getAllCollections(),
+                 "RESULTS": RESULTS, "input_results": 5})
     c.update(csrf(request))
     return render(request, "visko2/home/index.html", c)
 
