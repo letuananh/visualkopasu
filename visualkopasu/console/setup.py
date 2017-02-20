@@ -58,7 +58,7 @@ def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
 
 
-def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=False, ignore_raw=False):
+def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=False, has_raw=False):
     source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
     dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")
@@ -67,8 +67,8 @@ def convert_document(collection_name, corpus_name, doc_name, answer=None, active
     print("Biblioteca: %s" % collection_name)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
-    # Convert raw text to XML
-    if not ignore_raw:
+    # Convert raw text to XML first if needed
+    if has_raw:
         draw_separator()
         parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     # Convert XML to SQLite3
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('corpus', help='Corpus name')
     parser.add_argument('doc', help='Document name')
     parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
-    parser.add_argument('-i', '--noraw', help='Import from XML to SQLite only', action='store_true')
+    parser.add_argument('-r', '--raw', help='Import from Raw to XML and then to SQLite', action='store_true')
     parser.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         # Parse input arguments
         args = parser.parse_args()
         if args.biblioteca and args.corpus and args.doc:
-            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, ignore_raw=(args.noraw))
+            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, has_raw=(args.raw))
         else:
             parser.print_help()
     pass
