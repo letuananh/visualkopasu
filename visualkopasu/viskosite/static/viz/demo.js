@@ -4,6 +4,7 @@ var RESOURCES = {
     'erg-local': 'http://localhost:8080/erg/parse',
     'erg-cl': 'http://cl:8080/erg/parse',
     'virgo-local': 'http://localhost:8080/virgo/parse',
+    'jacy-local': 'http://localhost:8080/jacy/parse',
     'jacy-uw': 'http://chimpanzee.ling.washington.edu/bottlenose/jacy/parse',
     'indra-uw': 'http://chimpanzee.ling.washington.edu/bottlenose/indra/parse',
     'gg-um':'http://nedned.cis.unimelb.edu.au/bottlenose/gg/parse',
