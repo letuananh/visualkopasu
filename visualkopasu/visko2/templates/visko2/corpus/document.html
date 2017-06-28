@@ -11,12 +11,18 @@
 
 </ol>
 
-<h1 class="page-header">{{ doc.name }}</h1>
+<h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
 
 <form method="POST" action="{% url 'visko2:create_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" style="padding-bottom: 20px;">
   {% csrf_token %}
   <div class="input-group input-group-lg">
     <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
+    <span class="input-group-addon">Processor</span>
+    <select id="input_parser" name="input_parser" class="form-control input-small" title="Processor">
+      {% for p in PROCESSORS %}
+      <option {% if p == input_parser %}selected="selected"{% endif %} value="{{p}}">{{p}}</option>
+      {% endfor %}
+    </select>
     <span class="input-group-addon">Parse Count</span>
     <select id="input_results" name="input_results" class="form-control input-small" title="Maximum parses">
       {% for r in RESULTS %}

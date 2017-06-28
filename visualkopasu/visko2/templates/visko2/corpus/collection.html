@@ -32,7 +32,7 @@
       <div class="list-group">
         {% for doc in corpus.documents %}
         <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
-          {{ doc.name }}
+          {% if doc.title%}{{ doc.title }} ({{doc.name}}){%else%}{{doc.name}}{%endif %}
         </a>
         {% endfor %}
       </div>

@@ -11,9 +11,9 @@
   <li class="breadcrumb-item">Sent #{{ sent_id }}</li>
 </ol>
 
-{% if sent %}
+{% if sent != None %}
 <div class="dmrs_sentence_text">Parse count: {{ sent|length }}</div>
-<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ input_sentence }}</div>
+<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ sent.text }}</div>
 
   <ul class="nav nav-tabs">
     <li><a data-toggle="tab" href="#visko">DMRS</a></li>
@@ -61,8 +61,10 @@
       {% endfor %}
     </div>
   </div>
-{% endif %}
-{% endblock %}
+  {% else %}
+  Nothing
+  {% endif %}
+  {% endblock %}
 
 
 {% block css %}

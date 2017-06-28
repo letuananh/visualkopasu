@@ -52,11 +52,12 @@ class Corpus(SmartRecord):
 
 
 class Document(SmartRecord):
-    
-    def __init__(self, name='', corpusID=None):
+
+    def __init__(self, name='', corpusID=None, title=''):
         self.ID = None
         self.name = name
         self.corpusID = corpusID
+        self.title = title if title else name
         self.corpus = None
         self.sentences = []
         pass

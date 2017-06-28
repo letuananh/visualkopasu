@@ -15,10 +15,10 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
-
+from visualkopasu.visko2 import views as visko2_views
 
 urlpatterns = [
-    url(r'^$', 'visualkopasu.visko2.views.home'),
+    url(r'^$', visko2_views.home, name='visko2_home'),
     url(r'^visko1/', include('visualkopasu.visko1.urls', namespace="visko1"),),
     url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
     url(r'^admin/', admin.site.urls),

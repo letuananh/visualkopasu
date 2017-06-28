@@ -14,7 +14,9 @@
 <form method="POST" action="{% url 'visko2:create_doc' collection_name=collection_name corpus_name=corpus.name %}" style="padding-bottom: 20px;">
   {% csrf_token %}
   <div class="input-group input-group-lg">
-    <input class="form-control input-lg" name="doc_name" id="doc_name" placeholder="New Document (only alphanumeric or underscore characters are allowed)" value="{{ doc_name|default:'' }}" type="text">
+    <input class="form-control" name="doc_name" id="doc_name" placeholder="Unique name (only alphanumeric or underscore characters are allowed)" value="{{ doc_name|default:'' }}" type="text">
+    <span class="input-group-addon">-</span>
+    <input class="form-control" name="doc_title" id="doc_title" placeholder="Title (optional)" value="{{ doc_title|default:'' }}" type="text">
     <span class="input-group-btn">
       <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Create</button>
     </span>
@@ -25,7 +27,7 @@
 <div class="list-group">
   {% for doc in corpus.documents %}
   <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
-    {{ doc.name }}
+    {% if doc.title%}{{ doc.title }} ({{doc.name}}){%else%}{{doc.name}}{%endif %}
   </a>
   {% endfor %}
 </div>

@@ -45,7 +45,7 @@ from visualkopasu.util import getLogger
 from visualkopasu.kopasu import Biblioteche, Biblioteca
 from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
 from visualkopasu.kopasu.util import dmrs_str_to_xml, xml_to_str
-from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation
+from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation, Sentence
 
 ########################################################################
 
@@ -113,6 +113,7 @@ def delviz(request):
 
 # Maximum parses
 RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
+PROCESSORS = ('ERG', 'JACY', 'None')  # TODO: Make this more flexible
 
 
 def isf(request):
@@ -170,11 +171,13 @@ def create_corpus(request, collection_name):
 
 def create_doc(request, collection_name, corpus_name):
     doc_name = request.POST.get('doc_name', None)
+    doc_title = request.POST.get('doc_title', '')
+
     bib = get_bib(collection_name)
     try:
         # create SQLite doc
         corpus = bib.sqldao.getCorpus(corpus_name)[0]
-        bib.sqldao.saveDocument(Document(doc_name, corpusID=corpus.ID))
+        bib.sqldao.saveDocument(Document(doc_name, corpusID=corpus.ID, title=doc_title))
         # create XML doc
         cdao = bib.textdao.getCorpusDAO(corpus_name)
         cdao.create_doc(doc_name)
@@ -193,25 +196,35 @@ def create_sent(request, collection_name, corpus_name, doc_id):
     input_results = int(request.POST.get('input_results', 5))
     if input_results not in RESULTS:
         input_results = 5
+    input_parser = request.POST.get('input_parser', 'None')
+    if input_parser not in PROCESSORS:
+        input_parser = 'None'
     sentence_text = request.POST.get('input_sentence', None)
     if not sentence_text:
         logger.error("Sentence text cannot be empty")
     else:
-        isent = Grammar().parse(sentence_text, parse_count=input_results)
-        isent.tag(method='lelesk')
-        xsent = isent.to_visko_xml()
-        vsent = getSentenceFromXML(xsent)
-        # save to doc
-        vsent.documentID = doc.ID
-        try:
-            logger.debug("Visko sent: {} | length: {}".format(vsent, len(vsent)))
-            bib.sqldao.saveSentence(vsent)
-            # save XML
-            docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-            docdao.save_sentence(xsent, vsent.ID)
-            return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=vsent.ID)
-        except Exception as e:
-            logger.error("Cannot save sentence. Error = {}".format(e))
+        # parse the sentence
+        if input_parser == 'ERG':
+            isent = Grammar().parse(sentence_text, parse_count=input_results)
+            isent.tag(method='lelesk')
+            xsent = isent.to_visko_xml()
+            vsent = getSentenceFromXML(xsent)
+            # save to doc
+            vsent.documentID = doc.ID
+            try:
+                logger.debug("Visko sent: {} | length: {}".format(vsent, len(vsent)))
+                bib.sqldao.saveSentence(vsent)
+                # save XML
+                docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+                docdao.save_sentence(xsent, vsent.ID)
+                return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=vsent.ID)
+            except Exception as e:
+                logger.error("Cannot save sentence. Error = {}".format(e))
+        else:
+            # Just create a sentence with no parse
+            s = Sentence(text=sentence_text)
+            s.documentID = doc.ID
+            bib.sqldao.saveSentence(s)
     # default
     return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
 
@@ -280,7 +293,7 @@ def list_doc(request, collection_name, corpus_name):
     return render(request, "visko2/corpus/corpus.html", c)
 
 
-def list_sent(request, collection_name, corpus_name, doc_id):
+def list_sent(request, collection_name, corpus_name, doc_id, input_results=5, input_parser='ERG'):
     dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
@@ -291,8 +304,10 @@ def list_sent(request, collection_name, corpus_name, doc_id):
                  'corpus': corpus,
                  'doc': doc,
                  'sentences': sentences,
-                 'input_results': 5,
-                 'RESULTS': RESULTS})
+                 'input_results': input_results,
+                 'input_parser': input_parser,
+                 'RESULTS': RESULTS,
+                 'PROCESSORS': PROCESSORS})
     c.update(csrf(request))
     return render(request, "visko2/corpus/document.html", c)
 

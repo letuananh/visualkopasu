@@ -66,7 +66,7 @@ class CorpusORMSchema(object):
         self.orm_manager = LiteORM(db_path)
         # 0: table column | 1: object property
         self.Corpus = ORMInfo('corpus', ['ID', 'name'], Corpus(), orm_manager=self.orm_manager)
-        self.Document = ORMInfo('document', ['ID', 'name', 'corpusID'], Document(), orm_manager=self.orm_manager)
+        self.Document = ORMInfo('document', ['ID', 'name', 'corpusID', 'title'], Document(), orm_manager=self.orm_manager)
         self.Sentence = ORMInfo('sentence', ['ID', 'ident', 'text', 'documentID'], Sentence(), orm_manager=self.orm_manager)
         self.Interpretation = ORMInfo('interpretation', ['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
         self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
