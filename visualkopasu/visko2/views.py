@@ -90,13 +90,15 @@ def home(request):
     return render(request, "visko2/home/index.html", c)
 
 
-def dev(request):
+def dev(request, mode=None):
     c = Context({"title": "Test Bed @ Visual Kopasu 2.0",
                  "header": "Visual Kopasu 2.0",
                  "collections": getAllCollections()})
     c.update(csrf(request))
-
-    return render(request, "visko2/dev/index.html", c)
+    if mode == 'isf':
+        return render(request, "visko2/dev/isf.html", c)
+    else:
+        return render(request, "visko2/dev/index.html", c)
 
 
 ##########################################################################

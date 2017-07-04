@@ -1254,8 +1254,11 @@ ChibiJS.ShinChan.Layer.prototype.draw_table = function(x, y, table_data, name, p
             visual_table.expandRowHeight(row_id, visual_cell.size.height);
             
             // make links clickable
-            if (cell_url != undefined){
+            if (typeof cell_url == 'string'){
                 visual_cell.click(function(url){ return function(){ window.open(url, '_blank');} }(cell_url));
+            }
+            else if(typeof cell_url == 'function'){
+                visual_cell.click(cell_url);
             }
         }       
     }

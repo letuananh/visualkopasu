@@ -1,0 +1,17 @@
+{
+  "definition": "a member of the genus Canis (probably descended from the common wolf) that has been domesticated by man since prehistoric times; occurs in many breeds", 
+  "examples": [
+    "the dog barked all night"
+  ], 
+  "lemmas": [
+    "canis familiaris", 
+    "dog", 
+    "domestic dog"
+  ], 
+  "sensekeys": [
+    "canis_familiaris%1:05:00::", 
+    "dog%1:05:00::", 
+    "domestic_dog%1:05:00::"
+  ], 
+  "synsetid": "02084071-n"
+}

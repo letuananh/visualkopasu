@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^delphin-viz/?$', views.delviz, name='delviz'),
     url(r'^isf/?$', views.isf, name='isf'),
     url(r'^dev/?$', views.dev, name='dev'),
+    url(r'^dev/(?P<mode>\w+)?$', views.dev, name='dev'),
     url(r'^create_collection/?$', views.create_collection, name='create_collection'),
     url(r'^create_corpus/(?P<collection_name>\w+)/?$', views.create_corpus, name='create_corpus'),
     url(r'^create_doc/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/?$', views.create_doc, name='create_doc'),

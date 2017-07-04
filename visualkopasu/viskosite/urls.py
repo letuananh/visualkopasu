@@ -22,6 +22,6 @@ urlpatterns = [
     url(r'^visko1/', include('visualkopasu.visko1.urls', namespace="visko1"),),
     url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
     url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
-    url(r'^yawol/', include('yawoldjango.urls'),),
+    url(r'^yawol/', include('yawoldjango.urls', namespace="yawol"),),
     url(r'^admin/', admin.site.urls),
 ]
