@@ -18,7 +18,7 @@ Data access layer for VisualKopasu project.
 
 ########################################################################
 
-from chirptext.leutile import FileTool
+from chirptext.leutile import FileHelper
 
 from visualkopasu.util import getLogger
 from visualkopasu.config import ViskoConfig as vkconfig
@@ -58,7 +58,7 @@ class Biblioteche:
             raise Exception("Invalid biblioteca name (provided: {}".format(bibname))
         bib = Biblioteca(bibname)
         # create collection dir
-        FileTool.create_dir(bib.textdao.path)
+        FileHelper.create_dir(bib.textdao.path)
         # prepare SQLite database
         bib.sqldao.prepare(silent=True)
 

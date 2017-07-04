@@ -21,7 +21,7 @@ import shutil
 import gzip
 import lxml
 
-from chirptext.leutile import FileTool
+from chirptext.leutile import FileHelper
 from visualkopasu.util import getLogger
 from .util import getSentenceFromFile
 from .util import getSubFolders
@@ -58,7 +58,7 @@ class XMLCorpusCollection:
     def createCorpus(self, corpus_name):
         if not is_valid_name(corpus_name):
             raise Exception("Invalid corpus name (provided: {}".format(corpus_name))
-        FileTool.create_dir(os.path.join(self.path, corpus_name))
+        FileHelper.create_dir(os.path.join(self.path, corpus_name))
 
     def getCorpora(self):
         ''' Get all available corpora
@@ -80,7 +80,7 @@ class XMLCorpusDAO:
     def create_doc(self, doc_name):
         if not is_valid_name(doc_name):
             raise Exception("Invalid doc name (provided: {}".format(doc_name))
-        FileTool.create_dir(os.path.join(self.path, doc_name))
+        FileHelper.create_dir(os.path.join(self.path, doc_name))
 
 
 class XMLDocumentDAO:
