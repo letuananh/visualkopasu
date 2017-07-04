@@ -125,12 +125,12 @@ class LiteORM():
         # otherwise, failed
         return None
 
-    def execute(self, query, params):
+    def execute(self, query, params=[]):
         with self.getConnection() as conn:
             cur = conn.cursor()
             cur.execute(query, params)
 
-    def selectScalar(self, query, params):
+    def selectScalar(self, query, params=[]):
         try:
             conn = self.getConnection()
             cur = conn.cursor()
