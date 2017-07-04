@@ -327,6 +327,12 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         if context is None:
             context = self.buildContext()
         if not a_sentence.ID:
+            if a_sentence.ident in (-1, '-1', '', None):
+                # create a new ident
+                a_sentence.ident = self.orm_manager.selectScalar('SELECT max(id)+1 FROM sentence')
+                print("New ident: {}".format(a_sentence.ident))
+            else:
+                print("No need: {}".format(a_sentence.ident))
             self.Sentence.save(a_sentence, context=context)
             # save interpretations
             for interpretation in a_sentence.interpretations:
