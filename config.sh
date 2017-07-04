@@ -25,11 +25,11 @@ function link_file {
 cd modules/intsem.fx/
 git submodule init && git submodule update
 cd ../../
-link_folder `readlink -f ./modules/intsem.fx/coolisf` .
-link_folder `readlink -f ./modules/intsem.fx/modules/chirptext/chirptext` .
-link_folder `readlink -f ./modules/intsem.fx/modules/puchikarui/puchikarui` .
-link_folder `readlink -f ./modules/intsem.fx/modules/lelesk/lelesk` .
-link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawlib` .
-link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawoldjango` .
+link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
+link_folder `readlink -f ./modules/intsem.fx/modules/chirptext/chirptext` chirptext
+link_folder `readlink -f ./modules/intsem.fx/modules/puchikarui/puchikarui` puchikarui
+link_folder `readlink -f ./modules/intsem.fx/modules/lelesk/lelesk` lelesk
+link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawlib` yawlib
+link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawoldjango` yawoldjango
 
 ./manage.py migrate

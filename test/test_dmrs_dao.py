@@ -46,7 +46,7 @@ import os
 import logging
 import unittest
 
-from chirptext.leutile import FileTool
+from chirptext.leutile import FileHelper
 from coolisf.util import Grammar
 from coolisf.model import Sentence, Parse, MRS, DMRS
 
@@ -115,7 +115,7 @@ class TestDAOBase(unittest.TestCase):
     def setUpClass(cls):
         logging.info("Preparing test class")
         # prepare bibroot directory
-        FileTool.create_dir(cls.bibroot)
+        FileHelper.create_dir(cls.bibroot)
         db_path = cls.bib.sqldao.db_path
         logging.debug("Setting up database file at %s" % (db_path,))
         cls.bib.sqldao.prepare(backup=False, silent=True)
