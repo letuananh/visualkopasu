@@ -69,7 +69,7 @@ def getAllCollections():
                 for doc in corpus.documents:
                     doc.corpus = corpus
     for col in collections:
-        logger.debug(col.name, col.corpora)
+        logger.debug("{n} - {c}".format(n=col.name, c=col.corpora))
     return collections
 
 

@@ -104,36 +104,81 @@
 <script src="{% static 'js/testutil.js' %}"></script>
 <script src="{% static 'js/shinchan.js' %}"></script>
 <script src="{% static 'js/visko-2.0.js' %}"></script>
+<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
 <!-- Yawol client -->
 <script src="{% static 'js/yawol.js' %}"></script>
-<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
-
-<!-- Yawol client helper functions -->
+<!-- Yawol support -->
+<script type="text/template" id="synsetbox_template">
+     <div class="synsetbox container-fluid well">
+     <div class="row">
+     <div class="col-xs-12">
+      <button type="button" class="close" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <label>SynsetID</label>
+     </div>
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <span class="synsetid"><%= synset.synsetid %></span>                
+     </div>
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <label>Lemmas</label> <span class="lemma"></span>
+     </div>
+     <div class="col-xs-12 col-sm-6 col-md-6">
+      <span class="lemmas"><%= _.join(synset.lemmas, ', ') %></span>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-md-2">
+      <label>Definition</label>
+     </div>
+     <div class="col-xs-12 col-md-10">
+      <span class="definition"><%= synset.definition %></span>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-md-2">
+      <label>Examples</label>
+     </div>
+     <div class="col-xs-12 col-md-10">
+       <span class="examples">
+         <% if(synset.examples.length > 0) {  %>
+         <ul>
+           <% _.each(synset.examples, function(ex){ %>
+           <li><%= ex %></li>
+           <% }); %>
+         </ul>
+         <% } %>    
+       </span>
+     </div>
+     </div>
+     </div>
+</script>
 <script>
  var yawol;
- var yawol_root = 'http://localhost:8000/yawol/';
+ var yawol_root = '/yawol/';
 
  function get_yawol() {
-   yawol = undefined;
+   var yawol = undefined;
    if (yawol == undefined) {
      yawol = new Yawol("synsets", yawol_root, $("#synsetbox_template").html());
    }
    return yawol;
  }
- 
- function show_synset(synsetid) {
-   get_yawol().search_synset(synsetid);
- }
 
- function find_synset(synsetid){
-   return function() {
-     get_yawol().load_synset(synsetid);
-   }
+ function find_synset(synsetid) {
+   return function(){ 
+     get_yawol().search_synset(synsetid);
+   };
  }
- 
 </script>
 
+<!-- MRS related scripts -->
 <script>
+ // delphin-viz visualisation
  function visualize(divid, text, dmrs_json, mrs_json){
    var vizdivtext = $('#dmrs_text_holder')      
    var $vizdiv = $('#' + divid);
@@ -150,13 +195,13 @@
    {% if sent %}
    // MRS JSON data
    {% autoescape off %}
-   // All parses
    {% for parse in sent %}
    //   Parse #{{forloop.counter}}
    dmrs_json{{forloop.counter}} = {{parse.dmrs.json_str}};
    mrs_json{{forloop.counter}} = {{parse.mrs.json_str}};
    {% endfor %}
    {% endautoescape %}
+   
    // visualise delviz
    {% for parse in sent %}
    visualize('viszone{{forloop.counter}}', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json{{forloop.counter}}, mrs_json{{forloop.counter}});
@@ -164,20 +209,19 @@
    
    // visualise Visko
    // but only when activated ...
-   console = new Console('console');
    {% for parse in sent %}
    // visko_dmrs{{forloop.counter}} = json2visko(dmrs_json{{forloop.counter}}, "{{ sent.text }}", yawol_link_builder);
-   visual_dmrs{{forloop.counter}} = json2canvas(dmrs_json{{forloop.counter}}, "dmrs_canvas{{forloop.counter}}", find_synset);
+   dmrs_canvas{{forloop.counter}} = json2canvas(dmrs_json{{forloop.counter}}, "dmrs{{forloop.counter}}", find_synset);
    {% endfor %}
    visko_visualised = false;
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      var target = $(e.target).attr("href");
      if(target == '#visko'){
-       alert('boo');
+       alert('boo visko');
        if (!visko_visualised){
          visko_visualised = true;
          {% for parse in sent %}
-         visual_dmrs{{forloop.counter}}.visualise();
+         dmrs_canvas{{forloop.counter}}.visualise();
          {% endfor %}
        }
      }
