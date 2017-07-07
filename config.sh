@@ -26,6 +26,7 @@ cd modules/intsem.fx/
 git submodule init && git submodule update
 cd ../../
 link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
+link_folder `readlink -f ./modules/intsem.fx/djangoisf` djangoisf
 link_folder `readlink -f ./modules/intsem.fx/modules/chirptext/chirptext` chirptext
 link_folder `readlink -f ./modules/intsem.fx/modules/puchikarui/puchikarui` puchikarui
 link_folder `readlink -f ./modules/intsem.fx/modules/lelesk/lelesk` lelesk

@@ -23,5 +23,6 @@ urlpatterns = [
     url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
     url(r'^visko2/', include('visualkopasu.visko2.urls', namespace="visko2"),),
     url(r'^yawol/', include('yawoldjango.urls', namespace="yawol"),),
+    url(r'^restisf/', include('djangoisf.urls')),
     url(r'^admin/', admin.site.urls),
 ]
