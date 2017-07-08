@@ -65,7 +65,7 @@ Yawol.prototype = {
                     _yawol.display_synset(synset);
                 });
             })
-            .fail(_yawol.fail);
+            .fail(log_error);
     },
 
     /** Load a synset using AJAX/JSONP **/
@@ -74,7 +74,7 @@ Yawol.prototype = {
         // console.header("Accessing: " + url);
         $.ajax({url: url, dataType: 'jsonp'})
             .done(callback)
-            .fail(_yawol.fail);
+            .fail(log_error);
     },
     
     /*
@@ -89,7 +89,7 @@ Yawol.prototype = {
             .done(function(json){
                 _yawol.display_synset(json, true);
             })
-            .fail(_yawol.fail);
+            .fail(log_error);
     },
     
     /** Search synset (remote or local) **/
@@ -98,10 +98,14 @@ Yawol.prototype = {
         this._search_synset_ajax(url);
     },
     
-    /** Log error msg **/
-    fail: function(jqxhr) {
-        if (console != undefined && console.writeline != undefined) {
-            console.writeline( "Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
-        }
-    }       
+    
 }
+
+/**
+ * Log error msg 
+ **/
+function log_error(jqxhr) {
+    if (console != undefined && console.writeline != undefined) {
+        console.writeline( "Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
+    }
+}   

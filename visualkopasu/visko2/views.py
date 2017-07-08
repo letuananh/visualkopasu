@@ -76,6 +76,15 @@ def getAllCollections():
 def get_bib(bibname):
     return Biblioteca(bibname)
 
+
+def get_context(request=None):
+    c = Context({"title": "Delphin-viz",
+                 "header": "Visual Kopasu 2.0"})
+    if request:
+        c.update(csrf(request))
+    return c
+
+
 ##########################################################################
 # MAIN
 ##########################################################################
@@ -119,27 +128,7 @@ PROCESSORS = ('ERG', 'JACY', 'None')  # TODO: Make this more flexible
 
 
 def isf(request):
-    c = Context({"title": "Integrated Semantic Framework",
-                 "header": "Visual Kopasu 2.0"})
-    input_results = int(request.POST.get('input_results', 5))
-    if input_results not in RESULTS:
-        input_results = 5
-    sentence_text = request.POST.get('input_sentence', None)
-    if sentence_text:
-        logger.info("Parsing sentence: {} | Max results: {p}".format(sentence_text, p=input_results))
-        sent = Grammar().parse(sentence_text, parse_count=input_results)
-        # tag sentences
-        sent.tag(method=TagInfo.LELESK)
-        logger.debug("sent.text = " + sent.text)
-        c.update({'sent': sent})
-    else:
-        sentence_text = 'Three musketeers walk into a bar.'
-    # -------
-    # render
-    c.update(csrf(request))
-    c.update({'input_sentence': sentence_text,
-              'input_results': input_results,
-              'RESULTS': RESULTS})
+    c = get_context()
     return render(request, "visko2/isf/index.html", c)
 
 ##########################################################################

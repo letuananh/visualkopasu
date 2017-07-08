@@ -643,8 +643,81 @@ function json2visko(json, synset_link_builder){
     return visko;
 }
 
+/**
+ * Create a visko canvas for a given DMRS/JSON
+ **/
 function json2canvas(json, dmrs_id, synset_link_builder) {
     dmrs_obj = json2visko(json, synset_link_builder);
     canvas = new VisualKopasu.DMRSCanvas(dmrs_obj, dmrs_id + "_canvas", dmrs_id + "_text_holder");
     return canvas;
+}
+
+var rawblock = _.template('<pre><code id="dmrs<%=pid%>_json"><%=json%></code></pre>');
+
+/**
+ * Render a DMRS using Visko
+ **/
+function render_visko(parse, parseid, container){
+    if (parseid == undefined) { parseid = 1; }
+    if (container == undefined) { container = 'dmrses'; }
+    // Create a h2 for canvas
+    var div_parse = $('<h3></h3>');
+    div_parse.text('Parse #' + parseid);
+    div_parse.attr('id', 'parse' + parseid);
+    $('#' + container).append(div_parse);
+    // Create a div for canvas
+    var div_canvas = $('<div></div>');
+    div_canvas.attr('id', 'dmrs' + parseid + '_canvas');
+    $('#dmrses').append(div_canvas);
+    dmrs_visko = json2visko(parse, find_synset);
+    var dmrs_canvas = new VisualKopasu.DMRSCanvas(dmrs_visko, 'dmrs' + parseid + '_canvas', 'sentence_text');
+    dmrs_canvas.visualise();
+}
+
+/**
+ * Display XML raw data
+ **/
+function display_xml(content) {
+    $('#xmlcontent').text(content);
+    highlight('#xml');
+}
+
+/**
+ * Display MRS and DMRS raw data (pyDelphin format)
+ **/
+function display_raw(parse, parseid, container){
+    if (container == undefined) { container = 'raws'; }
+    // Header
+    var div_rparse = $('<h3></h3>');
+    div_rparse.text('Parse #' + parseid);
+    div_rparse.attr('id', 'rparse' + parseid);
+    $('#' + container).append(div_rparse);
+    // MRS JSON
+    $('#' + container).append($('<h4>MRS</h4>'));
+    var div_raw = $(rawblock({'pid': parseid, 'json': parse.mrs_raw}));
+    $('#' + container).append(div_raw);
+    // DMRS JSON
+    $('#' + container).append($('<h4>DMRS</h4>'));
+    var div_raw = $(rawblock({'pid': parseid, 'json': parse.dmrs_raw}));
+    $('#' + container).append(div_raw);
+}
+
+/**
+ * Display raw JSON data (to a pre/code block)
+ **/
+function display_json(parse, parseid, container){
+    if (container == undefined) { container = 'jsons'; }
+    // Header
+    var div_rparse = $('<h3></h3>');
+    div_rparse.text('Parse #' + parseid);
+    div_rparse.attr('id', 'rparse' + parseid);
+    $('#' + container).append(div_rparse);
+    // MRS JSON
+    $('#' + container).append($('<h4>MRS</h4>'));
+    var div_raw = $(rawblock({'pid': parseid, 'json': JSON.stringify(parse.mrs)}));
+    $('#' + container).append(div_raw);
+    // DMRS JSON
+    $('#' + container).append($('<h4>DMRS</h4>'));
+    var div_raw = $(rawblock({'pid': parseid, 'json': JSON.stringify(parse.dmrs)}));
+    $('#' + container).append(div_raw);
 }
