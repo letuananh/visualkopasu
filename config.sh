@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/bash
 
 function link_folder {
     FOLDER_PATH=$1
