@@ -7,34 +7,25 @@
   <div class="col-md-6">
     <!-- DMRS column -->
     <ul class="nav nav-tabs">
-      <li class="active"><a data-toggle="tab" href="#dmrs">Visual DMRS</a></li>
-      <li><a data-toggle="tab" href="#json">JSON</a></li>
+      <li class="active"><a data-toggle="tab" href="#main">Main Tab</a></li>
+      <li><a data-toggle="tab" href="#config">Config</a></li>
     </ul>
     <div class="tab-content">
-      <div id="dmrs" class="tab-pane fade in active">
+      <div id="main" class="tab-pane fade in active">
         <!-- Parsing Form -->
         <form style="padding: 20px 3px;">
           <div class="input-group input-group-lg">
-            <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="Some dogs barked." type="text">
-            <span class="input-group-addon">Parse Count</span>
-            <select id="input_results" name="input_results" class="form-control input-small" title="Maximum parses">
-              <option value="1">1</option>
-              <option value="5" selected="">5</option>
-              <option value="10">10</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="500">500</option>
-            </select>
+            <span class="input-group-addon">Input</span>
+            <input class="form-control input-lg" name="input_data" id="input_data" placeholder="Some dogs bark." value="Some dogs barked." type="text">
             <span class="input-group-btn">
-              <button type="button" class="btn btn-default btn-lg" name="btnParse" id="btnParse" value="parse">Parse</button>
+              <button type="button" class="btn btn-default btn-lg" name="btnProcess" id="btnProcess" value="parse">Process</button>
             </span>
           </div>
         </form>
-        <h2>DMRS</h2>
-        <div id="dmrs1_canvas"></div>
-        <div id="dmrs1_text_holder" class="dmrs_sentence_text"></div>
+
+        <div>Lorem ipsum</div>
       </div>
-      <div id="json" class="tab-pane fade">
+      <div id="config" class="tab-pane fade">
         <pre><code id="dmrs1_json"></code></pre>
       </div>
     </div>
@@ -45,9 +36,7 @@
   <div class="col-md-6">
     <!-- Control Panel and Console -->
     <div id="toolbar" class="input-group" style="padding: 10px 0px;">
-      <input type="button" class="btn btn-primary" id="btnRenderDMRS" name="btnRenderDMRS" value="Render"/>
-      <input type="button" class="btn btn-primary" id="btnClearCanvas" name="btnClearCanvas" value="Destroy"/>
-      <input type="button" class="btn btn-default" id="btnDebug" name="btnDebug" value="Debug"/>
+      <input type="button" class="btn btn-primary" id="btnDebug" name="btnDebug" value="Debug"/>
       <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
       <button type="button" id="btnHide" name="btnHide" class="btn btn-default">Hide Console</button>
     </div>
@@ -63,133 +52,32 @@
    overflow: auto;
  }
 </style>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
+<link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
 {% endblock %}
 
 {% block script %}
-<script type="text/javascript" src="{% static 'viz/lodash-4.11.2.min.js' %}"></script>
+<!-- Others -->
+<script type="text/javascript" src="{% static 'js/lodash-4.17.4.min.js' %}"></script>
+<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
+<!-- Delviz support -->
 <script type="text/javascript" src="{% static 'viz/svg-2.3.0.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/d3.v3.min.js' %}" charset="utf-8"></script>
 <script type="text/javascript" src="{% static 'viz/demo.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
-<!-- ShinchanJS scripts -->
-<script type="text/javascript" src="{% static 'js/raphael.js' %}"></script>
-<script type="text/javascript" src="{% static 'js/console.js' %}"></script>
-<script type="text/javascript" src="{% static 'js/shinchan.js' %}"></script>
-<script type="text/javascript" src="{% static 'js/shinchan.debug.js' %}"></script>
-<script type="text/javascript" src="{% static 'js/visko-2.0.js' %}"></script>
+<!-- ShinchanJS -->
+<script src="{% static 'js/raphael-2.2.1.min.js' %}"></script>
+<script src="{% static 'js/kajika.js' %}"></script>
+<script src="{% static 'js/console.js' %}"></script>
+<script src="{% static 'js/testutil.js' %}"></script>
+<script src="{% static 'js/shinchan.js' %}"></script>
+<script src="{% static 'js/visko-2.0.js' %}"></script>
+<script src="{% static 'js/restisf.js' %}"></script>
 
-<!-- DMRS related scripts -->
-<script>
- var dmrs_canvas;
- 
- function clearDMRS(){
-   if (dmrs_canvas != undefined){
-     dmrs_canvas.clear();
-     dmrs_canvas = undefined;
-     console.writeline("Canvas was destroyed");
-   }
- }
- 
- function showDMRS(){
-   if (dmrs_canvas == undefined) {
-     // Load DMRS JSON using AJAX
-     json_url = "{% static 'ajax/dmrs.json' %}";
-     console.writeline("Loading DMRS JSON from " + json_url);
-     $.getJSON(json_url)
-      .done(function(json) {
-        render_json(json);
-      })
-      .fail(function( jqxhr, textStatus, error ) {
-        var err = textStatus + ", " + error;
-        console.writeline( "Request Failed: " + err );
-      });
-   }
- }
-
- function render_json(json){
-   // Store JSON raw
-   json_str = JSON.stringify(json);
-   $('#dmrs1_json').text(json_str);
-   console.writeline("JSON length: " + json_str.length + " characters");
-   
-   console.writeline("Creating DMRS Canvas");
-   dmrs_canvas = json2canvas(json, "dmrs1", find_synset);
-   // Now render
-   console.writeline("Rendering DMRS");
-   dmrs_canvas.visualise();
-   console.writeline("Done!");
- }
-
- /** Sample synset link builder **/
- function find_synset(synsetid) {
-   return function(){ 
-     get_yawol().search_synset(synsetid);
-   };
- }
-
- function draw_dmrs(){
-   showDMRS();
-   show_info();
- }
-
- /** Show debug info **/
- function show_info() {
-   if (dmrs_canvas == undefined) {
-     return;
-   }
-   // Inspect DMRS
-   var dmrs = dmrs_canvas.get_data();
-   console.writeline("Text           : " + dmrs.text);       
-   console.writeline("Visko Node data: " + dmrs.nodes);
-   // Test get node by ID => get visual element => bind an event
-   var n = dmrs.node_map['10001'];
-   console.write(" | Visual elem: " + n.visual_element);
-   n.visual_element.click(function(){console.writeline('I am fabulous!')});
-   console.writeline("Find this and click it >>> " + n.nodeid + '/' + n.text);
- }
-
- /** Parse a sentence using RESTful **/
- function do_parse() {
-   var results = $('#input_results').val();
-   var sent = $('#input_sentence').val();
-   var grm_url = 'http://chimpanzee.ling.washington.edu/bottlenose/erg/parse';
-   console.writeline("Parsing sentence: " + sent);
-   console.writeline("Grammar URL     : " + grm_url);
-   // This script was adopted from: https://github.com/delph-in/delphin-viz
-   $.ajax({
-     url: grm_url,
-     dataType: 'json',
-     data: {
-       'derivation': 'null', 
-       'mrs': 'null',
-       'dmrs': 'json',
-       'input': sent,
-       'results': results
-     },
-     dataFilter: function(data) {
-       // Fix buggy JSON from LKB server
-       return data.replace(/([^,]) "pedges"/, '$1, "pedges"');
-     },
-     success: function(json){
-       delphin_json = json;
-       if (json.results.length > 0) {
-         // render
-         clearDMRS();
-         j = json.results[0].dmrs;
-         j['text'] = json.input;
-         render_json(j);
-       }
-     },
-     error: function(data){
-       console.writeline("Error");
-     }
-   });
- }          
-</script>
 <!-- Yawol client -->
 <script src="{% static 'js/yawol.js' %}"></script>
 <!-- Yawol support -->
@@ -244,62 +132,32 @@
 </script>
 <script>
  var yawol;
-
+ var yawol_root = '{% url "yawol:index" %}';
+ 
  function get_yawol() {
    var yawol = undefined;
    if (yawol == undefined) {
-     // var root = $('#yawol_url').val();
-     // console.writeline("Yawol root: " + root);
-     var root = '/yawol/';
-     yawol = new Yawol("synsets", root, $("#synsetbox_template").html());
+     yawol = new Yawol("synsets", yawol_root, $("#synsetbox_template").html());
    }
    return yawol;
  }
+ 
+ /** Sample synset link builder **/
+ function find_synset(synsetid) {
+   return function(){ 
+     get_yawol().search_synset(synsetid);
+   };
+ }
 </script>
-<!-- Document ready -->
-<script>
- $(document).ready(function(){       
-   initialise();   
-   draw_dmrs();
- });
 
- function initialise(){
-   // Console support
-   console = new Console("console");
-   $("#btnClear").click(clear_console);
-   $("#btnHide").click(toggleConsole);
-   clear_console();
-   update_console();
-   $('#synset_info').hide();
-   
-   $("#btnDebug").click(function(){
-     clear_console();
-     show_info();
-     // Dump canvas structure to console
-     console.header("DMRS Canvas structure");
-     displayInformation(dmrs_canvas.get_canvas());
-   });
-   $("#btnClearCanvas").click(function(){
-     clearDMRS();
-   });
-   $("#btnRenderDMRS").click(function(){
-     clearDMRS(); // Don't display it twice
-     showDMRS();
-   });
-   $("#btnParse").click(function(){
-     do_parse();
-   });
-   $("#btnHideSynset").click(function(){ $('#synset_info').hide(); });
- }     
-</script>
 <!-- Console support -->
 <script>
  var console;
-
+ 
  $(window).on('resize', function(){
    update_console();
  });
-
+ 
  function toggleConsole(){
    $("#console").toggle();
    if($("#console").is(":visible")){
@@ -311,18 +169,76 @@
  }
  
  function update_console(){
-   var ch = $(window).height() - 130;
+   var ch = $(window).height() - 360;
    if (ch < 300){
      ch = 300;
    }
    $("#console").height(ch);
    $("#console").css('max-height', ch);
-   //console.writeline("Window's height: " + $(window).height());
  }
-
+ 
  function clear_console() {
-   console.clear("VisualKopasu/DMRS Visualisation - Version 2.0");
+   console.clear("Visko REST Client - Version 0.1");
    console.writeline();
  }
 </script>
+
+<script>
+ function debug() {
+   console.writeline("Debug");
+ }
+
+ function process() {
+   var input = $("#input_data").val();
+   var req_url = "{% url 'visko2:dev_rest' %}";
+   console.writeline("User input: " + input);
+   console.writeline("Requesting URL: " + req_url);
+   $.ajaxSetup({
+     headers: { 'X-CSRFToken': "{{ csrf_token }}" }
+   });
+   $.ajax({url: req_url,
+           dataType: 'jsonp',
+           method: 'post',
+           data: {'input': input },
+           success: function(json) {
+             console.writeline(JSON.stringify(json));
+           },
+           fail: function(jqxhr){
+             if (console != undefined && console.writeline != undefined) {
+               console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
+             }
+           },
+           error: function(jqxhr){
+             if (console != undefined && console.writeline != undefined) {
+               console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
+             }
+           }
+   });
+ }
+</script>
+
+<!-- Document ready -->
+<script> 
+ function initialise(){
+   // Console support
+   console = new Console("console");
+   clear_console();
+   update_console();
+   $("#btnClear").click(clear_console);
+   $("#btnHide").click(toggleConsole);
+   $('#synset_info').hide();
+   $('#btnReset').click(function(){
+     clear_parses();
+     fetch_visko();
+   });   
+   $("#btnDebug").click(debug);
+   $("#btnProcess").click(process);
+ }
+ 
+ $(document).ready(function(){       
+   initialise();
+ });
+</script>
+
+
 {% endblock %}

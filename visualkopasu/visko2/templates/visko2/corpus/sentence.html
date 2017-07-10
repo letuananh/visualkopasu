@@ -5,66 +5,65 @@
 
 <ol class="breadcrumb">
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=collection_name %}">{{ collection_name }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=collection_name corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item">Sent #{{ sent_id }}</li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
+  <li class="breadcrumb-item">Sent #{{ sid }}</li>
 </ol>
 
 {% if sent != None %}
-<div class="dmrs_sentence_text">Parse count: {{ sent|length }}</div>
-<div id="dmrs_text_holder" class="dmrs_sentence_text">{{ sent.text }}</div>
+<div class="dmrs_sentence_text">Parse count: <span id="parse_count">0</span></div>
+<div id="sentence_text" class="dmrs_sentence_text"></div>
 
-  <ul class="nav nav-tabs">
-    <li><a data-toggle="tab" href="#visko">DMRS</a></li>
-    <li class="active"><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
-    <li><a data-toggle="tab" href="#raw">pyDelphin</a></li>
-    <li><a data-toggle="tab" href="#xml">XML</a></li>
-    <li><a data-toggle="tab" href="#json">JSON</a></li>
-  </ul>
-  <div class="tab-content">
-    <div id="visko" class="tab-pane">
-      <div style="overflow-y: auto; height: 700px;">
-      {% for parse in sent %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <div id='dmrs_canvas{{forloop.counter}}'></div>
-      {% endfor %}
-      </div>
-    </div>
-    <div id="delviz" class="tab-pane active">
-      <div style="overflow-y: auto; height: 700px;">
-      {% for parse in sent %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <div id='viszone{{forloop.counter}}'></div>
-      {% endfor %}
-      </div>
-    </div>
-    <div id="raw" class="tab-pane">
-      {% for parse in sent %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <h4>MRS</h4>
-      <pre><code>{{ parse.mrs.tostring }}</code></pre>
-      <h4>DMRS</h4>
-      <pre><code>{{ parse.dmrs.tostring }}</code></pre>
-      {% endfor %}
-    </div>
-    <div id="xml" class="tab-pane">
-      <pre><code>{{ sent.to_xml_str }}</code></pre>
-    </div>
-    <div id="json" class="tab-pane">
-      {% for parse in sent %}
-      <h3><a href="{% url 'visko2:view_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sent_id parse_id=parse.ID %}">Parse #{{parse.ident}}</a></h3>
-      <h4>MRS</h4>
-      <pre><code>{{ parse.mrs.json_str }}</code></pre>
-      <h4>DMRS</h4>
-      <pre><code>{{ parse.dmrs.json_str }}</code></pre>
-      {% endfor %}
+<!-- Synset Information -->
+<div id="synsets"></div>
+
+<ul id="alltabs" class="nav nav-tabs">
+  <li class="active"><a data-toggle="tab" href="#visko">DMRS</a></li>
+  <li><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
+  <li><a data-toggle="tab" href="#raw">pyDelphin</a></li>
+  <li><a data-toggle="tab" href="#xml">XML</a></li>
+  <li><a data-toggle="tab" href="#json">JSON</a></li>
+  <li><a data-toggle="tab" href="#debug">Debug</a></li>
+</ul>
+<div class="tab-content">
+  <div id="visko" class="tab-pane active">
+    <div style="overflow-y: auto; height: 600px;">
+      <!-- DMRSes container -->
+      <div id="dmrses"></div>
     </div>
   </div>
-  {% else %}
-  Nothing
-  {% endif %}
-  {% endblock %}
+  <div id="delviz" class="tab-pane">
+    <!-- Delphin-viz container -->
+    <div id="dvizes"></div>
+  </div>
+  <div id="raw" class="tab-pane">
+    <div id="raws"></div>
+  </div>
+  <div id="xml" class="tab-pane">
+    <pre><code id="xmlcontent"></code></pre>
+  </div>
+  <div id="json" class="tab-pane">
+    <div id="jsons"></div>
+  </div>
+  <div id="debug" class="tab-pane">
+    <!-- Control Panel and Console -->
+    <div id="toolbar" class="input-group" style="padding: 10px 0px;">
+      <div class="input-group-btn">
+        <input type="button" class="btn btn-primary" id="btnClearCanvas" name="btnClearCanvas" value="Reset"/>
+        <input type="button" class="btn btn-default" id="btnDebug" name="btnDebug" value="Debug"/>
+        <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
+        <!-- <button type="button" id="btnHide" name="btnHide" class="btn btn-default">Hide Console</button> -->
+      </div>
+    </div>
+    <div id="console" style="overflow: auto; max-height: 80vh;"></div>
+  </div>
+</div>
+
+{% else %}
+There is no parse for this sentence.
+{% endif %}
+{% endblock %}
 
 
 {% block css %}
@@ -81,79 +80,318 @@
 
 
 {% block script %}
-<script type="text/javascript" src="{% static 'viz/lodash-4.11.2.min.js' %}"></script>
+<!-- Others -->
+<script type="text/javascript" src="{% static 'js/lodash-4.17.4.min.js' %}"></script>
+<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
+<!-- Delviz support -->
 <script type="text/javascript" src="{% static 'viz/svg-2.3.0.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/d3.v3.min.js' %}" charset="utf-8"></script>
 <script type="text/javascript" src="{% static 'viz/demo.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
 <script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
-<script src="{% static 'js/raphael.js' %}"></script>
+<!-- ShinchanJS -->
+<script src="{% static 'js/raphael-2.2.1.min.js' %}"></script>
 <script src="{% static 'js/kajika.js' %}"></script>
+<script src="{% static 'js/console.js' %}"></script>
 <script src="{% static 'js/testutil.js' %}"></script>
 <script src="{% static 'js/shinchan.js' %}"></script>
 <script src="{% static 'js/visko-2.0.js' %}"></script>
-<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
+<script src="{% static 'js/restisf.js' %}"></script>
 
-
+<!-- Yawol client -->
+<script src="{% static 'js/yawol.js' %}"></script>
+<!-- Yawol support -->
+<script type="text/template" id="synsetbox_template">
+     <div class="synsetbox container-fluid well">
+     <div class="row">
+     <div class="col-xs-12">
+      <button type="button" class="close" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <label>SynsetID</label>
+     </div>
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <span class="synsetid"><%= synset.synsetid %></span>                
+     </div>
+     <div class="col-xs-12 col-sm-2 col-md-2">
+      <label>Lemmas</label> <span class="lemma"></span>
+     </div>
+     <div class="col-xs-12 col-sm-6 col-md-6">
+      <span class="lemmas"><%= _.join(synset.lemmas, ', ') %></span>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-md-2">
+      <label>Definition</label>
+     </div>
+     <div class="col-xs-12 col-md-10">
+      <span class="definition"><%= synset.definition %></span>
+     </div>
+     </div>
+     <div class="row">
+     <div class="col-xs-12 col-md-2">
+      <label>Examples</label>
+     </div>
+     <div class="col-xs-12 col-md-10">
+       <span class="examples">
+         <% if(synset.examples.length > 0) {  %>
+         <ul>
+           <% _.each(synset.examples, function(ex){ %>
+           <li><%= ex %></li>
+           <% }); %>
+         </ul>
+         <% } %>    
+       </span>
+     </div>
+     </div>
+     </div>
+</script>
 <script>
- function visualize(divid, text, dmrs_json, mrs_json){
-   var vizdivtext = $('#dmrs_text_holder')      
-   var $vizdiv = $('#' + divid);
-   vizdivtext.text(text);
-   $vizdiv.empty();
-   var $viz = $(Templates.viz({vizType:'dmrs'})).appendTo($vizdiv);
-   dmrs = DMRS($viz[0], dmrs_json);
-   var $viz = $(Templates.viz({vizType:'mrs'})).appendTo($vizdiv);
-   self.dmrs = MRS($viz[0], mrs_json, vizdivtext, '{{sent.text}}');
+ var yawol;
+ var yawol_root = '{% url "yawol:index" %}';
+ 
+ function get_yawol() {
+   var yawol = undefined;
+   if (yawol == undefined) {
+     yawol = new Yawol("synsets", yawol_root, $("#synsetbox_template").html());
+   }
+   return yawol;
+ }
+ 
+ /** Sample synset link builder **/
+ function find_synset(synsetid) {
+   return function(){ 
+     get_yawol().search_synset(synsetid);
+   };
+ }
+</script>
+
+<!-- Console support -->
+<script>
+ var console;
+ 
+ $(window).on('resize', function(){
+   update_console();
+ });
+ 
+ function toggleConsole(){
+   $("#console").toggle();
+   if($("#console").is(":visible")){
+     $("#btnHide").text("Hide Console");                
+   } 
+   else{
+     $("#btnHide").text("Show Console");
+   }
+ }
+ 
+ function update_console(){
+   var ch = $(window).height() - 360;
+   if (ch < 300){
+     ch = 300;
+   }
+   $("#console").height(ch);
+   $("#console").css('max-height', ch);
+ }
+ 
+ function clear_console() {
+   console.clear("Visko REST Client - Version 0.1");
+   console.writeline();
+ }
+</script>
+
+<!-- Delphin-viz support -->
+<script>
+ // delphin-viz visualisation
+ function render_delviz(parse, parseid, container){
+   if (parseid == undefined) { parseid = 1; }
+   if (container == undefined) { container = 'dvizes'; }
+   
+   // Add parse header
+   var div_parse = $('<h3></h3>');
+   div_parse.text('Parse #' + parseid);
+   div_parse.attr('id', 'parse' + parseid);
+   $('#' + container).append(div_parse);
+   
+   // Visualize dmrs
+   var dviz_dmrs = $('<div></div>');
+   dviz_dmrs.attr('id', 'dviz_dmrs' + parseid);
+   $('#' + container).append(dviz_dmrs);
+   var $viz = $(Templates.viz({vizType:'dmrs'})).appendTo(dviz_dmrs);
+   dmrs = DMRS(dviz_dmrs[0], JSON.parse(JSON.stringify(parse.dmrs)));
+   
+   // Visualize mrs
+   var dviz_mrs = $('<div></div>');
+   dviz_mrs.attr('id', 'dviz_mrs' + parseid);
+   $('#' + container).append(dviz_mrs);
+   var $viz = $(Templates.viz({vizType:'mrs'})).appendTo(dviz_mrs);
+   mrs = MRS(dviz_mrs[0], JSON.parse(JSON.stringify(parse.mrs)), $('#input_sentence'), $('#sentence_text'));
+ }
+</script>
+
+<!-- Visko REST -->
+<script>
+ var sent_url = "{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid %}";
+ var sent_data_url = "{% url 'visko2:rest_sent_fetch' col=col cor=corpus.name did=doc.name sid=sid %}";
+ function fetch_visko() {   
+   $.ajax({ url: sent_data_url,
+            dataType: 'jsonp',
+            data: { 'raw': true, 'xml': true, 'json': true },
+            success: function(json){
+              clear_parses();
+              response = json;
+              $('#parse_count').text(json.parses.length);
+              visualise();
+            },
+            fail: function(jqxhr){
+              if (console != undefined && console.writeline != undefined) {
+                console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
+              }
+            },
+            error: function(jqxhr){
+              if (console != undefined && console.writeline != undefined) {
+                console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
+              }
+            }
+   }); // end .ajax()
+ }
+</script>
+
+<!-- Coolisf REST support -->
+<script>
+ var restisf_root = '{% url "restisf:index" %}';
+ function get_isf() {
+   return new Restisf(restisf_root);
+ }
+ var response = undefined;
+ 
+ function clear_parses() {
+   $('#dmrses').empty();
+   $('#jsons').empty();
+   $('#dvizes').empty();
+   response = undefined;
+ }
+ 
+ function highlight(a_div) {
+   $(a_div).find('pre code').each(function(i, block) {
+     hljs.highlightBlock(block);
+   });
  }
 
- var console;
- $(document).ready(function(){
-   {% if sent %}
-   // MRS JSON data
-   {% autoescape off %}
-   // All parses
-   {% for parse in sent %}
-   //   Parse #{{forloop.counter}}
-   dmrs_json{{forloop.counter}} = {{parse.dmrs.json_str}};
-   mrs_json{{forloop.counter}} = {{parse.mrs.json_str}};
-   {% endfor %}
-   {% endautoescape %}
-   // visualise delviz
-   {% for parse in sent %}
-   visualize('viszone{{forloop.counter}}', '{% autoescape off %}{{ sentence.text }}{% endautoescape %}', dmrs_json{{forloop.counter}}, mrs_json{{forloop.counter}});
-   {% endfor %}
+ /**
+  * Make parse header clickable
+  **/
+ function header_toolbar(parse, parseidx, container) {
+   var h3 = add_parse_header(parse, parseidx, container);
+   var lnk = $('<a href="#"></a>');
+   lnk.attr('href', sent_url + '/' + parse.pid);
+   lnk.text(h3.text());
+   h3.text('').append(lnk);
+ }
+ 
+ // Render active visualizer
+ function visualise(){       
+   if (response == undefined) {
+     return;
+   }
+   var parses = $(response['parses']);
+   // if using delviz
+   if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){
+     parses.each(function(idx, parse){
+       pid = idx + 1;
+       render_delviz(parse, pid);
+     });
+   }
+   // if using visko
+   else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
+     parses.each(function(idx, parse){
+       pid = idx + 1;
+       render_visko(parse, pid, header_toolbar);
+     });
+   }
+   // XML
+   else if ($('#xmlcontent').is(':empty') && active_tab() == '#xml') {
+     display_xml(response.xml);
+   }
+   // Raws
+   else if ($('#raws').is(':empty') && active_tab() == '#raw') {
+     parses.each(function(idx, parse){
+       pid = idx + 1;
+       display_raw(parse, pid);
+     });
+     highlight('#raws');
+   }       
+   // JSONs
+   else if ($('#jsons').is(':empty') && active_tab() == '#json') {
+     parses.each(function(idx, parse){
+       pid = idx + 1;
+       display_json(parse, pid);
+     });
+     highlight('#jsons');
+   }
+   // end if
+ }
+ 
+ /** Parse a sentence using REST API **/
+ function do_parse() {
+   var sent = $('#input_sentence').val();
+   var parse_count = $('#input_results').val();
+   console.header("Sentence: " + sent);
+   // call parse async
+   get_isf().parse(sent, parse_count, 'lelesk', 'ERG', success);
+   console.writeline("Server is processing. Please wait ...");
+ }
+ 
+ /**
+  * When received parses from server
+  **/
+ function success(json) {
+   clear_parses();
+   response = json; // store parses for rendering  
+   // console.writeline("Raw response: " + JSON.stringify(response));
+   console.writeline(json.parses.length + " parse(s) has been received.");
+   $('#parse_count').text(json.parses.length);
+   visualise();
+ }
+ 
+ function active_tab() {
+   // return $("#alltabs .active").attr('href');
+   return $("#alltabs .active > a").attr("href");
+ }
+ 
+ /** Show debug info **/
+ function debug() {
+ }
+</script>
+<!-- Document ready -->
+<script> 
+ function initialise(){
+   // Console support
+   console = new Console("console");
+   $("#btnClear").click(clear_console);
+   $("#btnHide").click(toggleConsole);
+   clear_console();
+   update_console();
+   $('#synset_info').hide();
    
-   // visualise Visko
-   // but only when activated ...
-   console = new Console('console');
-   {% for parse in sent %}
-   visko_dmrs{{forloop.counter}} = json2visko(dmrs_json{{forloop.counter}}, "{{ sent.text }}");
-   visual_dmrs{{forloop.counter}} = new VisualKopasu.DMRSCanvas(visko_dmrs{{forloop.counter}}, "dmrs_canvas{{forloop.counter}}", "dmrs_text_holder");
-   {% endfor %}
-   visko_visualised = false;
-   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-     var target = $(e.target).attr("href");
-     if(target == '#visko'){
-       if (!visko_visualised){
-         visko_visualised = true;
-         {% for parse in sent %}
-         visual_dmrs{{forloop.counter}}.visualise();
-         {% endfor %}
-       }
-     }
-     else if (target == '#delviz'){
-       // rerender delviz?
-     }
-     else{
-       $(target).find('pre code').each(function(i, block) {
-         hljs.highlightBlock(block);
-       });
-     }
+   $("#btnDebug").click(debug);
+   $("#btnParse").click(do_parse);
+   $("#btnClearCanvas").click(function() {
+     clear_parses();
+     fetch_visko();
    });
-   {% endif %}
-   
+   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+     visualise();
+   });
+ }
+ 
+ $(document).ready(function(){       
+   initialise();
+   fetch_visko();
  });
 </script>
 {% endblock %}

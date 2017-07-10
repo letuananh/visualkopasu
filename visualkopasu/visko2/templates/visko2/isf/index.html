@@ -18,7 +18,7 @@
         <option value="500">500</option>
       </select>
       <span class="input-group-btn">
-        <button class="btn btn-default btn-lg" name="btnParse" type="button" id="btnParse" value="cached">Parse</button>
+        <button class="btn btn-default btn-lg" name="btnParse" type="button" id="btnParse" value="cached" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Processing">Parse</button>
       </span>
     </div>
   </form>
@@ -167,7 +167,7 @@
 </script>
 <script>
  var yawol;
- var yawol_root = 'http://localhost:8000/yawol/'; // TODO: Do not hardcode this
+ var yawol_root = '{% url "yawol:index" %}';
  
  function get_yawol() {
    var yawol = undefined;
@@ -236,21 +236,20 @@
    dviz_dmrs.attr('id', 'dviz_dmrs' + parseid);
    $('#' + container).append(dviz_dmrs);
    var $viz = $(Templates.viz({vizType:'dmrs'})).appendTo(dviz_dmrs);
-   dmrs = DMRS(dviz_dmrs[0], parse.dmrs);
+   dmrs = DMRS(dviz_dmrs[0], JSON.parse(JSON.stringify(parse.dmrs)));
    
    // Visualize mrs
    var dviz_mrs = $('<div></div>');
    dviz_mrs.attr('id', 'dviz_mrs' + parseid);
    $('#' + container).append(dviz_mrs);
    var $viz = $(Templates.viz({vizType:'mrs'})).appendTo(dviz_mrs);
-   mrs = MRS(dviz_mrs[0], parse.mrs, $('#input_sentence'), $('#sentence_text'));
+   mrs = MRS(dviz_mrs[0], JSON.parse(JSON.stringify(parse.mrs)), $('#input_sentence'), $('#sentence_text'));
  }
 </script>
 
 <!-- Coolisf REST support -->
 <script>
- // TODO: Do not hardcode this
- var restisf_root = 'http://localhost:8000/restisf/parse/';
+ var restisf_root = '{% url "restisf:index" %}';
  function get_isf() {
    return new Restisf(restisf_root);
  }
@@ -286,7 +285,7 @@
    else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
      parses.each(function(idx, parse){
        pid = idx + 1;
-       render_visko(parse.dmrs, pid);
+       render_visko(parse, pid);
      });
    }
    // XML
@@ -314,22 +313,30 @@
  
  /** Parse a sentence using REST API **/
  function do_parse() {
+   $("#btnParse").button('loading');
    var sent = $('#input_sentence').val();
    var parse_count = $('#input_results').val();
    console.header("Sentence: " + sent);
    // call parse async
-   get_isf().parse(sent, parse_count, 'lelesk', 'ERG', success);
+   get_isf().parse(sent, parse_count, 'lelesk', 'ERG', success, fail);
    console.writeline("Server is processing. Please wait ...");
+ }
+
+ function fail() {
+   $("#btnParse").button('reset');
+   alert("Error");
  }
  
  /**
   * When received parses from server
   **/
  function success(json) {
+   $("#btnParse").button('reset');
    clear_parses();
    response = json; // store parses for rendering  
    // console.writeline("Raw response: " + JSON.stringify(response));
    console.writeline(json.parses.length + " parse(s) has been received.");
+   $('#parse_count').text(json.parses.length);
    visualise();
  }
  

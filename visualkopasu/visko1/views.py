@@ -32,7 +32,7 @@ from collections import namedtuple
 
 import xml.etree.ElementTree as ET
 
-from django.core.context_processors import csrf
+from django.template.context_processors import csrf
 from django.http import HttpResponse
 from django.http import Http404
 from django.template import Context

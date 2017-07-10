@@ -654,23 +654,30 @@ function json2canvas(json, dmrs_id, synset_link_builder) {
 
 var rawblock = _.template('<pre><code id="dmrs<%=pid%>_json"><%=json%></code></pre>');
 
+function add_parse_header(parse, parseidx, container){
+    // Create a h3 for canvas
+    var div_parse = $('<h3></h3>');
+    div_parse.text('Parse #' + parseidx);
+    div_parse.attr('id', 'parse_' + parse.pid);
+    $('#' + container).append(div_parse);
+    return div_parse;
+}
+
 /**
  * Render a DMRS using Visko
  **/
-function render_visko(parse, parseid, container){
-    if (parseid == undefined) { parseid = 1; }
+function render_visko(parse, parseidx, header_maker, container){
+    if (parseidx == undefined) { parseidx = 1; }
     if (container == undefined) { container = 'dmrses'; }
-    // Create a h2 for canvas
-    var div_parse = $('<h3></h3>');
-    div_parse.text('Parse #' + parseid);
-    div_parse.attr('id', 'parse' + parseid);
-    $('#' + container).append(div_parse);
+    if (header_maker == undefined) { header_maker = add_parse_header; }
+    // Add a H3
+    header_maker(parse, parseidx, container);
     // Create a div for canvas
     var div_canvas = $('<div></div>');
-    div_canvas.attr('id', 'dmrs' + parseid + '_canvas');
-    $('#dmrses').append(div_canvas);
-    dmrs_visko = json2visko(parse, find_synset);
-    var dmrs_canvas = new VisualKopasu.DMRSCanvas(dmrs_visko, 'dmrs' + parseid + '_canvas', 'sentence_text');
+    div_canvas.attr('id', 'dmrs' + parseidx + '_canvas');
+    $('#' + container).append(div_canvas);
+    dmrs_visko = json2visko(JSON.parse(JSON.stringify(parse.dmrs)), find_synset);
+    var dmrs_canvas = new VisualKopasu.DMRSCanvas(dmrs_visko, 'dmrs' + parseidx + '_canvas', 'sentence_text');
     dmrs_canvas.visualise();
 }
 

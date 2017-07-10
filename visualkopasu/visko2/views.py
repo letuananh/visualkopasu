@@ -33,14 +33,15 @@ __status__ = "Prototype"
 import os
 import logging
 
-from django.template import Context
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.context_processors import csrf
+from django.views.decorators.csrf import csrf_protect
+from django.urls import reverse
 
 from chirptext.texttaglib import TagInfo
 from coolisf.util import Grammar
 
+from djangoisf.views import jsonp, sent2json
 from visualkopasu.util import getLogger
 from visualkopasu.kopasu import Biblioteche, Biblioteca
 from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
@@ -77,11 +78,15 @@ def get_bib(bibname):
     return Biblioteca(bibname)
 
 
-def get_context(request=None):
-    c = Context({"title": "Delphin-viz",
-                 "header": "Visual Kopasu 2.0"})
-    if request:
-        c.update(csrf(request))
+def get_context(extra=None, title=None):
+    c = {"title": "Visual Kopasu 2.0",
+         "header": "Visual Kopasu 2.0"}
+    # if request:
+    #     c.update(csrf(request))
+    if extra:
+        c.update(extra)
+    if title:
+        c['title'] = title
     return c
 
 
@@ -91,23 +96,29 @@ def get_context(request=None):
 
 
 def home(request):
-    c = Context({"title": "Visual Kopasu 2.0",
-                 "header": "Visual Kopasu 2.0",
-                 "collections": getAllCollections(),
-                 "RESULTS": RESULTS, "input_results": 5})
-    c.update(csrf(request))
+    c = get_context({"title": "Visual Kopasu 2.0",
+                     "collections": getAllCollections(),
+                     "RESULTS": RESULTS, "input_results": 5})
     return render(request, "visko2/home/index.html", c)
 
 
+@csrf_protect
 def dev(request, mode=None):
-    c = Context({"title": "Test Bed @ Visual Kopasu 2.0",
-                 "header": "Visual Kopasu 2.0",
-                 "collections": getAllCollections()})
-    c.update(csrf(request))
+    c = get_context({"title": "Test Bed @ Visual Kopasu 2.0",
+                     "collections": getAllCollections()})
     if mode == 'isf':
         return render(request, "visko2/dev/isf.html", c)
+    elif mode == 'vk2':
+        return render(request, "visko2/dev/visko2.html", c)
     else:
         return render(request, "visko2/dev/index.html", c)
+
+
+@jsonp
+@csrf_protect
+def dev_rest(request):
+    input = request.POST.get('input', '')
+    return {'input': input, 'output': input[::-1]}
 
 
 ##########################################################################
@@ -116,19 +127,18 @@ def dev(request, mode=None):
 
 
 def delviz(request):
-    c = Context({"title": "Delphin-viz",
-                 "header": "Visual Kopasu 2.0"})
-    c.update(csrf(request))
+    c = get_context(title="Delphin-viz")
     return render(request, "visko2/delviz/index.html", c)
 
 
 # Maximum parses
 RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
+TAGGERS = (TagInfo.LELESK, TagInfo.MFS)
 PROCESSORS = ('ERG', 'JACY', 'None')  # TODO: Make this more flexible
 
 
 def isf(request):
-    c = get_context()
+    c = get_context(title="CoolISF REST Client")
     return render(request, "visko2/isf/index.html", c)
 
 ##########################################################################
@@ -173,9 +183,9 @@ def create_doc(request, collection_name, corpus_name):
         cdao = bib.textdao.getCorpusDAO(corpus_name)
         cdao.create_doc(doc_name)
         return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
-    except:
-        msg = "Cannot create corpus with name = {}".format(corpus_name)
-        logger.error(msg)
+    except Exception as e:
+        msg = "Cannot create document with name = {}".format(doc_name)
+        logger.exception(e, msg)
         messages.error(request, msg)
         return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
 
@@ -245,14 +255,13 @@ def delete_sent(request, collection_name, corpus_name, doc_id, sent_id):
     return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
 
 
+@csrf_protect
 def list_collection(request):
-    c = Context({"title": "Visual Kopasu 2.0",
-                 "header": "Visual Kopasu 2.0",
-                 "collections": getAllCollections()})
-    c.update(csrf(request))
+    c = get_context({"collections": getAllCollections()})
     return render(request, "visko2/corpus/index.html", c)
 
 
+@csrf_protect
 def list_corpus(request, collection_name):
     dao = get_bib(collection_name).sqldao
     corpora = dao.getCorpora()
@@ -262,44 +271,40 @@ def list_corpus(request, collection_name):
                 corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
                 for doc in corpus.documents:
                     doc.corpus = corpus
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpora': corpora})
-    c.update(csrf(request))
+    c = get_context({'title': 'Corpus',
+                              'collection_name': collection_name,
+                              'corpora': corpora})
     return render(request, "visko2/corpus/collection.html", c)
 
 
+@csrf_protect
 def list_doc(request, collection_name, corpus_name):
     dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
     for doc in corpus.documents:
         doc.corpus = corpus
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpus': corpus})
-    c.update(csrf(request))
+    c = get_context({'title': 'Corpus ' + corpus_name,
+                     'collection_name': collection_name,
+                     'corpus': corpus})
     return render(request, "visko2/corpus/corpus.html", c)
 
 
+@csrf_protect
 def list_sent(request, collection_name, corpus_name, doc_id, input_results=5, input_parser='ERG'):
     dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sentences = dao.getSentences(doc_id)
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpus': corpus,
-                 'doc': doc,
-                 'sentences': sentences,
-                 'input_results': input_results,
-                 'input_parser': input_parser,
-                 'RESULTS': RESULTS,
-                 'PROCESSORS': PROCESSORS})
-    c.update(csrf(request))
+    c = get_context({'title': 'Document: ' + doc.title if doc.title else doc.name,
+                     'collection_name': collection_name,
+                     'corpus': corpus,
+                     'doc': doc,
+                     'sentences': sentences,
+                     'input_results': input_results,
+                     'input_parser': input_parser,
+                     'RESULTS': RESULTS,
+                     'PROCESSORS': PROCESSORS})
     return render(request, "visko2/corpus/document.html", c)
 
 
@@ -308,16 +313,15 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sent = dao.getSentence(sent_id)
+    # sent.ID = sent_id
     # if len(sent) == 1:
     #     # redirect to first parse to edit quicker
     #     return redirect('visko2:edit_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id, parse_id=sent[0].ID, mode='edit')
-    logger.debug("Sent: {} | length: {}".format(sent, len(sent)))
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpus': corpus,
-                 'doc': doc,
-                 'sent': sent, 'sent_id': sent_id})
+    c = get_context({'title': 'Sentence: ' + sent.text,
+                     'col': collection_name,
+                     'corpus': corpus,
+                     'doc': doc,
+                     'sid': sent_id})
     # update reparse count
     input_results = RESULTS[-1]
     for r in RESULTS:
@@ -333,36 +337,114 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
         print("Error: {}".format(e))
         raise
         pass
-    c.update(csrf(request))
     return render(request, "visko2/corpus/sentence.html", c)
 
 
-def view_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id):
-    dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)[0]
-    doc = dao.getDocument(doc_id)
-    sent = dao.getSentence(sent_id, interpretationIDs=(parse_id,))
-    logger.info("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpus': corpus,
-                 'doc': doc,
-                 'sent': sent, 'sent_id': sent_id})
-    # update reparse count
-    input_results = 5
-    c.update({'input_results': input_results, 'RESULTS': RESULTS})
+@csrf_protect
+def view_parse(request, col, cor, did, sid, pid):
+    dao = get_bib(col).sqldao
+    corpus = dao.getCorpus(cor)[0]
+    doc = dao.getDocument(did)
+    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    c = get_context({'title': 'Sentence: ' + sent.text,
+                     'col': col,
+                     'corpus': corpus,
+                     'doc': doc,
+                     'sid': sid,
+                     'pid': pid})
     # convert Visko Sentence into ISF to display
     isfsent = sent.to_isf()
-    print("vDMRS: {}".format(sent[0].dmrs[0]))
-    for n in sent[0].dmrs[0].nodes:
-        if str(n.nodeid) == '10007':
-            print(n, n.rplemma, n.rplemmaID)
     c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
-    c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)
 
 
+@jsonp
+def rest_sent_fetch(request, col, cor, did, sid, pid=None):
+    dao = get_bib(col).sqldao
+    if pid:
+        sent = dao.getSentence(sid, interpretationIDs=(pid,)).to_isf()
+    else:
+        sent = dao.getSentence(sid).to_isf()
+    return sent2json(sent)
+
+
+@csrf_protect
+@jsonp
+def rest_dmrs_fetch(request, col, cor, did, sid, pid):
+    dao = get_bib(col).sqldao
+    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    return {'dmrs': sent[0].dmrs[0]}
+
+
+@csrf_protect
+@jsonp
+def rest_dmrs_parse(request, col, cor, did, sid, pid):
+    dao = get_bib(col).sqldao
+    # corpus = dao.getCorpus(cor)[0]
+    # doc = dao.getDocument(did)
+    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    dmrs_raw = request.POST.get('dmrs', '')
+    dmrs_xml = dmrs_str_to_xml(dmrs_raw)
+    dmrs = getDMRSFromXML(dmrs_xml)
+    sent.mode = Interpretation.ACTIVE
+    sent.interpretations[0].dmrs = [dmrs]
+    sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+    return sent2json(sent.to_isf())
+
+
+@csrf_protect
+@jsonp
+def rest_dmrs_save(request, action, col, cor, did, sid, pid):
+    if action not in ('insert', 'replace'):
+        raise Exception("Invalid action provided")
+    dao = get_bib(col).sqldao
+    # corpus = dao.getCorpus(cor)[0]
+    doc = dao.getDocument(did)
+    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+
+    # Parse given DMRS
+    dmrs_raw = request.POST.get('dmrs', '')
+    dmrs_xml = dmrs_str_to_xml(dmrs_raw)
+    dmrs = getDMRSFromXML(dmrs_xml)
+    sent.mode = Interpretation.ACTIVE
+    sent.interpretations[0].dmrs = [dmrs]
+    sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+    try:
+        sent2json(sent.to_isf())
+    except Exception as e:
+        logger.exception("DMRS string is not well-formed")
+        raise e
+
+    if action == 'replace':
+        # this will replace old (existing) DMRS
+        dao.deleteInterpretation(pid)
+        # assign a new ident to this new parse
+    sentinfo = dao.getSentence(sent.ID, skip_details=True, get_raw=False)
+    new_parse = Interpretation(rid='{}-manual'.format(len(sentinfo)), mode=Interpretation.ACTIVE)
+    new_parse.sentenceID = sent.ID
+    new_parse.dmrs.append(dmrs)
+    new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+    dao.saveInterpretation(new_parse, doc.ID)
+    if new_parse.ID:
+        # complete
+        return {"success": True, "url": reverse('visko2:view_parse', args=[col, cor, did, sid, new_parse.ID])}
+    else:
+        raise Exception("Error occurred while creating interpretation")
+
+
+@csrf_protect
+@jsonp
+def rest_dmrs_delete(request, col, cor, did, sid, pid):
+    dao = get_bib(col).sqldao
+    try:
+        dao.deleteInterpretation(pid)
+        return {"success": True, "url": reverse('visko2:list_parse', args=[col, cor, did, sid])}
+    except Exception as e:
+        logger.exception("Cannot delete parse ID={}".format(pid))
+        raise e
+
+
+@csrf_protect
 def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id, mode):
     dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)[0]
@@ -377,12 +459,11 @@ def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id,
         return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id)
 
     # logger.info("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
-    c = Context({'title': 'Corpus',
-                 'header': 'Visual Kopasu - 2.0',
-                 'collection_name': collection_name,
-                 'corpus': corpus,
-                 'doc': doc,
-                 'sent_id': sent_id})
+    c = get_context({'title': 'Corpus',
+                     'collection_name': collection_name,
+                     'corpus': corpus,
+                     'doc': doc,
+                     'sent_id': sent_id})
     # update reparse count
     input_results = 5
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
@@ -422,7 +503,5 @@ def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id,
     isfsent = sent.to_isf()
     print("Visko sent: {}".format(len(sent)))
     print("ISF sent: {}".format(len(isfsent)))
-    # print("vdmrs: {}".format(sent[0].dmrs[0]))
     c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
-    c.update(csrf(request))
     return render(request, "visko2/corpus/parse.html", c)

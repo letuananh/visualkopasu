@@ -267,12 +267,12 @@ class SQLiteCorpusDAO(CorpusORMSchema):
 
     def createCorpus(self, corpus_name, context=None):
         if not is_valid_name(corpus_name):
-            raise Exception("Invalid corpus name (provided: {}".format(corpus_name))
+            raise Exception("Invalid corpus name (provided: {}) - Visko only accept names using alphanumeric characters".format(corpus_name))
         return self.Corpus.save(Corpus(corpus_name), context=context)
 
     def saveDocument(self, a_document, context=None):
         if not is_valid_name(a_document.name):
-            raise Exception("Invalid doc name (provided: {}".format(a_document.name))
+            raise Exception("Invalid doc name (provided: {}) - Visko only accept names using alphanumeric characters".format(a_document.name))
         self.Document.save(a_document, context=context)
 
     def getDocumentOfCorpus(self, corpusID):
@@ -330,6 +330,8 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             if a_sentence.ident in (-1, '-1', '', None):
                 # create a new ident
                 a_sentence.ident = self.orm_manager.selectScalar('SELECT max(id)+1 FROM sentence')
+                if not a_sentence.ident:
+                    a_sentence.ident = 1
                 print("New ident: {}".format(a_sentence.ident))
             else:
                 print("No need: {}".format(a_sentence.ident))

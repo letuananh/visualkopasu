@@ -283,7 +283,7 @@ def getSentenceFromRawXML(raw, filename=None):
 
 
 # Visko only accept names using alphanumeric characters
-NAME_RE = re.compile('^[a-z0-9_]+$')
+NAME_RE = re.compile('^[A-Za-z0-9_]+$')
 
 
 def is_valid_name(a_name):
