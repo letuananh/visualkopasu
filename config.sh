@@ -1,30 +1,48 @@
 #!/bin/bash
 
+bold=$(tput bold)
+normal=$(tput sgr0)
+py3=`python -c "import sys; print('1' if sys.version_info >= (3,0) else '0')"`
+
 function link_folder {
     FOLDER_PATH=$1
     SYMLINK_NAME=$2
-    if [ ! -d ${SYMLINK_NAME} ]; then
-        ln -sv ${FOLDER_PATH} ${SYMLINK_NAME}
+    if [ ! -d ${FOLDER_PATH} ]; then
+        echo "WARNING: Target folder ${bold}${FOLDER_PATH}${normal} does not exist"
+    elif [ ! -d ${SYMLINK_NAME} ]; then
+	ln -sv ${FOLDER_PATH} ${SYMLINK_NAME}
     else
-        echo "Folder ${SYMLINK_NAME} exists."
+	echo "Folder ${bold}${SYMLINK_NAME}${normal} exists."
     fi
 }
 
 function link_file {
-    FOLDER_PATH=$1
+    TARGET_FILE=$1
     SYMLINK_NAME=$2
-    if [ ! -f ${SYMLINK_NAME} ]; then
-        ln -sv ${FOLDER_PATH} ${SYMLINK_NAME}
+    if [ ! -f ${TARGET_FILE} ]; then
+        echo "WARNING: Target file ${bold}${TARGET_FILE}${normal} does not exist"
+    elif [ ! -f ${SYMLINK_NAME} ]; then
+	ln -sv ${TARGET_FILE} ${SYMLINK_NAME}
     else
-        echo "File ${SYMLINK_NAME} exists."
+	echo "File ${bold}${SYMLINK_NAME}${normal} exists."
     fi
 }
 
-# git submodule sync && git submodule init && git submodule update
+if [ ${py3} -eq 0 ]; then
+    echo "+-------------------------------+"
+    echo "| WARNING: Python 3 is required |"
+    echo "+-------------------------------+"
+fi
 
+# Config Coolisf 
 cd modules/intsem.fx/
-git submodule init && git submodule update
+if [ ! -d './modules/chirptext/chirptext' ]; then
+    git submodule init && git submodule update
+fi
+./config.sh
 cd ../../
+
+# Link required modules
 link_folder `readlink -f ./modules/intsem.fx/coolisf` coolisf
 link_folder `readlink -f ./modules/intsem.fx/djangoisf` djangoisf
 link_folder `readlink -f ./modules/intsem.fx/modules/chirptext/chirptext` chirptext
