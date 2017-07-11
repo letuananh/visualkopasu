@@ -29,12 +29,12 @@
   <li><a data-toggle="tab" href="#debug">Debug</a></li>
 </ul>
 <div class="tab-content">
-  <div id="visko" class="tab-pane active">
+  <div id="visko" class="tab-pane active" style="padding: 10px;">
     <!-- DMRSes container -->
     <div id="dmrses"></div>
     
     <!-- Edit DMRS -->
-    <h3>Edit DMRS</h3>
+    <!-- <h3>Edit DMRS</h3> -->
     <form method="POST" action="{% url 'visko2:edit_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid parse_id=parse.ID mode='edit' %}">
       {% csrf_token %}
       <div class="form-group">
@@ -48,7 +48,7 @@
     </form>
     <!-- End Edit DMRS -->
   </div>
-  <div id="delviz" class="tab-pane">
+  <div id="delviz" class="tab-pane" style="padding: 10px;">
     <div style="overflow-y: auto; height: 700px;">
       <div id='dvizes'></div>
     </div>
@@ -431,7 +431,8 @@
    });
  }
 
- function header_toolbar(parse, parseidx, container) { }
+ function header_toolbar(parse, parseidx, container) {
+ }
  
  // Render active visualizer
  function visualise(){       
@@ -451,7 +452,7 @@
    else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
      parses.each(function(idx, parse){
        pid = idx + 1;
-       render_visko(parse, pid);
+       render_visko(parse, pid, header_toolbar);
      });
    }
    // XML
