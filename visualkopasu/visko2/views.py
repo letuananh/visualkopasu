@@ -370,14 +370,6 @@ def rest_sent_fetch(request, col, cor, did, sid, pid=None):
 
 @csrf_protect
 @jsonp
-def rest_dmrs_fetch(request, col, cor, did, sid, pid):
-    dao = get_bib(col).sqldao
-    sent = dao.getSentence(sid, interpretationIDs=(pid,))
-    return {'dmrs': sent[0].dmrs[0]}
-
-
-@csrf_protect
-@jsonp
 def rest_dmrs_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     # corpus = dao.getCorpus(cor)[0]

@@ -31,8 +31,9 @@
 <div class="tab-content">
   <div id="visko" class="tab-pane active" style="padding: 10px;">
     <!-- DMRSes container -->
-    <div id="dmrses"></div>
-    
+    <div style="overflow-y: auto; min-height: 100px;">
+      <div id="dmrses"></div>
+    </div>
     <!-- Edit DMRS -->
     <!-- <h3>Edit DMRS</h3> -->
     <form method="POST" action="{% url 'visko2:edit_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid parse_id=parse.ID mode='edit' %}">
@@ -160,7 +161,7 @@
 
 <!-- Visko REST -->
 <script>
- var parse_data_url = "{% url 'visko2:rest_parse_fetch' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
+ var parse_data_url = "{% url 'visko2:rest_dmrs_fetch' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
  function fetch_visko() {
    console.writeline("Fetching from: " + parse_data_url);
    $.ajax({ url: parse_data_url,
