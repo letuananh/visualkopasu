@@ -2,6 +2,7 @@
 
 bold=$(tput bold)
 normal=$(tput sgr0)
+WORKSPACE_FOLDER=~/workspace
 py3=`python -c "import sys; print('1' if sys.version_info >= (3,0) else '0')"`
 
 function link_folder {
@@ -34,12 +35,18 @@ if [ ${py3} -eq 0 ]; then
     echo "+-------------------------------+"
 fi
 
-# Config Coolisf 
+# install prerequisite packages
+pip install -r requirements.txt -qq
+
+# init submodules
+git submodule init && git submodule update
+
+# Config Coolisf
 cd modules/intsem.fx/
 if [ ! -d './modules/chirptext/chirptext' ]; then
     git submodule init && git submodule update
 fi
-./config.sh
+
 cd ../../
 
 # Link required modules
@@ -50,5 +57,8 @@ link_folder `readlink -f ./modules/intsem.fx/modules/puchikarui/puchikarui` puch
 link_folder `readlink -f ./modules/intsem.fx/modules/lelesk/lelesk` lelesk
 link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawlib` yawlib
 link_folder `readlink -f ./modules/intsem.fx/modules/yawlib/yawoldjango` yawoldjango
+
+# Link ERG
+link_file `readlink -f ${WORKSPACE_FOLDER}/cldata/erg.dat` data/erg.dat
 
 ./manage.py migrate
