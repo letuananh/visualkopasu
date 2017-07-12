@@ -68,9 +68,11 @@
       <div class="input-group-btn">
         <input type="button" class="btn btn-primary" id="btnDebug" name="btnDebug" value="Debug"/>
         <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
+        <input type="checkbox" id="consoletoggle" checked data-toggle="toggle" data-on="Console" data-off="Console" data-width="100">Console</input>
       </div>
     </div>
     <div id="console" style="overflow: auto; max-height: 80vh;"></div>
+    <!-- End console UI -->
   </div>
 </div>
 {% endif %}
@@ -149,138 +151,12 @@
 <script src="{% static 'js/raphael-2.2.1.min.js' %}"></script>
 <script src="{% static 'js/kajika.js' %}"></script>
 <script src="{% static 'js/console.js' %}"></script>
-<script src="{% static 'js/testutil.js' %}"></script>
 <script src="{% static 'js/shinchan.js' %}"></script>
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
 
-<!-- Yawol client -->
-<script src="{% static 'js/yawol.js' %}"></script>
-<!-- Yawol support -->
-<script type="text/template" id="synsetbox_template">
-     <div class="synsetbox container-fluid well">
-     <div class="row">
-     <div class="col-xs-12">
-      <button type="button" class="close" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
-     </div>
-     </div>
-     <div class="row">
-     <div class="col-xs-12 col-sm-2 col-md-2">
-      <label>SynsetID</label>
-     </div>
-     <div class="col-xs-12 col-sm-2 col-md-2">
-      <span class="synsetid"><%= synset.synsetid %></span>                
-     </div>
-     <div class="col-xs-12 col-sm-2 col-md-2">
-      <label>Lemmas</label> <span class="lemma"></span>
-     </div>
-     <div class="col-xs-12 col-sm-6 col-md-6">
-      <span class="lemmas"><%= _.join(synset.lemmas, ', ') %></span>
-     </div>
-     </div>
-     <div class="row">
-     <div class="col-xs-12 col-md-2">
-      <label>Definition</label>
-     </div>
-     <div class="col-xs-12 col-md-10">
-      <span class="definition"><%= synset.definition %></span>
-     </div>
-     </div>
-     <div class="row">
-     <div class="col-xs-12 col-md-2">
-      <label>Examples</label>
-     </div>
-     <div class="col-xs-12 col-md-10">
-       <span class="examples">
-         <% if(synset.examples.length > 0) {  %>
-         <ul>
-           <% _.each(synset.examples, function(ex){ %>
-           <li><%= ex %></li>
-           <% }); %>
-         </ul>
-         <% } %>    
-       </span>
-     </div>
-     </div>
-     </div>
-</script>
-<script>
- var yawol;
- var yawol_root = '{% url "yawol:index" %}';
- 
- function get_yawol() {
-   var yawol = undefined;
-   if (yawol == undefined) {
-     yawol = new Yawol("synsets", yawol_root, $("#synsetbox_template").html());
-   }
-   return yawol;
- }
- 
- /** Sample synset link builder **/
- function find_synset(synsetid) {
-   return function(){ 
-     get_yawol().search_synset(synsetid);
-   };
- }
-</script>
-
-<!-- Console support -->
-<script>
- var console;
- 
- $(window).on('resize', function(){
-   update_console();
- });
- 
- function toggleConsole(){
-   $("#console").toggle();
-   if($("#console").is(":visible")){
-     $("#btnHide").text("Hide Console");                
-   } 
-   else{
-     $("#btnHide").text("Show Console");
-   }
- }
- 
- function update_console(){
-   var ch = $(window).height() - 360;
-   if (ch < 300){
-     ch = 300;
-   }
-   $("#console").height(ch);
-   $("#console").css('max-height', ch);
- }
- 
- function clear_console() {
-   console.clear("Visko REST Client - Version 0.1");
-   console.writeline();
- }
-</script>
-
-<!-- Delphin-viz support -->
-<script>
- // delphin-viz visualisation
- function render_delviz(parse, parseid, container){
-   if (parseid == undefined) { parseid = 1; }
-   if (container == undefined) { container = 'dvizes'; }
-   
-   // Visualize dmrs
-   var dviz_dmrs = $('<div></div>');
-   dviz_dmrs.attr('id', 'dviz_dmrs' + parseid);
-   $('#' + container).append(dviz_dmrs);
-   var $viz = $(Templates.viz({vizType:'dmrs'})).appendTo(dviz_dmrs);
-   dmrs = DMRS(dviz_dmrs[0], JSON.parse(JSON.stringify(parse.dmrs)));
-   
-   // Visualize mrs
-   var dviz_mrs = $('<div></div>');
-   dviz_mrs.attr('id', 'dviz_mrs' + parseid);
-   $('#' + container).append(dviz_mrs);
-   var $viz = $(Templates.viz({vizType:'mrs'})).appendTo(dviz_mrs);
-   mrs = MRS(dviz_mrs[0], JSON.parse(JSON.stringify(parse.mrs)), $('#input_sentence'), $('#sentence_text'));
- }
-</script>
+{% include 'visko2/yawol.html' %}
+{% include 'visko2/delviz.html' %}
 
 <!-- Visko REST -->
 <script>
@@ -416,7 +292,7 @@
  }
 </script>
 
-<!-- Visko REST -->
+<!-- Visualise stuff -->
 <script>
  function clear_parses() {
    $('#dmrses').empty();
@@ -429,6 +305,10 @@
    $(a_div).find('pre code').each(function(i, block) {
      hljs.highlightBlock(block);
    });
+ }
+
+ function active_tab() {
+   return $("#alltabs .active > a").attr("href");
  }
 
  function header_toolbar(parse, parseidx, container) {
@@ -445,7 +325,7 @@
    if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){
      parses.each(function(idx, parse){
        pid = idx + 1;
-       render_delviz(parse, pid);
+       render_delviz(parse, pid, header_toolbar);
      });
    }
    // if using visko
@@ -477,12 +357,7 @@
    }
    // end if
  }
- 
- function active_tab() {
-   // return $("#alltabs .active").attr('href');
-   return $("#alltabs .active > a").attr("href");
- }
- 
+  
  /** Show debug info **/
  function debug() {
    console.writeline("Lorem ipsum");
@@ -495,16 +370,24 @@
  }
 </script>
 <!-- Document ready -->
-<script> 
+<script>
+ var console;
+ 
  function initialise(){
    // Console support
-   console = new Console("console");
-   clear_console();
-   update_console();
-   $("#btnClear").click(clear_console);
-   $("#btnHide").click(toggleConsole);
+   console = new Console("console", 300, ".:: Debug ::.");
+   $("#btnClear").click(function() { console.clear(); });
+   $(window).on('resize', function() { console.resize(); });
+   $('#consoletoggle').change(function(){ console.toggle(); });
+   console.clear().resize();
    
-   $('#synset_info').hide();
+   // DMRS editing features
+   // Reset DMRS textarea
+   $('#btnReset').click(function(){     
+     clear_parses();
+     fetch_visko();
+     $('#dmrs_raw').val($('#dmrs_raw').prop('defaultValue'));
+   });
    $('#btnParse').click(parse_dmrs);
    $('#btnSave').click(function(){ store_dmrs('insert'); });
    $('#btnOverwrite').click(function(){ store_dmrs('replace'); });
@@ -512,12 +395,8 @@
      $('#confirm-delete').modal('show');
    });
    $('#btnActualDelete').click(delete_dmrs);
-   $('#btnReset').click(function(){
-     clear_parses();
-     fetch_visko();
-     $('#dmrs_raw').val($('#dmrs_raw').prop('defaultValue'));
-   });
-   
+
+   // Visualise DMRS
    $("#btnDebug").click(debug);
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      visualise();

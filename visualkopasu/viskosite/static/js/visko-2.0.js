@@ -654,11 +654,13 @@ function json2canvas(json, dmrs_id, synset_link_builder) {
 
 var rawblock = _.template('<pre><code id="dmrs<%=pid%>_json"><%=json%></code></pre>');
 
-function add_parse_header(parse, parseidx, container){
+function add_parse_header(parse, parseidx, container, id_prefix){
+    if (id_prefix == undefined) { id_prefix = 'parse_'; }
+    var divid = (parse.pid != undefined) ? id_prefix + parse.pid : id_prefix + parseidx;
     // Create a h3 for canvas
     var div_parse = $('<h3></h3>');
     div_parse.text('Parse #' + parseidx);
-    div_parse.attr('id', 'parse_' + parse.pid);
+    div_parse.attr('id', divid);
     $('#' + container).append(div_parse);
     return div_parse;
 }

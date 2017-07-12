@@ -12,100 +12,123 @@
  * You should have received a copy of the GNU General Public License 
  * along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
  **/
- 
- /**
-  * Just a simple console to throw debug info in
-  **/
-function Console(id){
+
+/**
+ * Just a simple console to throw debug info in
+ **/
+Console = function(id, height_offset, default_text, min_height){
     this.holder = $('#'+id);
     this.color = "lightgreen";
     this.holder.css({
-    "color" : "lightgreen"
-    ,"background-color" : "black"
-    ,"font-family" : "monospace, 'Courier New'"
-    ,"font-size" : '12px'
+        "color" : "lightgreen"
+        ,"background-color" : "black"
+        ,"font-family" : "monospace, 'Courier New'"
+        ,"font-size" : '12px'
         ,"padding": '5px'
     });
-    var mode = true;
-    
-    this.setEnable = function(_mode){
-    mode = _mode;
-    };
-    
-    this.setColor = function(color){
-    if(!mode){ return; }
-    this.color = color;
-    return this;
-    }
-    
-    this.write = function(text, color){
-    if(!mode){ return; }
-    
-    if(text == undefined){ text = ''; }
-    if(color == undefined) { color = this.color; }
-    if(typeof text.str === "function"){ 
-        text = text.str(); 
-    }
-    
-    if(color != undefined){
-        // this.holder.add('span').css('color', color);
-        this.holder.append("<span style='color:" + color + "'>" + text + "</span>");
-    }
-    else{
-        this.holder.append("<span>" + text + "</span>");
-    }
-    return this;
-    }
-    
-    this.writeline = function(text, color){
-    if(!mode){ return; }
-    this.write(text, color);
-    this.holder.append("</br>");
-    return this;
-    };
-    
-    this.header = function(text){
-    if(!mode){ return; }
-    header_color = "yellow";
-    var hr_line = ''
-    for(i = 0; i < text.length + 4; i++){
-        hr_line += '='
-    }
-    
-    this.writeline("");
-    this.writeline(hr_line, header_color);
-    this.writeline("| " + text + " |", header_color);
-    this.writeline(hr_line, header_color);
-    this.writeline("");
-    
-    return this;
-    };
-    
-    this.exec = function(command, prefix){
-    if(!mode){ return; }
-        
-    var result = '';
-    if (typeof prefix == 'string') {
-        result += prefix;
-    }
-    result += command + " -> " + eval(command);
-    this.writeline(result);
-    
-    return this;
-    };
-    
-    this.clear = function(initialText){
-    if(!mode){ return; }
-    if(initialText == undefined) {
-        this.holder.html('<br/>');
-    }
-    else{
+    this.default_text = default_text;
+    this.min_height = (min_height != undefined) ? min_height : 300;
+    this.height_offset = (height_offset != undefined) ? height_offset : 150;
+    this.mode = true;
+}
+
+Console.prototype = {
+   
+    setEnable : function(mode){
+        this.mode = mode;
+    },
+
+    toggle : function() {
+        this.holder.toggle();
+    },
+
+    isVisible : function() {
+        return this.holder.is(":visible");
+    },
+
+    resize : function() {
+        var ch = $(window).height() - this.height_offset;
+        if (ch < this.min_height){
+            ch = this.min_height;
+        }
+        this.holder.height(ch);
+        this.holder.css('max-height', ch);
+        return this;
+    },
+
+    clear : function(initialText){
+        if (initialText == undefined) {
+            initialText = this.default_text;
+        }
+        if(!this.mode){ return; }
         this.holder.html('');
-        this.writeline(initialText);
-    }
+        if(initialText != undefined) {
+            this.writeline(initialText);
+        }
+        return this;
+    },
     
-    return this;
-    };
+    setColor : function(color){
+        if(!this.mode){ return; }
+        this.color = color;
+        return this;
+    },
+    
+    write : function(text, color){
+        if(!this.mode){ return; }
+        
+        if(text == undefined){ text = ''; }
+        if(color == undefined) { color = this.color; }
+        if(typeof text.str === "function"){ 
+            text = text.str(); 
+        }
+        
+        if(color != undefined){
+            // this.holder.add('span').css('color', color);
+            this.holder.append("<span style='color:" + color + "'>" + text + "</span>");
+        }
+        else{
+            this.holder.append("<span>" + text + "</span>");
+        }
+        return this;
+    },
+    
+    writeline : function(text, color){
+        if(!this.mode){ return; }
+        this.write(text, color);
+        this.holder.append("</br>");
+        return this;
+    },
+    
+    header : function(text){
+        if(!this.mode){ return; }
+        header_color = "yellow";
+        var hr_line = ''
+        for(i = 0; i < text.length + 4; i++){
+            hr_line += '='
+        }
+        
+        this.writeline("");
+        this.writeline(hr_line, header_color);
+        this.writeline("| " + text + " |", header_color);
+        this.writeline(hr_line, header_color);
+        this.writeline("");
+        
+        return this;
+    },
+    
+    exec : function(command, prefix){
+        if(!this.mode){ return; }
+        
+        var result = '';
+        if (typeof prefix == 'string') {
+            result += prefix;
+        }
+        result += command + " -> " + eval(command);
+        this.writeline(result);
+        
+        return this;
+    }
 }
 
 /**
@@ -113,13 +136,13 @@ function Console(id){
  **/
 function dump_object(obj){
     if(typeof obj === "undefined"){
-    return "NULL";
+        return "NULL";
     }
     else if(typeof obj.str === "function"){
-    return obj.str();
+        return obj.str();
     }
     else{
-    return obj;
+        return obj;
     }
 }
 
@@ -129,16 +152,16 @@ function dump_object(obj){
  **/
 function dump_array(a_list){
     if(a_list == undefined){
-    return "NULL";
+        return "NULL";
     }
     if(a_list.length == 0){
-    return "[]";
+        return "[]";
     }
     
     str = '';
     a_new_list = []
     $(a_list).each(function(){
-    a_new_list.push("'" + dump_object(this) + "'");
+        a_new_list.push("'" + dump_object(this) + "'");
     });
     return "[ " + a_new_list.join(", ") + " ]"
 }
@@ -149,16 +172,16 @@ function dump_array(a_list){
  **/
 function dump_dict(a_dict){
     if(a_dict == undefined){
-    return "NULL";
+        return "NULL";
     }
     if(a_dict.length == 0){
-    return "[]";
+        return "[]";
     }
     
     str = '';
     a_new_list = []
     $.each(a_dict, function(key, value){
-    a_new_list.push("'" + key + "' : '" + dump_object(value) +"'");
+        a_new_list.push("'" + key + "' : '" + dump_object(value) +"'");
     });
     return "[ " + a_new_list.join(", ") + " ]"
 }
