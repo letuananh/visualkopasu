@@ -65,11 +65,11 @@ class TestName(unittest.TestCase):
         self.assertTrue(is_valid_name('1'))
         self.assertTrue(is_valid_name('1234'))
         self.assertTrue(is_valid_name('12_34'))
+        self.assertTrue(is_valid_name('ABC12_34'))
         # invalid names
         self.assertFalse(is_valid_name(''))
         self.assertFalse(is_valid_name(None))
         self.assertFalse(is_valid_name('a.b'))
-        self.assertFalse(is_valid_name('ABC123'))
 
 
 class TestConsoleSetup(unittest.TestCase):

@@ -47,11 +47,13 @@ from visualkopasu.kopasu import Biblioteche, Biblioteca
 from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
 from visualkopasu.kopasu.util import dmrs_str_to_xml, xml_to_str
 from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation, Sentence
+from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
 
 ########################################################################
 
 
 logger = getLogger('visko2.ui', logging.DEBUG)  # level = INFO (default)
+SEARCH_LIMIT = 10000
 
 
 def getAllCollections():
@@ -81,8 +83,6 @@ def get_bib(bibname):
 def get_context(extra=None, title=None):
     c = {"title": "Visual Kopasu 2.0",
          "header": "Visual Kopasu 2.0"}
-    # if request:
-    #     c.update(csrf(request))
     if extra:
         c.update(extra)
     if title:
@@ -138,13 +138,42 @@ PROCESSORS = ('ERG', 'JACY', 'None')  # TODO: Make this more flexible
 
 
 def isf(request):
-    c = get_context(title="CoolISF REST Client")
+    c = get_context({'RESULTS': RESULTS}, title="CoolISF REST Client")
+    if request.method == 'POST':
+        input_sentence = request.POST.get('input_sentence')
+        parse_count = int(request.POST.get('input_results'))
+        c.update({'input_sentence': input_sentence,
+                  'parse_count': parse_count})
     return render(request, "visko2/isf/index.html", c)
 
+
 ##########################################################################
-# CORPUS
+# SEARCH
 ##########################################################################
 
+def search(request, sid=None):
+    c = get_context({'collections': getAllCollections()}, title='Search')
+    if request.method == 'GET':
+        c.update({'sentences': []})
+    elif request.method == 'POST':
+        query = request.POST.get('query', '')
+        col = request.POST.get('col', '')
+        if query:
+            # search
+            bib = Biblioteca(col)
+            engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
+            # TODO: reuse engine objects
+            sentences = engine.search(query)
+            for s in sentences:
+                s.collection = col
+            c.update({'query': query, 'col': col, 'sentences': sentences})
+            logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col, q=query, r=sentences))
+    return render(request, "visko2/corpus/search.html", c)
+
+
+##########################################################################
+# CORPUS MANAGEMENT
+##########################################################################
 
 def create_collection(request):
     bib_name = request.POST.get('collection_name', None)
@@ -230,19 +259,6 @@ def create_sent(request, collection_name, corpus_name, doc_id):
     return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
 
 
-def reparse_sent(request, collection_name, corpus_name, doc_id, sent_id):
-    input_results = int(request.POST.get('input_results', 0))
-    if not input_results:
-        logger.error("Invalid parse count (provided {})".format(input_results))
-    else:
-        dao = get_bib(collection_name).sqldao
-        # corpus = dao.getCorpus(corpus_name)[0]
-        # doc = dao.getDocument(doc_id)
-        sent = dao.getSentence(sent_id)
-        logger.debug("Reparse (parse count: {})=> Sent: {} | length: {}".format(input_results, sent, len(sent)))
-    return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id)
-
-
 def delete_sent(request, collection_name, corpus_name, doc_id, sent_id):
     bib = get_bib(collection_name)
     doc = bib.sqldao.getDocument(doc_id)
@@ -316,7 +332,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     # sent.ID = sent_id
     # if len(sent) == 1:
     #     # redirect to first parse to edit quicker
-    #     return redirect('visko2:edit_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id, parse_id=sent[0].ID, mode='edit')
+    #     return redirect('visko2:view_parse', col_name=collection_name, cor=corpus_name, did=doc_id, sid=sent_id, pid=sent[0].ID)
     c = get_context({'title': 'Sentence: ' + sent.text,
                      'col': collection_name,
                      'corpus': corpus,
@@ -358,8 +374,12 @@ def view_parse(request, col, cor, did, sid, pid):
     return render(request, "visko2/corpus/parse.html", c)
 
 
+##########################################################################
+# REST APIs
+##########################################################################
+
 @jsonp
-def rest_sent_fetch(request, col, cor, did, sid, pid=None):
+def rest_fetch(request, col, cor, did, sid, pid=None):
     dao = get_bib(col).sqldao
     if pid:
         sent = dao.getSentence(sid, interpretationIDs=(pid,)).to_isf()
@@ -434,66 +454,3 @@ def rest_dmrs_delete(request, col, cor, did, sid, pid):
     except Exception as e:
         logger.exception("Cannot delete parse ID={}".format(pid))
         raise e
-
-
-@csrf_protect
-def edit_parse(request, collection_name, corpus_name, doc_id, sent_id, parse_id, mode):
-    dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)[0]
-    doc = dao.getDocument(doc_id)
-    sent = dao.getSentence(sent_id, interpretationIDs=(parse_id,))
-    if mode == 'delete' and str(sent[0].ID) == parse_id:
-        try:
-            logging.warning("Deleting interpretation: {}".format(parse_id))
-            dao.deleteInterpretation(parse_id)
-        except Exception as e:
-            logger.error("Cannot delete parse ID={}. Error: {}".format(parse_id, e))
-        return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id)
-
-    # logger.info("Sent: {} | parse_id: {} | length: {}".format(sent, parse_id, len(sent)))
-    c = get_context({'title': 'Corpus',
-                     'collection_name': collection_name,
-                     'corpus': corpus,
-                     'doc': doc,
-                     'sent_id': sent_id})
-    # update reparse count
-    input_results = 5
-    c.update({'input_results': input_results, 'RESULTS': RESULTS})
-    # try to parse DMRS from raw
-    #
-    action = request.POST.get('btn_action', None)
-    print("Action: ", action)
-    dmrs_raw = request.POST.get('dmrs_raw', None)
-    if dmrs_raw:
-        # replace current parse
-        # logger.info("DMRS raw: {}".format(dmrs_raw))
-        dmrs_xml = dmrs_str_to_xml(dmrs_raw)
-        # logger.info("DMRS xml: {}".format(etree.tostring(dmrs_xml)))
-        dmrs = getDMRSFromXML(dmrs_xml)
-        sent.mode = Interpretation.ACTIVE
-        sent.interpretations[0].dmrs = [dmrs]
-        sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-        # if action = insert (i.e. save as new DMRS)
-        if action in ('insert', 'save'):
-            if action == 'save':
-                # this will replace old (existing) DMRS
-                dao.deleteInterpretation(parse_id)
-            # assign a new ident to this new parse
-            sentinfo = dao.getSentence(sent.ID, skip_details=True, get_raw=False)
-            new_parse = Interpretation(rid='{}-manual'.format(len(sentinfo)), mode=Interpretation.ACTIVE)
-            new_parse.sentenceID = sent.ID
-            new_parse.dmrs.append(dmrs)
-            new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-            dao.saveInterpretation(new_parse, doc.ID)
-            if new_parse.ID:
-                return redirect('visko2:edit_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent_id, parse_id=new_parse.ID, mode='edit')
-            else:
-                raise Exception("Error occurred while creating interpretation")
-                pass
-    # convert Visko Sentence into ISF to display
-    #
-    isfsent = sent.to_isf()
-    print("Visko sent: {}".format(len(sent)))
-    print("ISF sent: {}".format(len(isfsent)))
-    c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
-    return render(request, "visko2/corpus/parse.html", c)

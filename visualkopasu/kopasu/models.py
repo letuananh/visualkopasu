@@ -70,6 +70,8 @@ class Sentence(SmartRecord):
         self.ident = ident
         self.text = text
         self.documentID = documentID
+        self.corpus = None
+        self.collection = None
         self.interpretations = []
         self.filename = None
         # self.dmrs = []
@@ -98,8 +100,11 @@ class Sentence(SmartRecord):
     def __iter__(self):
         return iter(self.interpretations)
 
+    def __repr__(self):
+        return str(self)
+
     def __str__(self):
-        return "[ID=" + self.ident + "]" + self.text
+        return "({col}\{cor}\{did}\Sent#{i})`{t}`".format(col=self.collection, cor=self.corpus, did=self.documentID, i=self.ident, t=self.text)
 
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
@@ -262,29 +267,6 @@ class Node(SmartRecord):
             sensetag = 'synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma, self.sense.score)
         carg = 'CARG=+' if self.carg else ''
         return "{nodeid} [ {pred}<{cfrom}:{cto}> {sortinfo} {sensetag} {carg} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, sensetag=sensetag, pred=pred, carg=carg)
-
-
-class NodeIndex(SmartRecord):
-    def __init__(self):
-        self.nodeID = None
-        self.carg = None
-        self.lemmaID = None
-        self.pos = None
-        self.sense = None
-        self.gpred_valueID = None
-        self.dmrsID = None
-        self.documentID = None
-
-
-class LinkIndex(SmartRecord):
-    def __init__(self):
-        self.linkID = None
-        self.fromNodeID = None
-        self.toNodeID = None
-        self.post = None
-        self.rargname = None
-        self.dmrsID = None
-        self.documentID = None
 
 
 class Sense(SmartRecord):

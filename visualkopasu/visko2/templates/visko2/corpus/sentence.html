@@ -91,7 +91,7 @@ There is no parse for this sentence.
 <!-- Visko REST -->
 <script>
  var sent_url = "{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid %}";
- var sent_data_url = "{% url 'visko2:rest_sent_fetch' col=col cor=corpus.name did=doc.name sid=sid %}";
+ var sent_data_url = "{% url 'visko2:rest_fetch_sent' col=col cor=corpus.name did=doc.name sid=sid %}";
  function fetch_visko() {   
    $.ajax({ url: sent_data_url,
             dataType: 'jsonp',

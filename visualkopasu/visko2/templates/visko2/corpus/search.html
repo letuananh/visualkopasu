@@ -1,0 +1,55 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+{% block content %}
+
+<h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
+
+<form method="POST" action="{% url 'visko2:search' %}" style="padding-bottom: 20px;">
+  {% csrf_token %}
+  <div class="input-group input-group-lg">
+    <span class="input-group-addon">Collection</span>
+    <select name="col" id="col" class="form-control">
+      {% for bib in collections %}
+      <option value="{{ bib.name}}" {% if bib.name == col %}selected="selected"{% endif %}>{{bib.name}}</option>
+      {% endfor %}
+        </select>
+    <span class="input-group-addon">Query</span>
+    <input class="form-control input-lg" name="query" id="query" placeholder="" value="{{ query|default:'' }}" type="text">
+    <span class="input-group-btn">
+      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Search</button>
+    </span>
+  </div>
+</form>
+
+<div class="list-group">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>#</td>
+        <td>ident</td>
+        <td>Sentence</td>
+        <td>Parse</td>
+      </tr>
+    </thead>
+    {% for sentence in sentences %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ sentence.ident }}</td>
+      <td>
+        <a target="search_results" href="{% url 'visko2:list_parse' collection_name=sentence.collection corpus_name=sentence.corpus doc_id=sentence.documentID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+      </td>
+      <td>
+        {% for parse in sentence %}
+        <a target="search_results" href="{% url 'visko2:view_parse' col=sentence.collection cor=sentence.corpus did=sentence.documentID sid=sentence.ID pid=parse.ID %}">#{{ parse.ID }}</a>&nbsp;
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+</div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

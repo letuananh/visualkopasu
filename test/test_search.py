@@ -5,15 +5,15 @@ Test DMRS search
 
 # Copyright 2016, Le Tuan Anh (tuananh.ke@gmail.com)
 # This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU General Public License as published by 
-# the Free Software Foundation, either version 3 of the License, or 
+# VisualKopasu is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# VisualKopasu is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
 
 __author__ = "Le Tuan Anh"
@@ -28,31 +28,84 @@ __status__ = "Prototype"
 ########################################################################
 
 import unittest
-from test.test_dmrs_dao import TestDAOBase
-from visualkopasu.kopasu import Biblioteche, Biblioteca
-# from visualkopasu.kopasu.dmrs_search import DMRSQueryParser
-from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
+import logging
+from visualkopasu.kopasu import Biblioteca
+from visualkopasu.kopasu.dmrs_search import DMRSQueryParser, LiteSearchEngine
 
 
-class TestDMRSSearch(TestDAOBase):
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+SEARCH_LIMIT = 10000
 
-    DEFAULT_LIMIT = 10000
 
-    def setUp(self):
-        pass
+class TestDMRSSearch(unittest.TestCase):
 
-    def test_search_lemma(self):
-        bibs = Biblioteche.list_all(self.bibroot)
-        self.assertEqual(len(bibs), 1)
-        bib = Biblioteca(self.bibroot)
-        engine = LiteSearchEngine(bib.sqldao, limit=self.DEFAULT_LIMIT)
-        print(engine.dao.db_path)
-        sentences = engine.search('act')
-        print(sentences)
+    bib = Biblioteca('test')
+    engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
+
+    @classmethod
+    def setUpClass(cls):
+        print(cls.engine.dao.db_path)
+
+    def test_lower_case(self):
+        sents = self.engine.search('linus')
+        print(sents)
+
+    def test_build_node_query(self):
+        clauses = DMRSQueryParser.parse('G:named_rel')
+        nq = DMRSQueryParser.parse_node(clauses[0][0])
+        print(nq.to_query())
+        q = nq.to_query()
+        self.assertEqual(q.query, ('SELECT DISTINCT dmrsID FROM dmrs_node node WHERE gpred_valueID = (SELECT ID FROM dmrs_node_gpred_value WHERE value = ?)'))
+        self.assertEqual(q.params, ['named_rel'])
+
+    def test_build_link_query(self):
+        clauses = DMRSQueryParser.parse('(G:compound_rel / hack)')
+        c = clauses[0]
+        lnk = DMRSQueryParser.parse_link(c[1], c[0], c[2])
+        self.assertEqual(lnk.to_query().params, ['compound_rel', 'hack', 'hack'])
+
+    def test_search_lemma_or_carg(self):
+        sents = self.engine.search('act')
+        self.assertIsNotNone(sents)
+        self.assertGreaterEqual(len(sents), 2)
+
+    def test_search_carg(self):
+        sents = self.engine.search('C:Linus')
+        self.assertGreaterEqual(len(sents), 1)
+
+    def test_search_lemma2(self):
+        sents = self.engine.search('L:bazaar')
+        self.assertGreaterEqual(len(sents), 1)
+
+    def test_search_pred(self):
+        sents = self.engine.search('G:pron_rel')
+        self.assertGreater(len(sents), 10)
+
+    def test_search_compound(self):
+        sents = self.engine.search('G:pron_rel AND code')
+        self.assertGreater(len(sents), 5)
+
+    def test_search_compound2(self):
+        cs = DMRSQueryParser.parse('G:named_rel AND bazaar')
+        self.assertEqual(cs, [['G:named_rel'], ['bazaar']])
+        sents = self.engine.search('G:named_rel AND bazaar')
+        self.assertGreaterEqual(len(sents), 1)
+
+    def test_search_link(self):
+        sents = self.engine.search('(know /ARG1 ?)')
+        self.assertGreaterEqual(len(sents), 0)
+        sents = self.engine.search('(want /ARG2 get)')
+        self.assertGreaterEqual(len(sents), 0)
+        sents = self.engine.search('(want /ARG1 G:pron_rel)')
+        self.assertGreaterEqual(len(sents), 0)
+
+    def test_complex_search(self):
+        sents = self.engine.search('(want /ARG1 G:pron_rel) AND ready')
+        self.assertGreaterEqual(len(sents), 0)
 
 
 ########################################################################
-
 
 def main():
     unittest.main()

@@ -34,9 +34,7 @@ from .models import ParseRaw
 from .models import Node
 from .models import Sense
 from .models import SortInfo
-from .models import NodeIndex
 from .models import Link
-from .models import LinkIndex
 from .models import GpredValue
 from .models import Lemma
 
@@ -119,9 +117,6 @@ class CorpusORMSchema(object):
                                 'post',
                                 'rargname'],
                             Link(), orm_manager=self.orm_manager)
-
-        self.NodeIndex = ORMInfo('dmrs_node_index', ['nodeID', 'carg', 'lemmaID', 'pos', 'sense', 'gpred_valueID', 'dmrsID', 'documentID'], NodeIndex(), orm_manager=self.orm_manager)
-        # self.LinkIndex = ORMInfo('dmrs_link_index', ['linkID', 'fromNodeID', 'toNodeID', 'post', 'rargname', 'dmrsID', 'documentID'], LinkIndex(), orm_manager=self.orm_manager)
 # TODO: Split the SQL code to a separate ORM engine
 
 
@@ -224,7 +219,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         location = self.db_path + '_temp.db'
         script_file_create = readscript('create.sql')
         if not silent:
-            print("Converting document from XML into SQLite3 database")
+            print("Preparing SQLite database")
             print("Database path     : %s" % self.db_path)
             print("Temp database path: %s" % location)
         try:
@@ -350,11 +345,9 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         return a_sentence
 
     def deleteInterpretation(self, interpretationID):
-        # delete all DMRS link, link_index, node, node_index
+        # delete all DMRS link, node
         self.orm_manager.execute("DELETE FROM dmrs_link WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
-        self.orm_manager.execute("DELETE FROM dmrs_link_index WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
         self.orm_manager.execute("DELETE FROM dmrs_node WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
-        self.orm_manager.execute("DELETE FROM dmrs_node_index WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
         self.orm_manager.execute("DELETE FROM dmrs_node_sortinfo WHERE dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE interpretationID=?))", (interpretationID,))
         # delete all DMRS
         self.orm_manager.execute("DELETE FROM dmrs WHERE interpretationID=?", (interpretationID,))
@@ -377,21 +370,16 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             self.DMRS.save(dmrs, context=context)
             # save nodes
             for node in dmrs.nodes:
-                nodeindex = NodeIndex()
                 node.dmrsID = dmrs.ID
                 # save realpred
                 if node.rplemma:
                     # Escape lemma
                     lemma = self.lemmaCache.getByValue(node.rplemma, context=context)
                     node.rplemmaID = lemma.ID
-                    nodeindex.lemmaID = lemma.ID
-                    nodeindex.pos = node.rppos
-                    nodeindex.sense = node.rpsense
                 # save gpred
                 if node.gpred:
                     gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
                     node.gpred_valueID = gpred_value.ID
-                    nodeindex.gpred_valueID = gpred_value.ID
                 # save sense
                 if node.sense:
                     node.synsetid = node.sense.synsetid
@@ -400,13 +388,6 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 # save sortinfo
                 node.sortinfo.dmrs_nodeID = node.ID
                 self.SortInfo.save(node.sortinfo, context=context)
-                # other nodeindex info
-                nodeindex.nodeID = node.ID
-                if node.carg:
-                    nodeindex.carg = node.carg
-                nodeindex.dmrsID = dmrs.ID
-                nodeindex.documentID = doc_id
-                self.NodeIndex.save(nodeindex, context=context)
             # save links
             for link in dmrs.links:
                 link.dmrsID = dmrs.ID
@@ -414,15 +395,6 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 link.toNodeID = link.toNode.ID
                 if link.rargname is None:
                     link.rargname = ''
-                # build link index
-                linkindex = LinkIndex()
-                linkindex.linkID = link.ID
-                linkindex.fromNodeID = link.fromNode.ID
-                linkindex.toNodeID = link.toNode.ID
-                linkindex.post = link.post
-                linkindex.rargname = link.rargname
-                linkindex.dmrsID = dmrs.ID
-                linkindex.documentID = doc_id
                 self.Link.save(link, context)
 
     def searchInterpretations(self, mode=None, rargname=None, post=None, lemma=None, limit=50):
@@ -520,7 +492,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         
         logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
-    
+
     def build_search_result(self, rows, no_more_query=False):
         if rows:
             logger.debug(("Found: %s presentation(s)" % len(rows)))
@@ -528,11 +500,12 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             logger.debug("None was found!")
             return []
         sentences = []
-        sentences_by_id = { }
+        sentences_by_id = {}
         for row in rows:
             interpretationID = row['interpretationID']
             sentenceID = row['sentenceID']
             sentence_ident = row['sentence_ident']
+            corpus = row['corpus']
             text = row['text']
             documentID = row['documentID']
             if sentenceID in sentences_by_id:
@@ -542,8 +515,9 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 sentences_by_id[sentenceID].interpretations.append(a_interpretation)
             else:
                 if no_more_query:
-                    a_sentence=Sentence(ident=sentence_ident, text=text, documentID=documentID)
-                    a_sentence.ID=sentenceID
+                    a_sentence = Sentence(ident=sentence_ident, text=text, documentID=documentID)
+                    a_sentence.corpus = corpus
+                    a_sentence.ID = sentenceID
                 else:
                     a_sentence = self.getSentence(sentenceID, interpretationIDs=[], skip_details=True)
                 a_sentence.interpretations = []
@@ -552,17 +526,16 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
             #sentences.append(a_sentence)
-        
         logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
-    
+
     def getLemma(self, lemma):
         lemmata = self.Lemma.select("lemma=?", [lemma])
         if len(lemmata) == 1:
             return lemmata[0]
         else:
             return None
-                
+
     def searchByLemma(self, lemma, limit=1000):
         lemma = self.getLemma(lemma)
         if lemma is None:

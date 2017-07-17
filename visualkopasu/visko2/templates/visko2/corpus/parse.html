@@ -36,7 +36,7 @@
     </div>
     <!-- Edit DMRS -->
     <!-- <h3>Edit DMRS</h3> -->
-    <form method="POST" action="{% url 'visko2:edit_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid parse_id=parse.ID mode='edit' %}">
+    <form>
       {% csrf_token %}
       <div class="form-group">
         <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{vdmrs}}</textarea>
@@ -161,7 +161,7 @@
 
 <!-- Visko REST -->
 <script>
- var parse_data_url = "{% url 'visko2:rest_dmrs_fetch' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
+ var parse_data_url = "{% url 'visko2:rest_fetch_dmrs' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
  function fetch_visko() {
    console.writeline("Fetching from: " + parse_data_url);
    $.ajax({ url: parse_data_url,

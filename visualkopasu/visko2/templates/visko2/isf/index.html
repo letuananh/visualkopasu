@@ -7,15 +7,12 @@
   <!-- Parsing Form -->
   <form>
     <div class="input-group input-group-lg">
-      <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="Some dogs barked." type="text">
+      <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence | default:'Some dogs barked.'}}" type="text">
       <span class="input-group-addon">Parse Count</span>
       <select id="input_results" name="input_results" class="form-control input-small" title="Maximum parses">
-        <option value="1">1</option>
-        <option value="5" selected="">5</option>
-        <option value="10">10</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-        <option value="500">500</option>
+        {% for pc in RESULTS %}
+        <option value="{{pc}}" {% if pc == parse_count %}selected="selected"{% endif %}>{{pc}}</option>
+        {% endfor %}
       </select>
       <span class="input-group-btn">
         <button class="btn btn-default btn-lg" name="btnParse" type="button" id="btnParse" value="cached" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Processing">Parse</button>
@@ -236,6 +233,9 @@
 
  $(document).ready(function(){       
    initialise();
+   {% if input_sentence %}
+   do_parse();
+   {% endif %}
  });
 </script>
 {% endblock %}

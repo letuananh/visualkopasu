@@ -334,8 +334,8 @@ class TestBiblioteche(TestDAOBase):
 
     def test_list_collections(self):
         bibs = Biblioteche.list_all(self.bibroot)
-        self.assertEqual(len(bibs), 1)
-        self.assertEqual(bibs[0], self.bibname)
+        self.assertGreaterEqual(len(bibs), 1)
+        self.assertIn(self.bibname, bibs)
         pass
 
 

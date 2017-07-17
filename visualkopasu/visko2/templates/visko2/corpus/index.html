@@ -5,16 +5,6 @@
 
 <h2 class="sub-header">Available Collections</h2>
 
-<form method="POST" action="{% url 'visko2:create_collection' %}" style="padding-bottom: 20px;">
-  {% csrf_token %}
-  <div class="input-group input-group-lg">
-    <input class="form-control input-lg" name="collection_name" id="collection_name" placeholder="New Collection (only alphanumeric or underscore characters are allowed)" value="{{ collection_name|default:'' }}" type="text">
-    <span class="input-group-btn">
-      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Create</button>
-    </span>
-  </div>
-</form>
-
 {% if collections %}
 {% for collection in collections %}
 <div class="panel panel-primary">
@@ -42,7 +32,19 @@
 </div>
 {% endfor %}
 {% else %}
-There is no collection available.
+<div style="padding: 20px;">
+  There is no collection available.
+</div>
 {% endif %}
+
+<form method="POST" action="{% url 'visko2:create_collection' %}" style="padding-bottom: 20px;">
+  {% csrf_token %}
+  <div class="input-group input-group-lg">
+    <input class="form-control input-lg" name="collection_name" id="collection_name" placeholder="New Collection (only alphanumeric or underscore characters are allowed)" value="{{ collection_name|default:'' }}" type="text">
+    <span class="input-group-btn">
+      <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Create</button>
+    </span>
+  </div>
+</form>
 
 {% endblock %}
