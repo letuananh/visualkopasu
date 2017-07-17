@@ -152,22 +152,35 @@ def isf(request):
 ##########################################################################
 
 def search(request, sid=None):
-    c = get_context({'collections': getAllCollections()}, title='Search')
+    cols = getAllCollections()
+    c = get_context({'collections': cols}, title='Search')
     if request.method == 'GET':
         c.update({'sentences': []})
     elif request.method == 'POST':
         query = request.POST.get('query', '')
         col = request.POST.get('col', '')
+        c.update({'query': query, 'col': col})
+        logger.info('Col: {c} - Query: {q}'.format(c=col, q=query))
         if query:
-            # search
-            bib = Biblioteca(col)
-            engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
-            # TODO: reuse engine objects
-            sentences = engine.search(query)
-            for s in sentences:
-                s.collection = col
-            c.update({'query': query, 'col': col, 'sentences': sentences})
-            logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col, q=query, r=sentences))
+            if col:
+                # search
+                bib = Biblioteca(col)
+                engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
+                # TODO: reuse engine objects
+                sentences = engine.search(query)
+                for s in sentences:
+                    s.collection = col
+                c.update({'sentences': sentences})
+                logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col, q=query, r=sentences))
+            else:
+                sentences = []
+                for bib in cols:
+                    engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
+                    sents = engine.search(query)
+                    for s in sents:
+                        s.collection = bib.name
+                    sentences += sents
+                c.update({'sentences': sentences})
     return render(request, "visko2/corpus/search.html", c)
 
 

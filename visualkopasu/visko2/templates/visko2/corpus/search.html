@@ -13,6 +13,7 @@
       {% for bib in collections %}
       <option value="{{ bib.name}}" {% if bib.name == col %}selected="selected"{% endif %}>{{bib.name}}</option>
       {% endfor %}
+      <option value="" {% if not col %}selected="selected"{% endif %}>.:: ALL ::.</option>
         </select>
     <span class="input-group-addon">Query</span>
     <input class="form-control input-lg" name="query" id="query" placeholder="" value="{{ query|default:'' }}" type="text">

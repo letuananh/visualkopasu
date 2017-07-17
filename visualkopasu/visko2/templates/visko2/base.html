@@ -60,8 +60,9 @@
             </li>
             <li><a href="https://github.com/letuananh/visualkopasu/wiki" target="_blank">Help</a></li>
           </ul>
-          <form class="navbar-form navbar-right">
-            <input type="text" class="form-control" placeholder="Search...">
+          <form class="navbar-form navbar-right" action="{% url 'visko2:search' %}" method="POST">
+            <input type="text" class="form-control" name="query" id="query" placeholder="Search...">
+            {% csrf_token %}
           </form>
         </div>
       </div>
