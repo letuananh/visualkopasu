@@ -226,6 +226,13 @@
 
    $("#btnDebug").click(debug);
    $("#btnParse").click(do_parse);
+   // Press enter to search
+   $('#input_sentence').keydown(function(e) {
+     if (e.keyCode == 13) {
+       do_parse();
+       return false;
+     }
+   });
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      visualise();
    });
