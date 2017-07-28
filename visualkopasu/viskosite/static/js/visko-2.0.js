@@ -340,7 +340,7 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
                 visual_node.getElements()[0].attr(theme.GPRED_NODE_BOX_STYLE);  
                 visual_node.getElements()[1].attr(theme.GPRED_NODE_TEXT_STYLE);             
             }
-            else if(current_node.type == "carg"){
+            else if(current_node.type == "gpred+carg"){
                 visual_node.getElements()[0].attr(theme.CARG_NODE_BOX_STYLE);   
                 visual_node.getElements()[1].attr(theme.CARG_NODE_TEXT_STYLE);
             }
@@ -584,7 +584,11 @@ function json2visko(json, synset_link_builder){
     // Visko nodes require -> text, from, to, type, pos, linkcount
     // convert nodes
     $(json.nodes).each(function(idx, elem){
-        var node = {'text': elem.predicate, 'from': elem.lnk.from, 'to': elem.lnk.to, 'type': elem.type, 'pos': elem.pos, linkcount: 0, 'nodeid': elem.nodeid, 'tooltip': [], 'senses': []};
+        var node_text = (elem.carg && elem.carg.length > 0) ? elem.carg : elem.predicate;
+        var node_type = (elem.carg && elem.carg.length > 0) ? "gpred+carg" : elem.type;
+        console.writeline("nodeid: " + elem.nodeid + " txt: " + node_text + " type: " + node_type);
+        console.writeline("CARG: " + elem.carg);
+        var node = {'text': node_text, 'from': elem.lnk.from, 'to': elem.lnk.to, 'type': node_type, 'pos': elem.pos, linkcount: 0, 'nodeid': elem.nodeid, 'tooltip': [], 'senses': []};
         
         // build tooltip
         max_length = 3;
@@ -665,6 +669,16 @@ function add_parse_header(parse, parseidx, container, id_prefix){
     return div_parse;
 }
 
+function clear_parses(dmrs_container, json_container, delviz_container) {
+    if (dmrs_container == undefined) { dmrs_container = $('#dmrses'); }
+    if (json_container == undefined) { json_container = $('#jsons'); }
+    if (delviz_container == undefined) { delviz_container = $('#dvizes'); }
+
+    $(dmrs_container).empty();
+    $(json_container).empty();
+    $(delviz_container).empty();
+}
+
 /**
  * Render a DMRS using Visko
  **/
@@ -677,7 +691,10 @@ function render_visko(parse, parseidx, header_maker, container){
     // Create a div for canvas
     var div_canvas = $('<div></div>');
     div_canvas.attr('id', 'dmrs' + parseidx + '_canvas');
-    $('#' + container).append(div_canvas);
+    // horizontal scroll div
+    var div_scroll = $('<div style="overflow-y: auto; min-height: 200px;"></div>');
+    div_scroll.append(div_canvas);
+    $('#' + container).append(div_scroll);
     dmrs_visko = json2visko(JSON.parse(JSON.stringify(parse.dmrs)), find_synset);
     var dmrs_canvas = new VisualKopasu.DMRSCanvas(dmrs_visko, 'dmrs' + parseidx + '_canvas', 'sentence_text');
     dmrs_canvas.visualise();
@@ -729,4 +746,47 @@ function display_json(parse, parseid, container){
     $('#' + container).append($('<h4>DMRS</h4>'));
     var div_raw = $(rawblock({'pid': parseid, 'json': JSON.stringify(parse.dmrs)}));
     $('#' + container).append(div_raw);
+}
+
+// Render active visualizer
+function visualise(response, visko_parse_header, dviz_parse_header){       
+    if (response == undefined) {
+        return;
+    }
+    var parses = $(response['parses']);
+    // if using delviz
+    if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){
+        parses.each(function(idx, parse){
+            pid = idx + 1;
+            render_delviz(parse, pid, dviz_parse_header);
+        });
+    }
+    // if using visko
+    else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
+        parses.each(function(idx, parse){
+            pid = idx + 1;
+            render_visko(parse, pid, visko_parse_header);
+        });
+    }
+    // XML
+    else if ($('#xmlcontent').is(':empty') && active_tab() == '#xml') {
+        display_xml(response.xml);
+    }
+    // Raws
+    else if ($('#raws').is(':empty') && active_tab() == '#raw') {
+        parses.each(function(idx, parse){
+            pid = idx + 1;
+            display_raw(parse, pid);
+        });
+        highlight('#raws');
+    }       
+    // JSONs
+    else if ($('#jsons').is(':empty') && active_tab() == '#json') {
+        parses.each(function(idx, parse){
+            pid = idx + 1;
+            display_json(parse, pid);
+        });
+        highlight('#jsons');
+    }
+    // end if
 }
