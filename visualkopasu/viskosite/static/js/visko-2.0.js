@@ -324,7 +324,6 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
             var current_node = nodes[idx];
             min_width = (current_node.link_count + 1) * theme.LINK_SLOT_SPACE;
             var node_style = 'rounded';
-            //console.writeline(current_node.text + " - " + current_node.pos);
             switch(current_node.pos){
             case 'a':{ node_style = 'parallelogram'; break; }
             case 's':{ node_style = 'diagonals'; break; }
@@ -586,8 +585,6 @@ function json2visko(json, synset_link_builder){
     $(json.nodes).each(function(idx, elem){
         var node_text = (elem.carg && elem.carg.length > 0) ? elem.carg : elem.predicate;
         var node_type = (elem.carg && elem.carg.length > 0) ? "gpred+carg" : elem.type;
-        console.writeline("nodeid: " + elem.nodeid + " txt: " + node_text + " type: " + node_type);
-        console.writeline("CARG: " + elem.carg);
         var node = {'text': node_text, 'from': elem.lnk.from, 'to': elem.lnk.to, 'type': node_type, 'pos': elem.pos, linkcount: 0, 'nodeid': elem.nodeid, 'tooltip': [], 'senses': []};
         
         // build tooltip
@@ -619,7 +616,6 @@ function json2visko(json, synset_link_builder){
                 }
                 row.push(k + ":" + elem.sortinfo[k])
             }
-            // console.writeline("Tooltip: " + node.tooltip + " | len: " + node.tooltip.length);
         }
         node_map[elem.nodeid] = node;
         nodes.push(node);
