@@ -426,6 +426,10 @@ class SQLiteCorpusDAO(ViskoSchema):
         if sent is not None:
             for i in sent:
                 self.deleteReading(i.ID)
+        # delete words, concepts, cwl
+        self.word.delete('sid=?', (sentenceID,))
+        self.cwl.delete('cid IN (SELECT cid FROM concept WHERE sid=?)', (sentenceID,))
+        self.concept.delete('sid=?', (sentenceID,))
         # delete sentence obj
         self.sentence.delete("ID=?", (sentenceID,))
 

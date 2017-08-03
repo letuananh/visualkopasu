@@ -100,6 +100,39 @@ class TestDAOBase(unittest.TestCase):
     def tearDownClass(cls):
         logging.debug("Cleaning up")
 
+    def ensure_corpus(self):
+        ''' Ensure that testcorpus exists'''
+        logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
+        # ensure corpus
+        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
+        if not corpuses:
+            self.bib.create_corpus(self.corpus_name)
+            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
+        else:
+            corpus = corpuses[0]
+        return corpus
+
+    def ensure_doc(self):
+        ''' Ensure that testcorpus exists'''
+        corpus = self.ensure_corpus()
+        docs = self.bib.sqldao.getDocumentByName(self.doc_name)
+        if not docs:
+            doc = Document(name=self.doc_name, corpusID=corpus.ID)
+            self.bib.sqldao.saveDocument(doc)
+        else:
+            doc = docs[0]
+        return doc
+
+    def ensure_sent(self):
+        doc = self.ensure_doc()
+        sent = getSentenceFromFile(TEST_FILE)
+        sent.documentID = doc.ID
+        sent_obj = self.bib.sqldao.getSentence(sentenceID=1)
+        if sent_obj is None:
+            return self.bib.sqldao.saveSentence(sent)
+        else:
+            return sent_obj
+
 
 class TestDMRSDAO(TestDAOBase):
 
@@ -166,44 +199,11 @@ def validate_sentence(self, sentence):
 
 class TestDMRSSQLite(TestDAOBase):
 
-    def ensure_corpus(self):
-        ''' Ensure that testcorpus exists'''
-        logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
-        # ensure corpus
-        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
-        if not corpuses:
-            self.bib.create_corpus(self.corpus_name)
-            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
-        else:
-            corpus = corpuses[0]
-        return corpus
-
     def test_list_collections(self):
         self.ensure_corpus()
         bibs = Biblioteche.list_all(self.bibroot)
         self.assertGreaterEqual(len(bibs), 1)
         self.assertIn(self.bibname, bibs)
-
-    def ensure_doc(self):
-        ''' Ensure that testcorpus exists'''
-        corpus = self.ensure_corpus()
-        docs = self.bib.sqldao.getDocumentByName(self.doc_name)
-        if not docs:
-            doc = Document(name=self.doc_name, corpusID=corpus.ID)
-            self.bib.sqldao.saveDocument(doc)
-        else:
-            doc = docs[0]
-        return doc
-
-    def ensure_sent(self):
-        doc = self.ensure_doc()
-        sent = getSentenceFromFile(TEST_FILE)
-        sent.documentID = doc.ID
-        sent_obj = self.bib.sqldao.getSentence(sentenceID=1)
-        if sent_obj is None:
-            return self.bib.sqldao.saveSentence(sent)
-        else:
-            return sent_obj
 
     def test_create_a_corpus(self):
         logging.info("Test creating a new corpus")
@@ -328,7 +328,14 @@ class TestDMRSSQLite(TestDAOBase):
 
 class TestHumanAnnotation(TestDAOBase):
 
+    def clear_sents(self):
+        doc = self.ensure_doc()
+        sents = self.bib.sqldao.getSentences(doc.ID)
+        for s in sents:
+            self.bib.sqldao.delete_sent(s.ID)
+
     def test_adding_human_annotations(self):
+        self.clear_sents()
         txt = "ロボットの子は猫が好きです。"
         sent = self.ghub.JACYMC.parse("ロボットの子は猫が好きです。", 1)
         self.assertGreaterEqual(len(sent), 1)
@@ -370,6 +377,9 @@ class TestHumanAnnotation(TestDAOBase):
         vsent.documentID = doc.ID
         dao.saveSentence(vsent)
         dao.save_annotations(vsent)
+
+    def test_retrieving_annotations(self):
+        pass
 
 
 ########################################################################
