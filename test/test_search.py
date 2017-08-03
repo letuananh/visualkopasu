@@ -29,8 +29,8 @@ __status__ = "Prototype"
 
 import unittest
 import logging
-from visualkopasu.kopasu import Biblioteca
-from visualkopasu.kopasu.dmrs_search import DMRSQueryParser, LiteSearchEngine
+from visko.kopasu import Biblioteca
+from visko.kopasu.dmrs_search import DMRSQueryParser, LiteSearchEngine
 
 
 logger = logging.getLogger(__name__)

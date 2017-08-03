@@ -52,13 +52,13 @@ from chirptext.texttaglib import TaggedSentence
 from coolisf.util import GrammarHub
 from coolisf import Lexsem, tag_gold
 
-from visualkopasu.kopasu.xmldao import getSentenceFromRawXML
-from visualkopasu.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML
-from visualkopasu.kopasu.xmldao import getDMRSFromXML
-from visualkopasu.kopasu.xmldao import RawXML
-from visualkopasu.kopasu.bibman import Biblioteche, Biblioteca
-from visualkopasu.kopasu.models import Document
-from visualkopasu.kopasu.models import ParseRaw
+from visko.kopasu.xmldao import getSentenceFromRawXML
+from visko.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML
+from visko.kopasu.xmldao import getDMRSFromXML
+from visko.kopasu.xmldao import RawXML
+from visko.kopasu.bibman import Biblioteche, Biblioteca
+from visko.kopasu.models import Document
+from visko.kopasu.models import ParseRaw
 
 ########################################################################
 

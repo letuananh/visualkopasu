@@ -26,7 +26,8 @@ from lxml import etree
 from chirptext.anhxa import update_data
 from chirptext.leutile import FileHelper
 from coolisf.model import Sentence as ISFSentence
-from visualkopasu.util import getLogger
+
+from visko.util import getLogger
 from .util import getSubFolders
 from .util import getFiles
 from .util import is_valid_name

@@ -50,15 +50,15 @@ import unittest
 from chirptext.texttaglib import TagInfo
 from coolisf.util import GrammarHub
 from coolisf.model import MRS, DMRS
-from visualkopasu.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
-from visualkopasu.kopasu.xmldao import getSentenceFromFile
-from visualkopasu.kopasu.xmldao import RawXML
-from visualkopasu.kopasu.util import tokenize_dmrs_str
-from visualkopasu.kopasu.util import parse_dmrs_str
-from visualkopasu.kopasu.util import dmrs_str_to_xml
-from visualkopasu.kopasu.util import str_to_dmrs
-from visualkopasu.kopasu.util import parse_dmrs
-from visualkopasu.kopasu.util import xml_to_str
+from visko.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
+from visko.kopasu.xmldao import getSentenceFromFile
+from visko.kopasu.xmldao import RawXML
+from visko.kopasu.util import tokenize_dmrs_str
+from visko.kopasu.util import parse_dmrs_str
+from visko.kopasu.util import dmrs_str_to_xml
+from visko.kopasu.util import str_to_dmrs
+from visko.kopasu.util import parse_dmrs
+from visko.kopasu.util import xml_to_str
 
 
 ########################################################################

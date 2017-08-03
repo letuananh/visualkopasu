@@ -46,13 +46,13 @@ __status__ = "Prototype"
 import os
 import unittest
 
-from visualkopasu.kopasu import Biblioteca
+from visko.kopasu import Biblioteca
 
-from visualkopasu.merchant.redwood import parse_document
-from visualkopasu.tools import get_raw_doc_folder
-from visualkopasu.tools import convert_document
+from visko.merchant.redwood import parse_document
+from visko.tools import get_raw_doc_folder
+from visko.tools import convert_document
 from test.test_dmrs_dao import validate_sentence
-from visualkopasu.kopasu.util import is_valid_name
+from visko.kopasu.util import is_valid_name
 
 ########################################################################
 

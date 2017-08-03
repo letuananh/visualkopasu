@@ -27,7 +27,7 @@ import logging
 from xml.etree import ElementTree as ETree
 from xml.etree.ElementTree import Element, SubElement, Comment
 
-from visualkopasu.config import ViskoConfig as vkconfig
+from visko.config import ViskoConfig as vkconfig
 
 ########################################################################
 

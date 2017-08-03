@@ -21,8 +21,8 @@ Data access layer for VisualKopasu project.
 import os
 import os.path
 import logging
-from visualkopasu.util import getLogger
-from visualkopasu.kopasu.util import is_valid_name
+from visko.util import getLogger
+from visko.kopasu.util import is_valid_name
 
 from puchikarui import Schema
 

@@ -20,8 +20,8 @@ Data access layer for VisualKopasu project.
 
 from chirptext.leutile import FileHelper
 
-from visualkopasu.util import getLogger
-from visualkopasu.config import ViskoConfig as vkconfig
+from visko.config import ViskoConfig as vkconfig
+from visko.util import getLogger
 from .dao import SQLiteCorpusCollection
 from .xmldao import XMLBiblioteche
 from .util import getFiles, is_valid_name

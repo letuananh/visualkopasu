@@ -42,15 +42,15 @@ from chirptext.texttaglib import TagInfo
 from coolisf.util import GrammarHub, sent2json
 
 from djangoisf.views import jsonp, TAGGERS
-from visualkopasu.util import getLogger
-from visualkopasu.kopasu import Biblioteche, Biblioteca
-from visualkopasu.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
-from visualkopasu.kopasu.util import dmrs_str_to_xml, xml_to_str
-from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation, Sentence
-from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
+from visko.util import getLogger
+from visko.kopasu import Biblioteche, Biblioteca
+from visko.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
+from visko.kopasu.util import dmrs_str_to_xml, xml_to_str
+from visko.kopasu.models import Document, ParseRaw, Interpretation, Sentence
+from visko.kopasu.dmrs_search import LiteSearchEngine
+
 
 ########################################################################
-
 
 logger = getLogger('visko2.ui', logging.DEBUG)  # level = INFO (default)
 SEARCH_LIMIT = 10000

@@ -24,9 +24,9 @@ import sys
 import os
 import argparse
 
-from visualkopasu.config import ViskoConfig as vkconfig
-from visualkopasu.merchant.redwood import parse_document
-from visualkopasu.merchant.morph import xml2db
+from visko.config import ViskoConfig as vkconfig
+from visko.merchant.redwood import parse_document
+from visko.merchant.morph import xml2db
 
 ########################################################################
 

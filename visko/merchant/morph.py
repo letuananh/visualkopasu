@@ -49,8 +49,8 @@ __credits__ = []
 
 import logging
 from chirptext import Timer
-from visualkopasu.kopasu.models import Document
-from visualkopasu.kopasu.bibman import Biblioteca
+from visko.kopasu.models import Document
+from visko.kopasu.bibman import Biblioteca
 
 
 #-------------------------------------------------------------------------------
