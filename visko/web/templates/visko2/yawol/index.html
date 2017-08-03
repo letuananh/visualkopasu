@@ -1,0 +1,120 @@
+{% extends 'visko2/base.html' %}
+{% load staticfiles %}
+
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6">
+      <!-- Search box -->
+      <form style="padding: 20px 3px;">
+        <div class="row">
+          <div class="input-group input-group-lg">
+            <input class="form-control input-lg" name="input_query" id="input_query" placeholder="01775164-v or love or love%2:37:00::" value="01775164-v" type="text">
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default btn-lg" name="btnSearch" id="btnSearch" value="parse">Search</button>
+            </span>
+          </div>
+        </div>
+        <div class="row" style="padding: 5px;">
+          <span class="label label-default">Try these</span>
+          <a href="#" id="txtSynsetID">01775164-v</a> | 
+          <a href="#" id="txtLemma">love</a> | 
+          <a href="#" id="txtSensekey">love%2:37:00::</a>
+        </div>
+      </form>
+      <!-- Synset Information -->
+      <div id="synsets"></div>
+      <!-- End DMRS column -->
+    </div>
+  <div class="col-md-6">
+      <!-- Control Panel and Console -->
+      <div id="toolbar" style="padding: 20px;">
+        <div class="row">
+          <button type="button" id="btnReset" name="btnReset" class="btn btn-primary">Reset</button>    
+          <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
+          <input type="checkbox" id="consoletoggle" data-width="100" checked data-toggle="toggle" data-on="Console" data-off="Console"></input>
+          
+          <button type="button" class="btn btn-primary" name="btnPing" id="btnPing" value="parse">Ping Server</button>
+        </div>
+      </div>
+      <div id="console" style="overflow: auto; max-height: 80vh;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block css %}
+</style>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
+<link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
+{% endblock %}
+
+
+{% block script %}
+<!-- Others -->
+<script type="text/javascript" src="{% static 'js/lodash-4.17.4.min.js' %}"></script>
+<script src="{% static 'highlight.js/highlight-9.9.0.js' %}"></script>
+<!-- Delviz support -->
+<script type="text/javascript" src="{% static 'viz/svg-2.3.0.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/d3.v3.min.js' %}" charset="utf-8"></script>
+<script type="text/javascript" src="{% static 'viz/demo.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/tree.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/mrs.js' %}"></script>
+<script type="text/javascript" src="{% static 'viz/dmrs.js' %}"></script>
+<!-- ShinchanJS -->
+<script src="{% static 'js/raphael-2.2.1.min.js' %}"></script>
+<script src="{% static 'js/kajika.js' %}"></script>
+<script src="{% static 'js/console.js' %}"></script>
+<script src="{% static 'js/shinchan.js' %}"></script>
+<script src="{% static 'js/visko-2.0.js' %}"></script>
+<script src="{% static 'js/restisf.js' %}"></script>
+
+{% include 'visko2/yawol.html' %}
+    
+<!-- Yawol client helper functions -->
+<script>
+ function do_search() {
+   var query = $('#input_query').val();
+   get_yawol().search_synset(query);
+ }
+ 
+ function ping_server() {
+   get_yawol().version(function(json){
+     console.writeline("Product: " + json.product + " " + json.version);
+     console.writeline("Server:  " + json.server);
+   });
+ }
+</script>
+<!-- Document ready -->
+<script>
+ $(document).ready(function(){       
+   initialise();   
+ });
+ 
+ function initialise(){
+   // Console support
+   console = new Console("console", 220, ".:: Yawol REST Client - Version 0.3.1 ::.<br/>");
+   $("#btnClear").click(function() { console.clear(); });
+   $(window).on('resize', function() { console.resize(); });
+   $('#consoletoggle').change(function(){ console.toggle(); });
+   console.clear().resize();
+   
+   // Press enter to search
+   $('#input_query').keydown(function(e) {
+     if (e.keyCode == 13) {
+       do_search();
+       return false;
+     }
+   });
+   $('#txtSynsetID').click(function(){ $('#input_query').val($(this).text()); });
+   $('#txtLemma').click(function(){ $('#input_query').val($(this).text()); });
+   $('#txtSensekey').click(function(){ $('#input_query').val($(this).text()); });
+   
+   // Synset related features
+   $("#btnReset").click(function(){get_yawol().clear();});
+   $("#btnSearch").click(function(){do_search();});
+   $('#btnPing').click(function(){ping_server();});
+ }     
+</script>
+{% endblock %}

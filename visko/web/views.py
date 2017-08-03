@@ -156,6 +156,11 @@ def isf(request):
     return render(request, "visko2/isf/index.html", c)
 
 
+def yawol(request):
+    c = get_context(ISF_DEFAULT, title="Yawol REST Client")
+    return render(request, "visko2/yawol/index.html", c)
+
+
 ##########################################################################
 # SEARCH
 ##########################################################################

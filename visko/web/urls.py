@@ -6,6 +6,8 @@ urlpatterns = [
     url(r'^home/?$', views.home, name='home'),
     url(r'^delphin-viz/?$', views.delviz, name='delviz'),
     url(r'^isf/?$', views.isf, name='isf'),
+    url(r'^yawol/?$', views.yawol, name='yawol'),
+
     # development features
     url(r'^dev/?$', views.dev, name='dev'),
     url(r'^dev/(?P<mode>\w+)?$', views.dev, name='dev'),
