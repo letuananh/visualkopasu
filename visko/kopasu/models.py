@@ -79,7 +79,7 @@ class Sentence(object):
         self.documentID = documentID
         self.corpus = None
         self.collection = None
-        self.interpretations = []
+        self.readings = []
         self.filename = None
         # self.dmrs = []
         # self.parseTrees = []
@@ -88,28 +88,28 @@ class Sentence(object):
         self.cmap = {}  # concept.ID -> concept objects
         self.wmap = {}  # word.ID -> word objects
 
-    def getInactiveInterpretation(self):
-        return [repr for repr in self.interpretations if repr.mode == "inactive"]
+    def getInactiveReading(self):
+        return [repr for repr in self.readings if repr.mode == "inactive"]
 
-    def getActiveInterpretation(self):
-        return [repr for repr in self.interpretations if repr.mode == "active"]
+    def getActiveReading(self):
+        return [repr for repr in self.readings if repr.mode == "active"]
 
     def has_raw(self):
-        ''' Check if there is at least one interpretations and
-        all interpretations has raw inside'''
+        ''' Check if there is at least one readings and
+        all readings has raw inside'''
         has_raw = len(self) > 0
-        for i in self.interpretations:
+        for i in self.readings:
             has_raw = has_raw and len(i.raws) > 0
         return has_raw
 
     def __len__(self):
-        return len(self.interpretations)
+        return len(self.readings)
 
     def __getitem__(self, key):
-        return self.interpretations[key]
+        return self.readings[key]
 
     def __iter__(self):
-        return iter(self.interpretations)
+        return iter(self.readings)
 
     def __repr__(self):
         return str(self)
@@ -143,14 +143,14 @@ class Sentence(object):
             if xml_raw is not None:
                 logger.debug("Using DMRS XML raw")
                 p = isfsent.add(dmrs_xml=xml_raw.text)
-                p.ID = i.ID  # parse ID should have the same ID as interpretation obj
+                p.ID = i.ID  # parse ID should have the same ID as reading obj
                 p.ident = i.rid
             else:
                 # try MRS
                 mrs_raw = i.find_raw(ParseRaw.MRS)
                 if mrs_raw is not None:
                     p = isfsent.add(mrs_str=mrs_raw.text)
-                    p.ID = i.ID  # parse ID should have the same ID as interpretation obj
+                    p.ID = i.ID  # parse ID should have the same ID as reading obj
                     p.ident = i.rid
                 else:
                     # TODO:build XML from DMRSes?
@@ -179,7 +179,7 @@ class ParseRaw(object):
         return self.text
 
 
-class Interpretation(object):
+class Reading(object):
 
     INACTIVE = 0
     ACTIVE = 1
@@ -194,7 +194,7 @@ class Interpretation(object):
         self.raws = raws if raws else list()
 
     def __str__(self):
-        return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
+        return u"Reading [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
 
     def add_raw(self, text='', ID=None, ident='', rtype=ParseRaw.XML):
         self.raws.append(ParseRaw(text, ID, ident, rtype))
@@ -238,7 +238,7 @@ class DMRS(object):
         self.cfrom = cfrom
         self.cto = cto
         self.surface = surface
-        self.interpretationID = None
+        self.readingID = None
 
         # Nodes and links might be indexed for faster access
         self.nodes = []
@@ -251,9 +251,7 @@ class DMRS(object):
             return [node for node in self.nodes if node.nodeid == nodeid]
 
     def getLink(self, fromid=None, toid=None):
-        return [link for link in self.links if 
-            ((not fromid) or link.fromNode.nodeid == fromid)
-            and ((not toid) or link.toNode.nodeid == toid)]
+        return [link for link in self.links if ((not fromid) or link.fromNode.nodeid == fromid) and ((not toid) or link.toNode.nodeid == toid)]
 
     def __str__(self):
         nodes = [str(n) for n in self.nodes if str(n.nodeid) != '0']
@@ -298,7 +296,7 @@ class Node(object):
             pred = Pred.realpred(self.rplemma, self.rppos, self.rpsense if self.rpsense else None).short_form()
         sensetag = ''
         if self.sense:
-            sensetag = ' synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma, self.sense.score)
+            sensetag = ' synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma.replace(' ', '+'), self.sense.score)
         carg = '("{}")'.format(self.carg) if self.carg else ''
         return "{nodeid} [{pred}<{cfrom}:{cto}>{carg} {sortinfo}{sensetag}]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, sensetag=sensetag, pred=pred, carg=carg)
 

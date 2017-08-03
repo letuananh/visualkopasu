@@ -331,10 +331,10 @@ class LiteSearchEngine:
         return -1
 
     def get_dmrs(self, dmrs_filter_query):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.interpretationID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
             FROM dmrs
-                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
-                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
+                LEFT JOIN reading ON dmrs.readingID = reading.ID
+                LEFT JOIN sentence ON reading.sentenceID = sentence.ID
                 LEFT JOIN document ON sentence.documentID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE dmrs.ID IN (%s)
@@ -345,10 +345,10 @@ class LiteSearchEngine:
         return rows
 
     def search_by_ident(self, ident):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.interpretationID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
             FROM dmrs
-                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
-                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
+                LEFT JOIN reading ON dmrs.readingID = reading.ID
+                LEFT JOIN sentence ON reading.sentenceID = sentence.ID
                 LEFT JOIN document ON sentence.documentID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentence.ident = ?

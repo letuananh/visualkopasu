@@ -59,6 +59,8 @@ class Biblioteche:
         bib = Biblioteca(bibname, root=bibroot)
         # create collection dir if needed
         FileHelper.create_dir(bib.textdao.path)
+        # prepare DB
+        bib.sqldao.corpus.select()
 
 
 class Biblioteca:

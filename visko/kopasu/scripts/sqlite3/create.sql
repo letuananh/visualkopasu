@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS "sentence" (
     , FOREIGN KEY(documentID) REFERENCES document(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "interpretation" (
+CREATE TABLE IF NOT EXISTS "reading" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "ident" VARCHAR NOT NULL 
     , "mode" VARCHAR
@@ -52,8 +52,8 @@ CREATE TABLE IF NOT EXISTS "parse_raw" (
     , "ident" VARCHAR 
     , "text" TEXT
     , "rtype" VARCHAR NOT NULL
-    , "interpretationID" INTEGER NOT NULL
-    , FOREIGN KEY(interpretationID) REFERENCES interpretation(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    , "readingID" INTEGER NOT NULL
+    , FOREIGN KEY(readingID) REFERENCES reading(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs" (
@@ -62,8 +62,8 @@ CREATE TABLE IF NOT EXISTS "dmrs" (
     , "cfrom" INTEGER NOT NULL  DEFAULT (-1) 
     , "cto" INTEGER NOT NULL  DEFAULT (-1) 
     , "surface" TEXT
-    , "interpretationID" INTEGER NOT NULL
-    , FOREIGN KEY(interpretationID) REFERENCES interpretation(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    , "readingID" INTEGER NOT NULL
+    , FOREIGN KEY(readingID) REFERENCES reading(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link" (
@@ -172,9 +172,9 @@ CREATE TABLE IF NOT EXISTS "cwl" (
 CREATE INDEX IF NOT EXISTS "sentence_|_documentID" ON "sentence" ("documentID" ASC);
 CREATE INDEX IF NOT EXISTS "document_|_grammar" ON "document" ("grammar");
 CREATE INDEX IF NOT EXISTS "document_|_lang" ON "document" ("lang");
-CREATE INDEX IF NOT EXISTS "interpretation_|_sentenceID" ON "interpretation" ("sentenceID" ASC);
-CREATE INDEX IF NOT EXISTS "parse_raw_|_interpretationID" ON "parse_raw" ("interpretationID" DESC);
-CREATE INDEX IF NOT EXISTS "dmrs_|_interpretationID" ON "dmrs" ("interpretationID" DESC);
+CREATE INDEX IF NOT EXISTS "reading_|_sentenceID" ON "reading" ("sentenceID" ASC);
+CREATE INDEX IF NOT EXISTS "parse_raw_|_readingID" ON "parse_raw" ("readingID" DESC);
+CREATE INDEX IF NOT EXISTS "dmrs_|_readingID" ON "dmrs" ("readingID" DESC);
 CREATE INDEX IF NOT EXISTS "dmrs_node_|_dmrsID" ON "dmrs_node" ("dmrsID" ASC);
 
 -- DMRS_NODE_SORTINFO INDICES

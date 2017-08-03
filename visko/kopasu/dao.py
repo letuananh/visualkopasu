@@ -29,7 +29,7 @@ from puchikarui import Schema
 from .models import Corpus
 from .models import Document
 from .models import Sentence
-from .models import Interpretation
+from .models import Reading
 from .models import DMRS
 from .models import ParseRaw
 from .models import Node
@@ -71,11 +71,11 @@ class ViskoSchema(Schema):
                        proto=Document, alias='doc').set_id('ID')
         self.add_table('sentence', ['ID', 'ident', 'text', 'documentID'],
                        proto=Sentence).set_id('ID')
-        self.add_table('interpretation', ['ID', 'ident', 'mode', 'sentenceID'],
-                       proto=Interpretation).set_id('ID').field_map(ident='rid')
-        self.add_table('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'],
+        self.add_table('reading', ['ID', 'ident', 'mode', 'sentenceID'],
+                       proto=Reading).set_id('ID').field_map(ident='rid')
+        self.add_table('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'readingID'],
                        proto=DMRS).set_id('ID')
-        self.add_table('parse_raw', ['ID', 'ident', 'text', 'rtype', 'interpretationID'],
+        self.add_table('parse_raw', ['ID', 'ident', 'text', 'rtype', 'readingID'],
                        proto=ParseRaw).set_id('ID')
         # Node related tables
         self.add_table('dmrs_node', ['ID', 'nodeid', 'cfrom', 'cto', 'surface', 'base',
@@ -197,7 +197,8 @@ class SQLiteCorpusDAO(ViskoSchema):
         if not is_valid_name(doc.name):
             raise ValueError("Invalid doc name (provided: {}) - Visko only accept names using alphanumeric characters".format(doc.name))
         else:
-            self.doc.save(doc, *fields, ctx=ctx)
+            doc.ID = self.doc.save(doc, *fields, ctx=ctx)
+        return doc
 
     def getDocumentOfCorpus(self, corpusID):
         return self.doc.select('corpusID=?', (corpusID,))
@@ -214,9 +215,9 @@ class SQLiteCorpusDAO(ViskoSchema):
     def getSentences(self, docID, add_dummy_parses=True):
         if add_dummy_parses:
             query = '''
-            SELECT sentence.*, count(interpretation.ID) AS 'parse_count'
-            FROM sentence LEFT JOIN interpretation
-            ON sentence.ID = interpretation.sentenceID
+            SELECT sentence.*, count(reading.ID) AS 'parse_count'
+            FROM sentence LEFT JOIN reading
+            ON sentence.ID = reading.sentenceID
             WHERE documentID = ?
             GROUP BY sentenceID ORDER BY sentence.ID;
             '''
@@ -225,7 +226,7 @@ class SQLiteCorpusDAO(ViskoSchema):
                 sents = []
                 for row in rows:
                     sent = self.sentence.to_obj(row)
-                    sent.interpretations = [None] * row['parse_count']
+                    sent.readings = [None] * row['parse_count']
                     sents.append(sent)
                 return sents
         else:
@@ -249,42 +250,42 @@ class SQLiteCorpusDAO(ViskoSchema):
                     a_sentence.ident = 1
             # save sentence
             a_sentence.ID = self.sentence.save(a_sentence, ctx=ctx)
-            # save interpretations
-            for interpretation in a_sentence.interpretations:
+            # save readings
+            for reading in a_sentence.readings:
                 # Update sentenceID
-                interpretation.sentenceID = a_sentence.ID
-                self.saveInterpretation(interpretation, doc_id=a_sentence.documentID, ctx=ctx)
+                reading.sentenceID = a_sentence.ID
+                self.saveReading(reading, doc_id=a_sentence.documentID, ctx=ctx)
         else:
             # update sentence
             pass
         # Select sentence
         return a_sentence
 
-    def deleteInterpretation(self, interpretationID):
+    def deleteReading(self, readingID):
         # delete all DMRS link, node
-        self.dmrs_link.delete('dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)', (interpretationID,))
-        self.dmrs_node_sortinfo.delete('dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE interpretationID=?))', (interpretationID,))
+        self.dmrs_link.delete('dmrsID IN (SELECT ID FROM dmrs WHERE readingID=?)', (readingID,))
+        self.dmrs_node_sortinfo.delete('dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE readingID=?))', (readingID,))
 
-        self.dmrs_node.delete('dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)', (interpretationID,))
+        self.dmrs_node.delete('dmrsID IN (SELECT ID FROM dmrs WHERE readingID=?)', (readingID,))
         # delete all DMRS
-        self.dmrs.delete("interpretationID=?", (interpretationID,))
+        self.dmrs.delete("readingID=?", (readingID,))
         # delete parse_raws
-        self.parse_raw.delete("interpretationID=?", (interpretationID,))
-        # delete interpretations
-        self.interpretation.delete("ID=?", (interpretationID,))
+        self.parse_raw.delete("readingID=?", (readingID,))
+        # delete readings
+        self.reading.delete("ID=?", (readingID,))
 
-    def updateInterpretation(self, interpretation):
+    def updateReading(self, reading):
         raise NotImplementedError
 
-    def saveInterpretation(self, interpretation, doc_id, ctx=None):
-        interpretation.ID = self.interpretation.save(interpretation, ctx=ctx)
+    def saveReading(self, reading, doc_id, ctx=None):
+        reading.ID = self.reading.save(reading, ctx=ctx)
         # Save raw
-        for raw in interpretation.raws:
-            raw.interpretationID = interpretation.ID
+        for raw in reading.raws:
+            raw.readingID = reading.ID
             self.parse_raw.save(raw, ctx=ctx)
         # Save DMRS
-        for dmrs in interpretation.dmrs:
-            dmrs.interpretationID = interpretation.ID
+        for dmrs in reading.dmrs:
+            dmrs.readingID = reading.ID
             dmrs.ID = self.dmrs.save(dmrs, ctx=ctx)
             # save nodes
             for node in dmrs.nodes:
@@ -324,37 +325,37 @@ class SQLiteCorpusDAO(ViskoSchema):
         sentences = []
         sentences_by_id = {}
         for row in rows:
-            interpretationID = row['interpretationID']
+            readingID = row['readingID']
             sentenceID = row['sentenceID']
             sentence_ident = row['sentence_ident']
             corpus = row['corpus']
             text = row['text']
             documentID = row['documentID']
             if sentenceID in sentences_by_id:
-                # update interpretation
-                a_interpretation = Interpretation(ID=interpretationID)
-                # self.getInterpretation(a_interpretation)
-                sentences_by_id[sentenceID].interpretations.append(a_interpretation)
+                # update reading
+                a_reading = Reading(ID=readingID)
+                # self.getReading(a_reading)
+                sentences_by_id[sentenceID].readings.append(a_reading)
             else:
                 if no_more_query:
                     a_sentence = Sentence(ident=sentence_ident, text=text, documentID=documentID)
                     a_sentence.corpus = corpus
                     a_sentence.ID = sentenceID
                 else:
-                    a_sentence = self.getSentence(sentenceID, interpretationIDs=[], skip_details=True)
-                a_sentence.interpretations = []
-                a_interpretation = Interpretation(ID=interpretationID)
-                a_sentence.interpretations.append(a_interpretation)
+                    a_sentence = self.getSentence(sentenceID, readingIDs=[], skip_details=True)
+                a_sentence.readings = []
+                a_reading = Reading(ID=readingID)
+                a_sentence.readings.append(a_reading)
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
             #sentences.append(a_sentence)
         logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
 
-    def getInterpretation(self, a_interpretation):
+    def getReading(self, a_reading):
         # retrieve all DMRSes
-        a_interpretation.dmrs = self.dmrs.select('interpretationID=?', (a_interpretation.ID,))
-        for a_dmrs in a_interpretation.dmrs:
+        a_reading.dmrs = self.dmrs.select('readingID=?', (a_reading.ID,))
+        for a_dmrs in a_reading.dmrs:
             # retrieve all nodes
             a_dmrs.nodes = self.node.select('dmrsID=?', (a_dmrs.ID,))
             for a_node in a_dmrs.nodes:
@@ -382,49 +383,49 @@ class SQLiteCorpusDAO(ViskoSchema):
             for a_link in a_dmrs.links:
                 a_link.fromNode = a_dmrs.getNodeById(a_link.fromNodeID, True)[0]
                 a_link.toNode = a_dmrs.getNodeById(a_link.toNodeID, True)[0]
-        return a_interpretation
+        return a_reading
 
     def saveParseRaw(self, a_raw, ctx=None):
         self.parse_raw.save(a_raw, ctx=ctx)
 
-    def get_raw(self, interpretationID, interpretation=None):
-        raws = self.parse_raw.select('interpretationID=?', (interpretationID,))
-        if interpretation is not None:
+    def get_raw(self, readingID, reading=None):
+        raws = self.parse_raw.select('readingID=?', (readingID,))
+        if reading is not None:
             for raw in raws:
-                raw.interpretationID = interpretation.ID
-                interpretation.raws.append(raw)
+                raw.readingID = reading.ID
+                reading.raws.append(raw)
         return raws
 
-    def getSentence(self, sentenceID, mode=None, interpretationIDs=None, skip_details=False, get_raw=True):
+    def getSentence(self, sentenceID, mode=None, readingIDs=None, skip_details=False, get_raw=True):
         a_sentence = self.sentence.by_id(sentenceID)
         if a_sentence is not None:
-            # retrieve all interpretations
+            # retrieve all readings
             conditions = 'sentenceID=?'
             params = [a_sentence.ID]
             if mode:
                 conditions += ' AND mode=?'
                 params.append(mode)
-            if interpretationIDs and len(interpretationIDs) > 0:
-                conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
-                params.extend(interpretationIDs)
-            a_sentence.interpretations = self.interpretation.select(conditions, params)
-            for a_interpretation in a_sentence.interpretations:
+            if readingIDs and len(readingIDs) > 0:
+                conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(readingIDs))))
+                params.extend(readingIDs)
+            a_sentence.readings = self.reading.select(conditions, params)
+            for a_reading in a_sentence.readings:
                 if get_raw:
-                    self.get_raw(a_interpretation.ID, a_interpretation)
+                    self.get_raw(a_reading.ID, a_reading)
                 if not skip_details:
-                    self.getInterpretation(a_interpretation)
+                    self.getReading(a_reading)
         else:
             logging.debug("No sentence with ID={} was found".format(sentenceID))
         # Return
         return a_sentence
 
     def delete_sent(self, sentenceID):
-        # delete all interpretation
+        # delete all reading
         sent = self.getSentence(sentenceID, skip_details=True, get_raw=False)
-        # delete interpretations
+        # delete readings
         if sent is not None:
             for i in sent:
-                self.deleteInterpretation(i.ID)
+                self.deleteReading(i.ID)
         # delete sentence obj
         self.sentence.delete("ID=?", (sentenceID,))
 

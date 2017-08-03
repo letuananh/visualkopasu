@@ -46,7 +46,7 @@ from visko.util import getLogger
 from visko.kopasu import Biblioteche, Biblioteca
 from visko.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
 from visko.kopasu.util import dmrs_str_to_xml, xml_to_str
-from visko.kopasu.models import Document, ParseRaw, Interpretation, Sentence
+from visko.kopasu.models import Document, ParseRaw, Reading, Sentence
 from visko.kopasu.dmrs_search import LiteSearchEngine
 
 
@@ -264,9 +264,8 @@ def create_sent(request, collection_name, corpus_name, doc_id):
             s.documentID = doc.ID
             bib.sqldao.saveSentence(s)
         elif input_parser in PROCESSORS:
-            isent = ghub[input_parser].parse(text=sentence_text, parse_count=input_results)
-            isent.tag(method=input_tagger)
-            xsent = isent.to_visko_xml()
+            isent = ghub.parse(sentence_text, input_parser, pc=input_results, tagger=input_tagger)
+            xsent = isent.tag_xml().to_visko_xml()
             vsent = getSentenceFromXML(xsent)
             # save to doc
             vsent.documentID = doc.ID
@@ -396,7 +395,7 @@ def view_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     corpus = dao.getCorpus(cor)[0]
     doc = dao.getDocument(did)
-    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    sent = dao.getSentence(sid, readingIDs=(pid,))
     c = get_context({'title': 'Sentence: ' + sent.text,
                      'col': col,
                      'corpus': corpus,
@@ -417,7 +416,7 @@ def view_parse(request, col, cor, did, sid, pid):
 def rest_fetch(request, col, cor, did, sid, pid=None):
     dao = get_bib(col).sqldao
     if pid:
-        sent = dao.getSentence(sid, interpretationIDs=(pid,)).to_isf()
+        sent = dao.getSentence(sid, readingIDs=(pid,)).to_isf()
     else:
         sent = dao.getSentence(sid).to_isf()
     return sent2json(sent)
@@ -429,13 +428,13 @@ def rest_dmrs_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     # corpus = dao.getCorpus(cor)[0]
     # doc = dao.getDocument(did)
-    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    sent = dao.getSentence(sid, readingIDs=(pid,))
     dmrs_raw = request.POST.get('dmrs', '')
     dmrs_xml = dmrs_str_to_xml(dmrs_raw)
     dmrs = getDMRSFromXML(dmrs_xml)
-    sent.mode = Interpretation.ACTIVE
-    sent.interpretations[0].dmrs = [dmrs]
-    sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+    sent.mode = Reading.ACTIVE
+    sent.readings[0].dmrs = [dmrs]
+    sent.readings[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
     return sent2json(sent.to_isf())
 
 
@@ -447,15 +446,15 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     # corpus = dao.getCorpus(cor)[0]
     doc = dao.getDocument(did)
-    sent = dao.getSentence(sid, interpretationIDs=(pid,))
+    sent = dao.getSentence(sid, readingIDs=(pid,))
 
     # Parse given DMRS
     dmrs_raw = request.POST.get('dmrs', '')
     dmrs_xml = dmrs_str_to_xml(dmrs_raw)
     dmrs = getDMRSFromXML(dmrs_xml)
-    sent.mode = Interpretation.ACTIVE
-    sent.interpretations[0].dmrs = [dmrs]
-    sent.interpretations[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
+    sent.mode = Reading.ACTIVE
+    sent.readings[0].dmrs = [dmrs]
+    sent.readings[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
     try:
         sent2json(sent.to_isf())
     except Exception as e:
@@ -464,19 +463,19 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
 
     if action == 'replace':
         # this will replace old (existing) DMRS
-        dao.deleteInterpretation(pid)
+        dao.deleteReading(pid)
         # assign a new ident to this new parse
     sentinfo = dao.getSentence(sent.ID, skip_details=True, get_raw=False)
-    new_parse = Interpretation(rid='{}-manual'.format(len(sentinfo)), mode=Interpretation.ACTIVE)
+    new_parse = Reading(rid='{}-manual'.format(len(sentinfo)), mode=Reading.ACTIVE)
     new_parse.sentenceID = sent.ID
     new_parse.dmrs.append(dmrs)
     new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-    dao.saveInterpretation(new_parse, doc.ID)
+    dao.saveReading(new_parse, doc.ID)
     if new_parse.ID:
         # complete
         return {"success": True, "url": reverse('visko2:view_parse', args=[col, cor, did, sid, new_parse.ID])}
     else:
-        raise Exception("Error occurred while creating interpretation")
+        raise Exception("Error occurred while creating reading")
 
 
 @csrf_protect
@@ -484,7 +483,7 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
 def rest_dmrs_delete(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     try:
-        dao.deleteInterpretation(pid)
+        dao.deleteReading(pid)
         return {"success": True, "url": reverse('visko2:list_parse', args=[col, cor, did, sid])}
     except Exception as e:
         logger.exception("Cannot delete parse ID={}".format(pid))

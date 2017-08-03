@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('biblioteca', help='Biblioteca name')
     parser.add_argument('corpus', help='Corpus name')
     parser.add_argument('doc', help='Document name')
-    parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
+    parser.add_argument('-a', '--active', help='Only import active readings', action='store_true')
     parser.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
     parser.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
     if len(sys.argv) == 1:

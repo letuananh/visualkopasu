@@ -31,7 +31,7 @@ from visko.util import getLogger
 from .util import getSubFolders
 from .util import getFiles
 from .util import is_valid_name
-from .models import Sentence, Interpretation, DMRS, ParseRaw, Node, SortInfo, Link, Sense
+from .models import Sentence, Reading, DMRS, ParseRaw, Node, SortInfo, Link, Sense
 
 logger = getLogger('visko.dao')
 
@@ -175,7 +175,7 @@ class RawXML(object):
         else:
             self.raw = etree.tostring(self.xml, encoding='utf-8', pretty_print=True).decode('utf-8')
         self.text = self.xml.find('text').text
-        for p in self.xml.findall('interpretation'):
+        for p in self.xml.findall('reading'):
             mrs = p.findall('mrs')
             dmrs = p.findall('dmrs')
             parse = RawParse(p)
@@ -225,7 +225,7 @@ class RawParse(object):
     ''' A raw parse (e.g. ACE MRS string) '''
 
     def __init__(self, node=None, mrs=None, dmrs=None):
-        self.node = node  # interpretation node
+        self.node = node  # reading node
         self.mrs = mrs  # from mrs string
         self.dmrs = dmrs  # from dmrs_xml_str
 
@@ -265,21 +265,21 @@ def getSentenceFromRawXML(raw, filename=None):
         sentence.filename = filename
 
     for idx, parse in enumerate(raw):
-        interpretation = Interpretation()
-        interpretation.rid = parse.node.attrib['id']
-        interpretation.mode = parse.node.attrib['mode']
+        reading = Reading()
+        reading.rid = parse.node.attrib['id']
+        reading.mode = parse.node.attrib['mode']
         if parse.mrs is not None:
             # add raw MRS
-            interpretation.raws.append(ParseRaw(parse.mrs.text, rtype=ParseRaw.MRS))
+            reading.raws.append(ParseRaw(parse.mrs.text, rtype=ParseRaw.MRS))
         if parse.dmrs is not None:
-            interpretation.raws.append(ParseRaw(parse.dmrs_str(), rtype=ParseRaw.XML))
+            reading.raws.append(ParseRaw(parse.dmrs_str(), rtype=ParseRaw.XML))
 
-        sentence.interpretations.append(interpretation)
+        sentence.readings.append(reading)
         # XXX: parse all synthetic trees
 
         # parse all DMRS
         dmrs = getDMRSFromXML(parse.dmrs)
-        interpretation.dmrs.append(dmrs)
+        reading.dmrs.append(dmrs)
     return sentence
 
 
@@ -288,7 +288,7 @@ def getDMRSFromXMLString(xmlcontent):
         Get DMRS object from XML string
     '''
     root = etree.XML(xmlcontent)
-    if root.tag == 'interpretation':
+    if root.tag == 'reading':
         root = root.findall('dmrs')[0]
     return getDMRSFromXML(root)
 
@@ -379,5 +379,5 @@ def getDMRSFromXML(dmrs_tag):
                 temp_link.rargname = rargname_tag.text
             # end for link_tag
             dmrs.links.append(temp_link)
-    # finished, add dmrs object to interpretation
+    # finished, add dmrs object to reading
     return dmrs

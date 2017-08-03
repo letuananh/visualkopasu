@@ -42,7 +42,7 @@ __status__ = "Prototype"
 
 ########################################################################
 
-INTERPRETATION_TOKEN = chr(10) + chr(12) + chr(10)
+READING_TOKEN = chr(10) + chr(12) + chr(10)
 DRMS_TREE_TOKEN = chr(10) + chr(10) + chr(10)
 PARSE_TREE_TOKEN = chr(10) + chr(10)
 
@@ -54,40 +54,40 @@ def stripComment(text):
 def parse(source_file, destination, active_only=True):
     logging.info("parsing [{src}] ...".format(src=source_file, dest=destination))
     raw_text = gzip.open(source_file).read().decode('utf-8')
-    repres_raw = raw_text.split(INTERPRETATION_TOKEN)
+    repres_raw = raw_text.split(READING_TOKEN)
     # store to XML
     a_sentence = Element('sentence')
     a_sentence.set('version', '1.0')
     for part in repres_raw:
-        logging.debug("FOUND AN INTERPRETATION", "H1")
-        a_interpretation = None
+        logging.debug("FOUND AN READING", "H1")
+        a_reading = None
         elems = part.split(DRMS_TREE_TOKEN)
         for elem in elems:
             if(elem.startswith("<dmrs ")):
-                if a_interpretation is None:
+                if a_reading is None:
                     break
                 logging.debug('DMRS', 'H2', elem)
                 dmrs_node = ETree.fromstring(elem.encode('utf-8'))
-                a_interpretation.append(dmrs_node)
+                a_reading.append(dmrs_node)
             elif elem.startswith("["):
                 pieces = elem.split(PARSE_TREE_TOKEN)
                 for piece in pieces:
                     if piece.startswith("("):
-                        if a_interpretation is None:
+                        if a_reading is None:
                             break
                         logging.debug('Syntactic tree', 'H2', piece)
                         # XXX: To XML
-                        syntree_node = SubElement(a_interpretation, 'parsetree')
+                        syntree_node = SubElement(a_reading, 'parsetree')
                         syntree_node.text = piece
                     elif piece.startswith("["):
                         logging.debug('Header', 'H2', piece)
-                        if a_interpretation is None:
+                        if a_reading is None:
                             mt = re.match("\[(\d+):(\d+)\]\s\((active|inactive)\)", piece)
                             if active_only and mt.group(3) != 'active':
                                 break                           
-                            a_interpretation = SubElement(a_sentence, 'interpretation')
-                            a_interpretation.attrib['id'] = mt.group(2)
-                            a_interpretation.attrib['mode'] = mt.group(3)
+                            a_reading = SubElement(a_sentence, 'reading')
+                            a_reading.attrib['id'] = mt.group(2)
+                            a_reading.attrib['mode'] = mt.group(3)
             elif elem.startswith(";;;"):
                 # this will be a header
                 pieces = elem.split(PARSE_TREE_TOKEN)

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 '''
-Test DMRS XML
-Latest version can be found at https://github.com/letuananh/intsem.fx
+Test DMRS DAO
+Latest version can be found at https://github.com/letuananh/visualkopasu
 
 References:
     Python documentation:
@@ -56,17 +56,25 @@ from visko.kopasu.xmldao import getSentenceFromRawXML
 from visko.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML
 from visko.kopasu.xmldao import getDMRSFromXML
 from visko.kopasu.xmldao import RawXML
+from visko.kopasu.dao import SQLiteCorpusDAO
 from visko.kopasu.bibman import Biblioteche, Biblioteca
 from visko.kopasu.models import Document
 from visko.kopasu.models import ParseRaw
 
-########################################################################
+
+#-----------------------------------------------------------------------
+# CONFIGURATION
+#-----------------------------------------------------------------------
 
 logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
-TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
+TEST_FILE = os.path.join(TEST_DIR, '1300.xml.gz')
+TEST_FILE2 = os.path.join(TEST_DIR, '10022.xml.gz')
 
+
+#-----------------------------------------------------------------------
+# TESTS
+#-----------------------------------------------------------------------
 
 class TestDAOBase(unittest.TestCase):
 
@@ -78,6 +86,7 @@ class TestDAOBase(unittest.TestCase):
     bib = Biblioteca(bibname, root=bibroot)
     ghub = GrammarHub()
     ERG = ghub.ERG
+    db = SQLiteCorpusDAO(":memory:", "memdb")
 
     @classmethod
     def setUpClass(cls):
@@ -94,50 +103,15 @@ class TestDAOBase(unittest.TestCase):
 
 class TestDMRSDAO(TestDAOBase):
 
-    def test_creating_stuff(self):
-        self.bib.textdao.createCorpus(self.corpus_name)
-        cdao = self.bib.textdao.getCorpusDAO(self.corpus_name)
-        self.assertTrue(os.path.isdir(cdao.path))
-        # create doc
-        cdao.create_doc(self.doc_name)
-        ddao = cdao.getDocumentDAO(self.doc_name)
-        self.assertTrue(os.path.isdir(ddao.path))
-        # clear doc first
-        sentids = ddao.getSentences()
-        for sentid in sentids:
-            ddao.delete_sent(sentid)
-        # create sentences
-        ddao.copy_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'))
-        ddao.copy_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'))
-        ddao.copy_sentence(os.path.join(TEST_DIR, 'test1.xml.gz'), 1)
-        ddao.copy_sentence(os.path.join(TEST_DIR, 'test2.xml.gz'), 2)
-        sentids = ddao.getSentences()
-        self.assertEqual(len(sentids), 4)
-        # now delete 2 of them
-        ddao.delete_sent('test1')
-        ddao.delete_sent('test2')
-        # now we should have only 2 sentences
-        sentids = ddao.getSentences()
-        self.assertEqual(len(sentids), 2)
-
-        # test first sentence
-        sentence = ddao.getSentence(sentids[0])
-        validate_sentence(self, sentence)
-
     def test_parse_xml_file(self):
         logging.info("Test XML parser")
         sent = getSentenceFromFile(TEST_FILE)
         self.assertTrue(sent)
-        self.assertTrue(sent.interpretations)
-        i = sent.interpretations[0]
+        self.assertTrue(sent.readings)
+        i = sent.readings[0]
         d = i.dmrs[0]
         self.assertTrue(d.nodes)
         self.assertTrue(d.links)
-        self.assertTrue(d.nodes[2].sense)
-        # there should be 2 raw (MRS in str mode and DMRS in xml mode)
-        self.assertEqual(len(i.raws), 2)
-        for raw in i.raws:
-            logging.debug(raw)
 
     def test_xml_dao(self):
         logging.info("Test ISF sense reading")
@@ -184,9 +158,9 @@ class TestDMRSDAO(TestDAOBase):
 
 def validate_sentence(self, sentence):
     self.assertIsNotNone(sentence)
-    self.assertTrue(sentence.interpretations)
-    self.assertTrue(sentence.interpretations[0])
-    self.assertTrue(sentence.interpretations[0].dmrs[0])
+    self.assertTrue(sentence.readings)
+    self.assertTrue(sentence.readings[0])
+    self.assertTrue(sentence.readings[0].dmrs[0])
     logging.debug(sentence)
 
 
@@ -203,6 +177,12 @@ class TestDMRSSQLite(TestDAOBase):
         else:
             corpus = corpuses[0]
         return corpus
+
+    def test_list_collections(self):
+        self.ensure_corpus()
+        bibs = Biblioteche.list_all(self.bibroot)
+        self.assertGreaterEqual(len(bibs), 1)
+        self.assertIn(self.bibname, bibs)
 
     def ensure_doc(self):
         ''' Ensure that testcorpus exists'''
@@ -221,14 +201,13 @@ class TestDMRSSQLite(TestDAOBase):
         sent.documentID = doc.ID
         sent_obj = self.bib.sqldao.getSentence(sentenceID=1)
         if sent_obj is None:
-            self.bib.sqldao.saveSentence(sent)
-        return self.bib.sqldao.getSentence(sentenceID=1)
+            return self.bib.sqldao.saveSentence(sent)
+        else:
+            return sent_obj
 
     def test_create_a_corpus(self):
         logging.info("Test creating a new corpus")
         self.ensure_corpus()
-        # test retriving created corpus
-        logging.debug("Connecting to {}".format(self.bib.sqldao.db_path))
         corpora = self.bib.sqldao.getCorpus(self.corpus_name)
         self.assertIsNotNone(corpora)
         self.assertGreater(len(corpora), 0)
@@ -237,7 +216,6 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertTrue(os.path.isfile(self.bib.sqldao.db_path))
         # and a directory to store XML files
         # text collection must exist
-        logging.debug("XMLCorpusCollection loc: {}".format(self.bib.textdao.path))
         self.assertTrue(os.path.isdir(self.bib.textdao.path))
         # corpus folder must exist as well
         cdao = self.bib.textdao.getCorpusDAO(self.corpus_name)
@@ -254,8 +232,8 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(doc.corpusID, corpus.ID)
 
     def test_insert_sentence(self):
-        sentence = getSentenceFromFile(TEST_FILE)
-        self.assertTrue(sentence.interpretations)
+        sentence = getSentenceFromFile(TEST_FILE2)
+        self.assertTrue(sentence.readings)
 
         doc = self.ensure_doc()
         sentence.documentID = doc.ID
@@ -271,8 +249,8 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(actual_sentence[0].raws[1].rtype, ParseRaw.XML)
         self.assertGreater(len(actual_sentence[0].raws[0].text), 0)
         self.assertGreater(len(actual_sentence[0].raws[1].text), 0)
-        self.assertEqual(repr(actual_sentence[0].raws[0]), '[mrs:[ TOP: h0\n  INDEX: e2 [ e...h6 qeq h4 h10 qeq h12 > ]]')
-        self.assertEqual(repr(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
+        self.assertTrue(repr(actual_sentence[0].raws[0]).startswith('[mrs:[ TOP: '))
+        self.assertTrue(repr(actual_sentence[0].raws[1]).startswith('[xml:<dmrs cfrom'))
 
     def test_get_sentences_with_dummy(self):
         doc = self.ensure_doc()
@@ -293,7 +271,7 @@ class TestDMRSSQLite(TestDAOBase):
         sent = self.ensure_sent()
         self.assertIsNotNone(sent)
         self.assertGreater(len(sent), 0)
-        raw.interpretationID = sent[0].ID
+        raw.readingID = sent[0].ID
         self.bib.sqldao.saveParseRaw(raw)
         raws = self.bib.sqldao.get_raw(sent[0].ID)
         self.assertGreater(len(raws), 0)
@@ -392,21 +370,6 @@ class TestHumanAnnotation(TestDAOBase):
         vsent.documentID = doc.ID
         dao.saveSentence(vsent)
         dao.save_annotations(vsent)
-
-
-class TestBiblioteche(TestDAOBase):
-
-    def test_list_collections(self):
-        bibs = Biblioteche.list_all(self.bibroot)
-        self.assertGreaterEqual(len(bibs), 1)
-        self.assertIn(self.bibname, bibs)
-        pass
-
-
-class TestNewDAO(unittest.TestCase):
-
-    def test_new_dao(self):
-        pass
 
 
 ########################################################################

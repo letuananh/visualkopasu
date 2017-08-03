@@ -65,7 +65,7 @@ from visko.kopasu.util import xml_to_str
 
 logging.basicConfig(level=logging.WARNING)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
+TEST_FILE = os.path.join(TEST_DIR, '10022.xml.gz')
 TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 
 ghub = GrammarHub()
@@ -79,7 +79,7 @@ class TestRawXML(unittest.TestCase):
 
     def test_read_from_xml(self):
         raw = RawXML.from_file(TEST_FILE)
-        self.assertEqual(raw.text, 'I took a step forward.')
+        self.assertEqual(raw.text, '"My name is Sherlock Holmes.')
         self.assertEqual(len(raw), 1)
         # should have both MRS and DMRS
         self.assertGreater(len(raw[0].mrs_str()), 0)
@@ -113,7 +113,7 @@ class TestMain(unittest.TestCase):
     def test_txt2isf(self):
         txt = 'Three musketeers and a giant walk into a bar.'
         # create a Grammar to parse text
-        isent = ERG.parse(txt, parse_count=10)
+        isent = ghub.parse(txt, 'ERG', 10, TagInfo.LELESK)
         self.assertEqual(len(isent), 10)
         # convert ISF sentence into an XML node
         xsent = isent.to_visko_xml()
@@ -122,7 +122,15 @@ class TestMain(unittest.TestCase):
         vsent = getSentenceFromXML(xsent)
         self.assertEqual(vsent.text, txt)
         self.assertEqual(len(vsent), 10)
-        self.assertEqual(len(vsent.interpretations[0].raws), 2)
+        self.assertEqual(len(vsent.readings[0].raws), 2)
+
+    def test_mfs_2_visko(self):
+        txt = 'Three musketeers and a giant walk into a bar.'
+        # create a Grammar to parse text
+        isent = ghub.parse(txt, 'ERG', 10, TagInfo.MFS)
+        xsent = isent.tag_xml().to_visko_xml()
+        vsent = getSentenceFromXML(xsent)
+        print(vsent[0].dmrs[0])
 
     def test_visko2isf(self):
         isent = ERG.parse('I saw a girl with a telescope.', parse_count=10)
@@ -211,6 +219,7 @@ class TestMain(unittest.TestCase):
         # tokens = simplemrs.tokenize(str(sent[0].dmrs[0]))
         # print(tokens)
         d = sent[0].dmrs[0]
+        print(str(d))
         dmrs_dict = parse_dmrs_str(str(d))
         logging.info("DMRS dict: {}".format(dmrs_dict))
         # -1 because of root node (nodeid = 0)
