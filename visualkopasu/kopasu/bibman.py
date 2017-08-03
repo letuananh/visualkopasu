@@ -57,10 +57,8 @@ class Biblioteche:
         if not is_valid_name(bibname):
             raise Exception("Invalid biblioteca name (provided: {}".format(bibname))
         bib = Biblioteca(bibname, root=bibroot)
-        # create collection dir
+        # create collection dir if needed
         FileHelper.create_dir(bib.textdao.path)
-        # prepare SQLite database
-        bib.sqldao.prepare(silent=True)
 
 
 class Biblioteca:

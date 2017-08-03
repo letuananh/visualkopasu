@@ -32,19 +32,19 @@ __status__ = "Prototype"
 
 import os
 import logging
-
+from django.http import Http404
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse
 
 from chirptext.texttaglib import TagInfo
-from coolisf.util import Grammar
+from coolisf.util import GrammarHub, sent2json
 
-from djangoisf.views import jsonp, sent2json
+from djangoisf.views import jsonp, TAGGERS
 from visualkopasu.util import getLogger
 from visualkopasu.kopasu import Biblioteche, Biblioteca
-from visualkopasu.kopasu.util import getSentenceFromXML, getDMRSFromXML
+from visualkopasu.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
 from visualkopasu.kopasu.util import dmrs_str_to_xml, xml_to_str
 from visualkopasu.kopasu.models import Document, ParseRaw, Interpretation, Sentence
 from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
@@ -54,6 +54,17 @@ from visualkopasu.kopasu.dmrs_search import LiteSearchEngine
 
 logger = getLogger('visko2.ui', logging.DEBUG)  # level = INFO (default)
 SEARCH_LIMIT = 10000
+
+# TODO: Make this more flexible
+# Maximum parse count
+RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
+ghub = GrammarHub()
+PROCESSORS = ghub.available
+PROCESSORS.update({'': 'None'})
+ISF_DEFAULT = {'input_results': 5, 'RESULTS': RESULTS,
+               'PROCESSORS': PROCESSORS, 'input_parser': 'ERG',
+               'input_tagger': TagInfo.LELESK, 'TAGGERS': TAGGERS,
+               'input_sentence': "Abrahams' dogs barked."}
 
 
 def getAllCollections():
@@ -96,9 +107,8 @@ def get_context(extra=None, title=None):
 
 
 def home(request):
-    c = get_context({"title": "Visual Kopasu 2.0",
-                     "collections": getAllCollections(),
-                     "RESULTS": RESULTS, "input_results": 5})
+    c = get_context(ISF_DEFAULT)
+    c['collections'] = getAllCollections()
     return render(request, "visko2/home/index.html", c)
 
 
@@ -131,19 +141,18 @@ def delviz(request):
     return render(request, "visko2/delviz/index.html", c)
 
 
-# Maximum parses
-RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
-TAGGERS = (TagInfo.LELESK, TagInfo.MFS)
-PROCESSORS = ('ERG', 'JACY', 'None')  # TODO: Make this more flexible
-
-
 def isf(request):
-    c = get_context({'RESULTS': RESULTS}, title="CoolISF REST Client")
+    c = get_context(ISF_DEFAULT, title="CoolISF REST Client")
     if request.method == 'POST':
         input_sentence = request.POST.get('input_sentence')
-        parse_count = int(request.POST.get('input_results'))
+        input_parser = request.POST.get('input_parser')
+        input_tagger = request.POST.get('input_tagger')
+        input_results = int(request.POST.get('input_results'))
         c.update({'input_sentence': input_sentence,
-                  'parse_count': parse_count})
+                  'input_parser': input_parser,
+                  'input_tagger': input_tagger,
+                  'input_results': input_results})
+    print(c)
     return render(request, "visko2/isf/index.html", c)
 
 
@@ -163,7 +172,7 @@ def search(request, sid=None):
         logger.info('Col: {c} - Query: {q}'.format(c=col, q=query))
         if query:
             if col:
-                # search
+                # search in specified collection
                 bib = Biblioteca(col)
                 engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
                 # TODO: reuse engine objects
@@ -173,6 +182,7 @@ def search(request, sid=None):
                 c.update({'sentences': sentences})
                 logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col, q=query, r=sentences))
             else:
+                # search in all collection
                 sentences = []
                 for bib in cols:
                     engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
@@ -239,17 +249,23 @@ def create_sent(request, collection_name, corpus_name, doc_id):
     input_results = int(request.POST.get('input_results', 5))
     if input_results not in RESULTS:
         input_results = 5
-    input_parser = request.POST.get('input_parser', 'None')
+    input_parser = request.POST.get('input_parser')
     if input_parser not in PROCESSORS:
-        input_parser = 'None'
+        raise Http404("Invalid grammar")
+    input_tagger = request.POST.get('input_tagger')
     sentence_text = request.POST.get('input_sentence', None)
     if not sentence_text:
-        logger.error("Sentence text cannot be empty")
+        messages.error(request, "Sentence text cannot be empty")
     else:
         # parse the sentence
-        if input_parser == 'ERG':
-            isent = Grammar().parse(sentence_text, parse_count=input_results)
-            isent.tag(method='lelesk')
+        if input_parser == '':
+            # Just create a sentence with no parse
+            s = Sentence(text=sentence_text)
+            s.documentID = doc.ID
+            bib.sqldao.saveSentence(s)
+        elif input_parser in PROCESSORS:
+            isent = ghub[input_parser].parse(text=sentence_text, parse_count=input_results)
+            isent.tag(method=input_tagger)
             xsent = isent.to_visko_xml()
             vsent = getSentenceFromXML(xsent)
             # save to doc
@@ -260,14 +276,16 @@ def create_sent(request, collection_name, corpus_name, doc_id):
                 # save XML
                 docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
                 docdao.save_sentence(xsent, vsent.ID)
+                # if everything went right, save config
+                doc.grammar = input_parser
+                doc.tagger = input_tagger
+                doc.parse_count = input_results
+                bib.sqldao.saveDocument(doc)
                 return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=vsent.ID)
             except Exception as e:
                 logger.error("Cannot save sentence. Error = {}".format(e))
         else:
-            # Just create a sentence with no parse
-            s = Sentence(text=sentence_text)
-            s.documentID = doc.ID
-            bib.sqldao.saveSentence(s)
+            raise Http404("Invalid grammar has been selected")
     # default
     return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
 
@@ -325,15 +343,19 @@ def list_sent(request, collection_name, corpus_name, doc_id, input_results=5, in
     corpus = dao.getCorpus(corpus_name)[0]
     doc = dao.getDocument(doc_id)
     sentences = dao.getSentences(doc_id)
-    c = get_context({'title': 'Document: ' + doc.title if doc.title else doc.name,
-                     'collection_name': collection_name,
+    c = get_context({'collection_name': collection_name,
                      'corpus': corpus,
                      'doc': doc,
-                     'sentences': sentences,
-                     'input_results': input_results,
-                     'input_parser': input_parser,
-                     'RESULTS': RESULTS,
-                     'PROCESSORS': PROCESSORS})
+                     'sentences': sentences},
+                    title='Document: ' + doc.title if doc.title else doc.name)
+    c.update(ISF_DEFAULT)
+    print(doc)
+    if doc.grammar and doc.grammar in PROCESSORS:
+        c['input_parser'] = doc.grammar
+    if doc.tagger and doc.tagger in TAGGERS:
+        c['input_tagger'] = doc.tagger
+    if doc.parse_count and doc.parse_count in RESULTS:
+        c['input_results'] = doc.parse_count
     return render(request, "visko2/corpus/document.html", c)
 
 

@@ -14,20 +14,25 @@
  **/
 
 CREATE TABLE IF NOT EXISTS "corpus" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "name" text NOT NULL 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
+    , "name" text NOT NULL UNIQUE
+    , "title" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "document" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "name" TEXT NOT NULL
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
+    , "name" TEXT NOT NULL UNIQUE
     , "title" TEXT
-    , "corpusID" INTEGER NOT NULL 
+    , "grammar" TEXT
+    , "tagger" TEXT
+    , "parse_count" INTEGER
+    , "lang" TEXT
+    , "corpusID" INTEGER NOT NULL
     , FOREIGN KEY(corpusID) REFERENCES corpus(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "sentence" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT 
     , "ident" VARCHAR
     , "text" TEXT
     , "documentID" INTEGER
@@ -35,7 +40,7 @@ CREATE TABLE IF NOT EXISTS "sentence" (
 );
 
 CREATE TABLE IF NOT EXISTS "interpretation" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "ident" VARCHAR NOT NULL 
     , "mode" VARCHAR
     , "sentenceID" INTEGER NOT NULL 
@@ -43,7 +48,7 @@ CREATE TABLE IF NOT EXISTS "interpretation" (
 );
 
 CREATE TABLE IF NOT EXISTS "parse_raw" (
-    "ID" INTEGER PRIMARY KEY  NOT NULL 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "ident" VARCHAR 
     , "text" TEXT
     , "rtype" VARCHAR NOT NULL
@@ -52,7 +57,7 @@ CREATE TABLE IF NOT EXISTS "parse_raw" (
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs" (
-    "ID" INTEGER PRIMARY KEY  NOT NULL 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "ident" VARCHAR NOT NULL 
     , "cfrom" INTEGER NOT NULL  DEFAULT (-1) 
     , "cto" INTEGER NOT NULL  DEFAULT (-1) 
@@ -62,7 +67,7 @@ CREATE TABLE IF NOT EXISTS "dmrs" (
 );
 
 CREATE TABLE IF NOT EXISTS "dmrs_link" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "fromNodeID" INTEGER NOT NULL 
     , "toNodeID" INTEGER NOT NULL
     , "dmrsID" INTEGER NOT NULL
@@ -75,8 +80,8 @@ CREATE TABLE IF NOT EXISTS "dmrs_link" (
 -- DMRS NODE
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
-    , "nodeID" INTEGER NOT NULL 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
+    , "nodeid" INTEGER NOT NULL 
     , "cfrom" INTEGER NOT NULL  DEFAULT (-1)
     , "cto" INTEGER NOT NULL  DEFAULT (-1)
     , "surface" TEXT
@@ -99,17 +104,17 @@ CREATE TABLE IF NOT EXISTS "dmrs_node" (
 -- SORT INFORMATION
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node_sortinfo" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE 
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "cvarsort" VARCHAR
-    , "number" VARCHAR
-    , "person" VARCHAR
-    , "gender" VARCHAR
-    , "sentence_force" VARCHAR
+    , "num" VARCHAR
+    , "pers" VARCHAR
+    , "gend" VARCHAR
+    , "sf" VARCHAR
     , "tense" VARCHAR
     , "mood" VARCHAR
-    , "pronoun_type" VARCHAR
-    , "progressive" VARCHAR
-    , "perfective_aspect" VARCHAR
+    , "prontype" VARCHAR
+    , "prog" VARCHAR
+    , "perf" VARCHAR
     , "ind" VARCHAR 
     ,"dmrs_nodeID" INTEGER NOT NULL
     , FOREIGN KEY(dmrs_nodeID) REFERENCES dmrs_node(ID) ON DELETE CASCADE ON UPDATE CASCADE
@@ -119,7 +124,7 @@ CREATE TABLE IF NOT EXISTS "dmrs_node_sortinfo" (
 -- REAL PREDICATE
 --
 CREATE TABLE IF NOT EXISTS "dmrs_node_realpred_lemma" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     ,"lemma" VARCHAR
 );
 
@@ -127,11 +132,46 @@ CREATE TABLE IF NOT EXISTS "dmrs_node_realpred_lemma" (
 -- GRAMMAR PREDICATE
 -- 
 CREATE TABLE IF NOT EXISTS "dmrs_node_gpred_value" (
-    "ID" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "value" VARCHAR 
 );
 
+--
+-- HUMAN ANNOTATIONS
+--
+CREATE TABLE IF NOT EXISTS "word" (
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
+    ,"sid" INTEGER
+    ,"widx" INTEGER
+    ,"word" TEXT
+    ,"lemma" TEXT
+    ,"pos" TEXT
+    ,"cfrom" INTEGER
+    ,"cto" INTEGER
+    ,FOREIGN KEY(sid) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "concept" (
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT
+    ,"sid" INTEGER NOT NULL
+    ,"cidx" INTEGER
+    ,"clemma" TEXT
+    ,"tag" TEXT
+    ,FOREIGN KEY(sid) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "cwl" (
+    "cid" INTEGER NOT NULL
+    ,"wid" INTEGER NOT NULL
+    ,FOREIGN KEY(cid) REFERENCES concept(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    ,FOREIGN KEY(wid) REFERENCES word(ID) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
 CREATE INDEX IF NOT EXISTS "sentence_|_documentID" ON "sentence" ("documentID" ASC);
+CREATE INDEX IF NOT EXISTS "document_|_grammar" ON "document" ("grammar");
+CREATE INDEX IF NOT EXISTS "document_|_lang" ON "document" ("lang");
 CREATE INDEX IF NOT EXISTS "interpretation_|_sentenceID" ON "interpretation" ("sentenceID" ASC);
 CREATE INDEX IF NOT EXISTS "parse_raw_|_interpretationID" ON "parse_raw" ("interpretationID" DESC);
 CREATE INDEX IF NOT EXISTS "dmrs_|_interpretationID" ON "dmrs" ("interpretationID" DESC);
@@ -139,15 +179,15 @@ CREATE INDEX IF NOT EXISTS "dmrs_node_|_dmrsID" ON "dmrs_node" ("dmrsID" ASC);
 
 -- DMRS_NODE_SORTINFO INDICES
 CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|cvarsort" ON "dmrs_node_sortinfo"("cvarsort");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|number" ON "dmrs_node_sortinfo"("number");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|person" ON "dmrs_node_sortinfo"("person");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|gender" ON "dmrs_node_sortinfo"("gender");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|sentence_force" ON "dmrs_node_sortinfo"("sentence_force");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|number" ON "dmrs_node_sortinfo"("num");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|person" ON "dmrs_node_sortinfo"("pers");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|gender" ON "dmrs_node_sortinfo"("gend");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|sentence_force" ON "dmrs_node_sortinfo"("sf");
 CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|tense" ON "dmrs_node_sortinfo"("tense");
 CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|mood" ON "dmrs_node_sortinfo"("mood");
-CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|pronoun_type" ON "dmrs_node_sortinfo"("pronoun_type");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|progressive" ON "dmrs_node_sortinfo"("progressive");
---CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|perfective_aspect" ON "dmrs_node_sortinfo"("perfective_aspect");
+CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|pronoun_type" ON "dmrs_node_sortinfo"("prontype");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|progressive" ON "dmrs_node_sortinfo"("prog");
+--CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|perfective_aspect" ON "dmrs_node_sortinfo"("perf");
 --CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|ind" ON "dmrs_node_sortinfo"("ind");
 CREATE INDEX IF NOT EXISTS "dmrs_node_sortinfo|dmrs_nodeID" ON "dmrs_node_sortinfo"("dmrs_nodeID");
 

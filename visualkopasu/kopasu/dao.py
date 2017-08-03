@@ -21,10 +21,11 @@ Data access layer for VisualKopasu project.
 import os
 import os.path
 import logging
-import sqlite3
-from chirptext.leutile import Timer
 from visualkopasu.util import getLogger
 from visualkopasu.kopasu.util import is_valid_name
+
+from puchikarui import Schema
+
 from .models import Corpus
 from .models import Document
 from .models import Sentence
@@ -37,142 +38,124 @@ from .models import SortInfo
 from .models import Link
 from .models import GpredValue
 from .models import Lemma
+from .models import Word, Concept, CWLink
 
-
-from .liteorm import ORMInfo, LiteORM
-from .liteorm import DBContext
 
 ########################################################################
 
 __author__ = "Le Tuan Anh"
 __copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
+__credits__ = ["Fan Zhenzhen", "Francis Bond", "Mathieu Morey"]
 __license__ = "GPL"
-__version__ = "0.1"
+__version__ = "0.2"
 __maintainer__ = "Le Tuan Anh"
 __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
-########################################################################
+#----------------------------------------------------------------------
+# Configuration
+#----------------------------------------------------------------------
 
 logger = getLogger('visko.dao')
+MY_DIR = os.path.dirname(os.path.realpath(__file__))
+INIT_SCRIPT = os.path.join(MY_DIR, 'scripts', 'sqlite3', 'create.sql')
 
 
-class CorpusORMSchema(object):
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self.orm_manager = LiteORM(db_path)
-        # 0: table column | 1: object property
-        self.Corpus = ORMInfo('corpus', ['ID', 'name'], Corpus(), orm_manager=self.orm_manager)
-        self.Document = ORMInfo('document', ['ID', 'name', 'corpusID', 'title'], Document(), orm_manager=self.orm_manager)
-        self.Sentence = ORMInfo('sentence', ['ID', 'ident', 'text', 'documentID'], Sentence(), orm_manager=self.orm_manager)
-        self.Interpretation = ORMInfo('interpretation', ['ID', ['ident', 'rid'], 'mode', 'sentenceID'], Interpretation(), orm_manager=self.orm_manager)
-        self.DMRS = ORMInfo('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'], DMRS(), orm_manager=self.orm_manager)
-        self.ParseRaw = ORMInfo('parse_raw', ['ID', 'ident', 'text', 'rtype', 'interpretationID'], ParseRaw(), orm_manager=self.orm_manager)
+class ViskoSchema(Schema):
+
+    def __init__(self, data_source):
+        Schema.__init__(self, data_source=data_source, setup_file=INIT_SCRIPT)
+        self.add_table('corpus', ['ID', 'name', 'title'], proto=Corpus).set_id('ID')
+        self.add_table('document', ['ID', 'name', 'corpusID', 'title',
+                                    'grammar', 'tagger', 'parse_count', 'lang'],
+                       proto=Document, alias='doc').set_id('ID')
+        self.add_table('sentence', ['ID', 'ident', 'text', 'documentID'],
+                       proto=Sentence).set_id('ID')
+        self.add_table('interpretation', ['ID', 'ident', 'mode', 'sentenceID'],
+                       proto=Interpretation).set_id('ID').field_map(ident='rid')
+        self.add_table('dmrs', ['ID', 'ident', 'cfrom', 'cto', 'surface', 'interpretationID'],
+                       proto=DMRS).set_id('ID')
+        self.add_table('parse_raw', ['ID', 'ident', 'text', 'rtype', 'interpretationID'],
+                       proto=ParseRaw).set_id('ID')
         # Node related tables
-        self.Node = ORMInfo('dmrs_node',
-                            [
-                                'ID',
-                                ['nodeID', 'nodeid'],
-                                'cfrom',
-                                'cto',
-                                'surface',
-                                'base',
-                                'carg',
-                                'dmrsID',
-                                'rplemmaID',
-                                'rppos',
-                                'rpsense',
-                                'gpred_valueID',
-                                'synsetid',
-                                'synset_score'
-                            ],
-                            Node(), orm_manager=self.orm_manager)
-        self.SortInfo = ORMInfo('dmrs_node_sortinfo',
-                                [
-                                    'ID',
-                                    'cvarsort',
-                                    ['number', 'num'],
-                                    ['person', 'pers'],
-                                    ['gender', 'gend'],
-                                    ['sentence_force', 'sf'],
-                                    'tense',
-                                    'mood',
-                                    ['pronoun_type', 'prontype'],
-                                    ['progressive', 'prog'],
-                                    ['perfective_aspect', 'perf'],
-                                    'ind',
-                                    'dmrs_nodeID'
-                                ],
-                                SortInfo(), orm_manager=self.orm_manager)
-        self.GpredValue = ORMInfo('dmrs_node_gpred_value', ['ID', 'value'], GpredValue(), orm_manager=self.orm_manager)
-        self.Lemma = ORMInfo('dmrs_node_realpred_lemma', ['ID', 'lemma'], Lemma(), orm_manager=self.orm_manager)
+        self.add_table('dmrs_node', ['ID', 'nodeid', 'cfrom', 'cto', 'surface', 'base',
+                                     'carg', 'dmrsID', 'rplemmaID', 'rppos', 'rpsense',
+                                     'gpred_valueID', 'synsetid', 'synset_score'],
+                       proto=Node, alias='node').set_id('ID')
+        self.add_table('dmrs_node_sortinfo', ['ID', 'cvarsort', 'num', 'pers', 'gend', 'sf',
+                                              'tense', 'mood', 'prontype', 'prog', 'perf',
+                                              'ind', 'dmrs_nodeID'],
+                       proto=SortInfo, alias='sortinfo').set_id('ID')
+        self.add_table('dmrs_node_gpred_value', ['ID', 'value'],
+                       proto=GpredValue, alias='gpval').set_id('ID')
+        self.add_table('dmrs_node_realpred_lemma', ['ID', 'lemma'],
+                       proto=Lemma, alias='rplemma').set_id('ID')
         # Link related tables
-        self.Link = ORMInfo('dmrs_link',
-                            [
-                                'ID',
-                                'fromNodeID',
-                                'toNodeID',
-                                'dmrsID',
-                                'post',
-                                'rargname'],
-                            Link(), orm_manager=self.orm_manager)
-# TODO: Split the SQL code to a separate ORM engine
+        self.add_table('dmrs_link', ['ID', 'fromNodeID', 'toNodeID', 'dmrsID', 'post', 'rargname'],
+                       proto=Link, alias='link').set_id('ID')
+        # Human annotation related tables
+        self.add_table('word', ['ID', 'sid', 'widx', 'word', 'lemma', 'pos', 'cfrom', 'cto'],
+                       proto=Word).set_id('ID')
+        self.add_table('concept', ['ID', 'sid', 'cidx', 'clemma', 'tag'],
+                       proto=Concept).set_id('ID')
+        self.add_table('cwl', ['cid', 'wid'],
+                       proto=CWLink)
 
 
-class ObjectCache():
+class CachedTable():
     '''
-    A simple ORM cache
+    ORM cache
     @auto_fill: Auto select all objects to cache when the cache is created
     '''
-    def __init__(self, manager, orm_config, cache_by_field="value", auto_fill=True):
+    def __init__(self, table, cache_by_field="value", ctx=None, auto_fill=True):
         self.cacheMap = {}
         self.cacheMapByID = {}
-        self.manager = manager
-        self.orm_config = orm_config
+        self.table = table
         self.cache_by_field = cache_by_field
         if auto_fill:
-            instances = self.orm_config.select()
+            instances = self.table.select(ctx=ctx)
             if instances is not None:
                 for instance in instances:
                     self.cache(instance)
 
     def cache(self, instance):
         if instance:
-            key = instance.__dict__[self.cache_by_field]
+            key = getattr(instance, self.cache_by_field)
             if key not in self.cacheMap:
                 self.cacheMap[key] = instance
             else:
                 logger.debug(("Cache error: key [%s] exists!" % key))
 
-            key = instance.__dict__[self.orm_config.columnID]
+            key = tuple(getattr(instance, c) for c in self.table.id_cols)
             if key not in self.cacheMapByID:
                 self.cacheMapByID[key] = instance
             else:
                 logger.debug(("Cache error: ID [%s] exists!" % key))
 
-    def getByValue(self, value, new_object=None, context=None):
+    def getByValue(self, value, new_object=None, ctx=None):
         if value not in self.cacheMap:
             # insert a new record
             if new_object is None:
                 # try to select from database first
-                results = self.orm_config.select(condition="%s=?" % self.cache_by_field, args=[value])
-                if results is None or len(results) != 1:
-                    # logger.debug("Cache: There is no instance with value = [%s] - Attempting to create one ..." % value)
-                    new_object = self.orm_config.create_instance()
-                    new_object.__dict__[self.cache_by_field] = value
-                    self.orm_config.save(new_object, update_back=True, context=context)
+                results = self.table.select_single("{f}=?".format(f=self.cache_by_field), (value,), ctx=ctx)
+                if not results:
+                    # create a new instance
+                    new_object = self.table.to_obj((value,), (self.cache_by_field,))
+                    self.table.save(new_object, ctx=ctx)
+                    # select the instance again
+                    new_object = self.table.select_single("{f}=?".format(f=self.cache_by_field), (value,), ctx=ctx)
                 else:
-                    new_object = results[0]  # Use the object from DB
+                    new_object = results  # Use the object from DB
             self.cache(new_object)
         return self.cacheMap[value]
 
-    def getByID(self, ID):
-        if ID not in self.cacheMapByID:
+    def getByID(self, *ID):
+        k = tuple(ID)
+        if k not in self.cacheMapByID:
             # select from database
-            obj = self.orm_config.getByID(ID)
+            obj = self.table.by_id(*ID)
             self.cache(obj)
-        return self.cacheMapByID[ID]
+        return self.cacheMapByID[k]
 
 
 class SQLiteCorpusCollection(object):
@@ -181,106 +164,52 @@ class SQLiteCorpusCollection(object):
 
     def getCorpusDAO(self, collection_name, auto_fill=False):
         collection_db_path = os.path.join(self.path, collection_name + '.db')
-        return SQLiteCorpusDAO(collection_db_path, collection_name, auto_fill)
+        return SQLiteCorpusDAO(collection_db_path, collection_name, auto_fill=auto_fill)
 
 
-def backup_database(location_target):
-    '''
-    Prepare database
-    '''
-    print("Backing up existing database file ...")
-    if os.path.isfile(location_target):
-        i = 0
-        backup_file = location_target + ".bak." + str(i)
-        while os.path.isfile(backup_file):
-            i = i + 1
-            backup_file = location_target + ".bak." + str(i)
-        print("Renaming file %s --> %s" % (location_target, backup_file))
-        os.rename(location_target, backup_file)
+class SQLiteCorpusDAO(ViskoSchema):
 
-
-def readscript(filename):
-    ''' Read a script file
-    '''
-    script_location = os.path.join(os.path.dirname(__file__), 'scripts', 'sqlite3', filename)
-    with open(script_location, 'r') as script_file:
-        return script_file.read()
-
-
-class SQLiteCorpusDAO(CorpusORMSchema):
-
-    def __init__(self, db_path, name, auto_fill):
+    def __init__(self, db_path, name, auto_fill=False):
         super().__init__(db_path)
         self.name = name
-        self.lemmaCache = ObjectCache(self.orm_manager, self.Lemma, "lemma", auto_fill=auto_fill)
-        self.gpredCache = ObjectCache(self.orm_manager, self.GpredValue, "value", auto_fill=auto_fill)
+        self.lemmaCache = CachedTable(self.rplemma, "lemma", auto_fill=auto_fill)
+        self.gpredCache = CachedTable(self.gpval, "value", auto_fill=auto_fill)
 
-    def prepare(self, backup=True, silent=False):
-        location = self.db_path + '_temp.db'
-        script_file_create = readscript('create.sql')
-        if not silent:
-            print("Preparing SQLite database")
-            print("Database path     : %s" % self.db_path)
-            print("Temp database path: %s" % location)
-        try:
-            conn = sqlite3.connect(location)
-            cur = conn.cursor()
-            if not silent:
-                print("Creating database ...")
-            if not silent:
-                timer = Timer()
-                timer.start()
-            cur.executescript(script_file_create)
-            if not silent:
-                timer.end()
-            if not silent:
-                print("Database has been created")
-        except sqlite3.Error as e:
-            logging.error('Error: %s', e)
-            pass
-        finally:
-            if conn:
-                conn.close()
-        if backup:
-            backup_database(self.db_path)
-        else:
-            logging.warning("DB file {} is being overwritten".format(self.db_path))
-        if not silent:
-            print("Renaming file %s --> %s ..." % (location, self.db_path))
-            print("--")
-        os.rename(location, self.db_path)
-        pass
+    @property
+    def db_path(self):
+        return self.ds.path
 
     def getCorpora(self):
-        return self.Corpus.select()
+        return self.corpus.select()
 
     def getCorpus(self, corpus_name):
-        return self.Corpus.select('name=?', [corpus_name])
+        return self.corpus.select('name=?', (corpus_name,))
 
     def getCorpusByID(self, corpusID):
-        return self.Corpus.select('ID=?', (corpusID,))[0]
+        return self.Corpus.by_id(corpusID)
 
-    def createCorpus(self, corpus_name, context=None):
+    def createCorpus(self, corpus_name, ctx=None):
         if not is_valid_name(corpus_name):
             raise Exception("Invalid corpus name (provided: {}) - Visko only accept names using alphanumeric characters".format(corpus_name))
-        return self.Corpus.save(Corpus(corpus_name), context=context)
+        return self.corpus.save(Corpus(corpus_name), ctx=ctx)
 
-    def saveDocument(self, a_document, context=None):
-        if not is_valid_name(a_document.name):
-            raise Exception("Invalid doc name (provided: {}) - Visko only accept names using alphanumeric characters".format(a_document.name))
-        self.Document.save(a_document, context=context)
+    def saveDocument(self, doc, *fields, ctx=None):
+        if not is_valid_name(doc.name):
+            raise ValueError("Invalid doc name (provided: {}) - Visko only accept names using alphanumeric characters".format(doc.name))
+        else:
+            self.doc.save(doc, *fields, ctx=ctx)
 
     def getDocumentOfCorpus(self, corpusID):
-        return self.Document.select('corpusID=?', [corpusID])
+        return self.doc.select('corpusID=?', (corpusID,))
 
     def getDocuments(self):
-        return self.Document.select()
+        return self.doc.select()
 
     def getDocument(self, docID):
-        return self.Document.getByID(docID)
+        return self.doc.by_id(docID)
 
     def getDocumentByName(self, doc_name):
-        return self.Document.select('name=?', [doc_name])
+        return self.doc.select('name=?', (doc_name,))
 
     def getSentences(self, docID, add_dummy_parses=True):
         if add_dummy_parses:
@@ -291,53 +220,40 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             WHERE documentID = ?
             GROUP BY sentenceID ORDER BY sentence.ID;
             '''
-            rows = self.orm_manager.selectRows(query, (docID,))
-            sents = []
-            for row in rows:
-                sent = Sentence(row['ident'], row['text'], row['documentID'])
-                sent.ID = row['ID']
-                sent.interpretations = [None] * row['parse_count']
-                sents.append(sent)
-            return sents
+            with self.ctx() as ctx:
+                rows = ctx.execute(query, (docID,))
+                sents = []
+                for row in rows:
+                    sent = self.sentence.to_obj(row)
+                    sent.interpretations = [None] * row['parse_count']
+                    sents.append(sent)
+                return sents
         else:
             return self.Sentence.select('documentID=?', (docID,))
 
-    def buildContext(self):
-        context = DBContext(self.orm_manager.getConnection())
-        context.cur.execute("PRAGMA cache_size=80000000")
-        context.cur.execute("PRAGMA journal_mode=MEMORY")
-        context.cur.execute("PRAGMA temp_store=MEMORY")
-        # context.cur.execute("PRAGMA count_changes=OFF")
-        return context
-
     def query(self, query_obj):
-        return self.orm_manager.selectRows(query_obj.query, query_obj.params)
+        return self.ds.select(query_obj.query, query_obj.params)
 
-    def saveSentence(self, a_sentence, context=None, auto_flush=True):
+    def saveSentence(self, a_sentence, ctx=None):
         """
         Complicated queries
         """
         if a_sentence is None:
-            raise Exception("Sentence object cannot be None")
-        if context is None:
-            context = self.buildContext()
+            raise ValueError("Sentence object cannot be None")
         if not a_sentence.ID:
+            # choose a new ident
             if a_sentence.ident in (-1, '-1', '', None):
                 # create a new ident
-                a_sentence.ident = self.orm_manager.selectScalar('SELECT max(id)+1 FROM sentence')
+                a_sentence.ident = self.ds.select_scalar('SELECT max(id)+1 FROM sentence')
                 if not a_sentence.ident:
                     a_sentence.ident = 1
-                print("New ident: {}".format(a_sentence.ident))
-            else:
-                print("No need: {}".format(a_sentence.ident))
-            self.Sentence.save(a_sentence, context=context)
+            # save sentence
+            a_sentence.ID = self.sentence.save(a_sentence, ctx=ctx)
             # save interpretations
             for interpretation in a_sentence.interpretations:
                 # Update sentenceID
                 interpretation.sentenceID = a_sentence.ID
-                self.saveInterpretation(interpretation, doc_id=a_sentence.documentID, context=context, auto_flush=auto_flush)
-            if auto_flush:
-                context.flush()
+                self.saveInterpretation(interpretation, doc_id=a_sentence.documentID, ctx=ctx)
         else:
             # update sentence
             pass
@@ -346,48 +262,50 @@ class SQLiteCorpusDAO(CorpusORMSchema):
 
     def deleteInterpretation(self, interpretationID):
         # delete all DMRS link, node
-        self.orm_manager.execute("DELETE FROM dmrs_link WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
-        self.orm_manager.execute("DELETE FROM dmrs_node WHERE dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)", (interpretationID,))
-        self.orm_manager.execute("DELETE FROM dmrs_node_sortinfo WHERE dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE interpretationID=?))", (interpretationID,))
+        self.dmrs_link.delete('dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)', (interpretationID,))
+        self.dmrs_node_sortinfo.delete('dmrs_nodeID IN (SELECT ID FROM dmrs_node WHERE dmrsID IN (SELECT ID from dmrs WHERE interpretationID=?))', (interpretationID,))
+
+        self.dmrs_node.delete('dmrsID IN (SELECT ID FROM dmrs WHERE interpretationID=?)', (interpretationID,))
         # delete all DMRS
-        self.orm_manager.execute("DELETE FROM dmrs WHERE interpretationID=?", (interpretationID,))
-        # delete all parse_raw
-        self.orm_manager.execute("DELETE FROM parse_raw WHERE interpretationID=?", (interpretationID,))
-        self.orm_manager.execute("DELETE FROM interpretation WHERE ID=?", (interpretationID,))
+        self.dmrs.delete("interpretationID=?", (interpretationID,))
+        # delete parse_raws
+        self.parse_raw.delete("interpretationID=?", (interpretationID,))
+        # delete interpretations
+        self.interpretation.delete("ID=?", (interpretationID,))
 
     def updateInterpretation(self, interpretation):
         raise NotImplementedError
 
-    def saveInterpretation(self, interpretation, doc_id, context=None, auto_flush=True):
-        self.Interpretation.save(interpretation, context=context)
+    def saveInterpretation(self, interpretation, doc_id, ctx=None):
+        interpretation.ID = self.interpretation.save(interpretation, ctx=ctx)
         # Save raw
         for raw in interpretation.raws:
             raw.interpretationID = interpretation.ID
-            self.ParseRaw.save(raw, context=context)
+            self.parse_raw.save(raw, ctx=ctx)
         # Save DMRS
         for dmrs in interpretation.dmrs:
             dmrs.interpretationID = interpretation.ID
-            self.DMRS.save(dmrs, context=context)
+            dmrs.ID = self.dmrs.save(dmrs, ctx=ctx)
             # save nodes
             for node in dmrs.nodes:
                 node.dmrsID = dmrs.ID
                 # save realpred
                 if node.rplemma:
                     # Escape lemma
-                    lemma = self.lemmaCache.getByValue(node.rplemma, context=context)
+                    lemma = self.lemmaCache.getByValue(node.rplemma, ctx=ctx)
                     node.rplemmaID = lemma.ID
                 # save gpred
                 if node.gpred:
-                    gpred_value = self.gpredCache.getByValue(node.gpred, context=context)
+                    gpred_value = self.gpredCache.getByValue(node.gpred, ctx=ctx)
                     node.gpred_valueID = gpred_value.ID
                 # save sense
                 if node.sense:
                     node.synsetid = node.sense.synsetid
                     node.synset_score = node.sense.score
-                self.Node.save(node, context=context)
+                node.ID = self.node.save(node, ctx=ctx)
                 # save sortinfo
                 node.sortinfo.dmrs_nodeID = node.ID
-                self.SortInfo.save(node.sortinfo, context=context)
+                self.sortinfo.save(node.sortinfo, ctx=ctx)
             # save links
             for link in dmrs.links:
                 link.dmrsID = dmrs.ID
@@ -395,103 +313,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                 link.toNodeID = link.toNode.ID
                 if link.rargname is None:
                     link.rargname = ''
-                self.Link.save(link, context)
-
-    def searchInterpretations(self, mode=None, rargname=None, post=None, lemma=None, limit=50):
-        query = '''
-        SELECT interpretation.ID as interpretationID, sentenceID as sentenceID, text FROM interpretation
-        LEFT JOIN sentence ON sentenceID = sentence.ID
-        {condition}
-        '''
-        
-        link_conditions_template = '''
-        interpretation.ID IN
-            (SELECT interpretationID from dmrs WHERE 
-            dmrs.ID IN ( SELECT dmrsID 
-                    FROM dmrs_link 
-                        LEFT JOIN dmrs_link_post ON dmrs_link_post.dmrs_linkID = dmrs_link.ID
-                        LEFT JOIN dmrs_link_rargname ON dmrs_link_rargname.dmrs_linkID = dmrs_link.ID
-                    {link_conditions} LIMIT ?)
-            )
-        '''
-        node_conditions_template = '''
-        interpretation.ID IN
-            (SELECT interpretationID from dmrs WHERE 
-            dmrs.ID IN ( SELECT dmrsID 
-                    FROM dmrs_node_realpred AS "realpred" 
-                        LEFT JOIN dmrs_node ON realpred.dmrs_nodeID = dmrs_node.ID 
-                    {node_conditions} LIMIT ?)
-            )
-        '''
-        interpretation_condition = ''
-        link_conditions = ''
-        node_conditions = ''
-        conditions = []
-        params = []
-
-        # Interpretation condition
-        if mode:
-            interpretation_condition += 'mode = ?'
-            conditions.append(interpretation_condition)
-            params.append(mode)
-
-        # Node condition
-        if lemma:
-            node_conditions += ' realpred.lemmaID = (SELECT ID FROM dmrs_node_realpred_lemma WHERE lemma=?) '
-            params.append(lemma)
-        if len(node_conditions) > 0:
-            node_conditions = 'WHERE ' + node_conditions
-            node_conditions = node_conditions_template.format(node_conditions=node_conditions)
-            conditions.append(node_conditions)
-            
-        # Link condition
-        if rargname:
-            link_conditions += ' dmrs_link_rargname.value = ?'
-            params.append(rargname)
-        if post:
-            link_conditions += ' dmrs_link_post.value = ?'
-            params.append(post)
-        if len(link_conditions) > 0:
-            link_conditions = 'WHERE ' + link_conditions
-            link_conditions = link_conditions_template.format(link_conditions=link_conditions)
-            conditions.append(link_conditions)
-            
-        # Final condition
-        condition = ' AND '.join(conditions)
-        if len(condition) > 0:
-            condition = 'WHERE ' + condition
-
-        params.append(limit)
-        logger.debug(("Query: %s" % query.format(condition=condition)))
-        logger.debug(("Params: %s" % params))
-        rows = self.orm_manager.selectRows(query.format(condition=condition), params)
-        # logger.debug("rows: %s" % rows)
-        if rows:
-            logger.debug(("Found: %s presentation(s)" % len(rows)))
-        else:
-            logger.debug("None was found!")
-
-        sentences = []
-        sentences_by_id = {}
-        for row in rows:
-            interpretationID = row['interpretationID']
-            sentenceID = row['sentenceID']
-            if sentenceID not in sentences_by_id:
-                # update interpretation
-                a_interpretation = Interpretation(ID=interpretationID)
-                # self.getInterpretation(a_interpretation)
-                sentences_by_id[sentenceID].interpretations.append(a_interpretation)
-            else:
-                a_sentence = self.getSentence(sentenceID, interpretationIDs=[], skip_details=True)
-                a_sentence.interpretations = []
-                a_interpretation = Interpretation(ID=interpretationID)
-                a_sentence.interpretations.append(a_interpretation)
-                sentences.append(a_sentence)
-                sentences_by_id[sentenceID] = a_sentence
-            # sentences.append(a_sentence)
-        
-        logger.debug(("Sentence count: %s" % len(sentences)))
-        return sentences
+                self.link.save(link, ctx=ctx)
 
     def build_search_result(self, rows, no_more_query=False):
         if rows:
@@ -529,64 +351,15 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
 
-    def getLemma(self, lemma):
-        lemmata = self.Lemma.select("lemma=?", [lemma])
-        if len(lemmata) == 1:
-            return lemmata[0]
-        else:
-            return None
-
-    def searchByLemma(self, lemma, limit=1000):
-        lemma = self.getLemma(lemma)
-        if lemma is None:
-            return []
-        else:
-            logger.debug(lemma)
-            lemmaID = lemma.ID
-            
-        query = '''
-            SELECT DISTINCT interpretation.sentenceID, dmrs.interpretationID, sentence.text
-            FROM dmrs_node_realpred "realpred"
-                LEFT JOIN dmrs_node "node" ON node.ID = realpred.dmrs_nodeID
-                LEFT JOIN dmrs ON node.dmrsID = dmrs.ID
-                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
-                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
-            WHERE realpred.lemmaID = ?
-            LIMIT ?
-        '''
-        params = [lemmaID, limit]
-
-        logger.debug(("Query: %s" % query))
-        logger.debug(("Params: %s" % params))
-        rows = self.orm_manager.selectRows(query, params)
-        return self.build_search_result(rows)
-    
-    def searchByCarg(self, carg, limit=1000):
-        query ='''
-            SELECT DISTINCT interpretation.sentenceID,dmrs.interpretationID, sentence.text
-            FROM dmrs_node "node"
-                LEFT JOIN dmrs ON node.dmrsID = dmrs.ID
-                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
-                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
-            WHERE node.carg = ?
-            LIMIT ?
-        '''
-        params = [carg, limit]
-        
-        logger.debug(("Query: %s" % query))
-        logger.debug(("Params: %s" % params))
-        rows = self.orm_manager.selectRows(query, params)
-        return self.build_search_result(rows)
-
     def getInterpretation(self, a_interpretation):
         # retrieve all DMRSes
-        self.DMRS.select('interpretationID=?', [a_interpretation.ID], a_interpretation.dmrs)
-        for a_dmrs in a_interpretation.dmrs:                
+        a_interpretation.dmrs = self.dmrs.select('interpretationID=?', (a_interpretation.ID,))
+        for a_dmrs in a_interpretation.dmrs:
             # retrieve all nodes
-            self.Node.select('dmrsID=?', [a_dmrs.ID], a_dmrs.nodes)
+            a_dmrs.nodes = self.node.select('dmrsID=?', (a_dmrs.ID,))
             for a_node in a_dmrs.nodes:
                 # retrieve sortinfo
-                list_sortinfo = self.SortInfo.select('dmrs_nodeID=?', [a_node.ID])
+                list_sortinfo = self.sortinfo.select('dmrs_nodeID=?', (a_node.ID,))
                 if len(list_sortinfo) == 1:
                     a_node.sortinfo = list_sortinfo[0]
                 # retrieve realpred
@@ -604,18 +377,18 @@ class SQLiteCorpusDAO(CorpusORMSchema):
                     sense_info.pos = a_node.synsetid[-1]
                     a_node.sense = sense_info
             # retrieve all links
-            self.Link.select('dmrsID=?', [a_dmrs.ID], a_dmrs.links)
+            a_dmrs.links = self.link.select('dmrsID=?', (a_dmrs.ID,))
             # update link node
             for a_link in a_dmrs.links:
                 a_link.fromNode = a_dmrs.getNodeById(a_link.fromNodeID, True)[0]
                 a_link.toNode = a_dmrs.getNodeById(a_link.toNodeID, True)[0]
         return a_interpretation
 
-    def saveParseRaw(self, a_raw, context=None):
-        self.ParseRaw.save(a_raw, context=context)
+    def saveParseRaw(self, a_raw, ctx=None):
+        self.parse_raw.save(a_raw, ctx=ctx)
 
     def get_raw(self, interpretationID, interpretation=None):
-        raws = self.ParseRaw.select('interpretationID=?', (interpretationID,))
+        raws = self.parse_raw.select('interpretationID=?', (interpretationID,))
         if interpretation is not None:
             for raw in raws:
                 raw.interpretationID = interpretation.ID
@@ -623,7 +396,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
         return raws
 
     def getSentence(self, sentenceID, mode=None, interpretationIDs=None, skip_details=False, get_raw=True):
-        a_sentence = self.Sentence.getByID(str(sentenceID))
+        a_sentence = self.sentence.by_id(sentenceID)
         if a_sentence is not None:
             # retrieve all interpretations
             conditions = 'sentenceID=?'
@@ -634,7 +407,7 @@ class SQLiteCorpusDAO(CorpusORMSchema):
             if interpretationIDs and len(interpretationIDs) > 0:
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(interpretationIDs))))
                 params.extend(interpretationIDs)
-            self.Interpretation.select(conditions, params, a_sentence.interpretations)
+            a_sentence.interpretations = self.interpretation.select(conditions, params)
             for a_interpretation in a_sentence.interpretations:
                 if get_raw:
                     self.get_raw(a_interpretation.ID, a_interpretation)
@@ -648,7 +421,44 @@ class SQLiteCorpusDAO(CorpusORMSchema):
     def delete_sent(self, sentenceID):
         # delete all interpretation
         sent = self.getSentence(sentenceID, skip_details=True, get_raw=False)
+        # delete interpretations
         if sent is not None:
             for i in sent:
                 self.deleteInterpretation(i.ID)
-        self.orm_manager.execute("DELETE FROM Sentence WHERE ID=?", (sentenceID,))
+        # delete sentence obj
+        self.sentence.delete("ID=?", (sentenceID,))
+
+    def get_annotations(self, sentenceID, sent_obj):
+        sent = self.getSentence(sentenceID, skip_details=True, get_raw=False)
+        # select words
+        # select concepts
+        sent.words = self.Word.select("sid=?", (sentenceID,))
+        wmap = {w.ID: w for w in sent.words}
+        sent.concepts = self.Concept.select("sid=?", (sentenceID,))
+        cmap = {c.ID: c for c in sent.concepts}
+        # link concept-word
+        links = self.CWLink.select("cid IN (SELECT ID from concept WHERE sid=?)", (sentenceID,))
+        for lnk in links:
+            cmap[lnk.cid].words.append(wmap[lnk.wid])
+        # return annotation
+        return sent
+
+    def save_annotations(self, sent_obj, ctx=None):
+        if ctx:
+            self.save_annotations_with_context(sent_obj, ctx)
+        else:
+            with self.ctx() as ctx:
+                self.save_annotations_with_context(sent_obj, ctx)
+
+    def save_annotations_with_context(self, sent_obj, ctx):
+        for word in sent_obj.words:
+            word.sid = word.sent.ID if word.sent else word.sid
+            word.ID = self.word.save(word, ctx=ctx)
+        for concept in sent_obj.concepts:
+            concept.sid = concept.sent.ID if concept.sent else concept.sid
+            concept.ID = self.concept.save(concept, ctx=ctx)
+            for word in concept.words:
+                # save links
+                print("Saving", CWLink(wid=word.ID, cid=concept.ID))
+                self.cwl.save(CWLink(wid=word.ID, cid=concept.ID), ctx=ctx)
+                pass

@@ -19,7 +19,6 @@ Data models for VisualKopasu project.
 ########################################################################
 
 import logging
-from .liteorm import SmartRecord
 from delphin.mrs import Pred
 from coolisf.model import Sentence as ISFSentence
 
@@ -40,30 +39,38 @@ logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 
 
-class Corpus(SmartRecord):
+class Corpus(object):
     '''
     A corpus wrapper
     '''
-    def __init__(self, name=''):
+    def __init__(self, name='', title=''):
         self.ID = None
         self.name = name
+        self.title = title
         self.documents = []
         pass
 
 
-class Document(SmartRecord):
+class Document(object):
 
-    def __init__(self, name='', corpusID=None, title=''):
+    def __init__(self, name='', corpusID=None, title='', grammar=None, tagger=None, parse_count=None, lang=None):
         self.ID = None
         self.name = name
         self.corpusID = corpusID
         self.title = title if title else name
+        self.grammar = grammar
+        self.tagger = tagger
+        self.parse_count = parse_count
+        self.lang = lang
         self.corpus = None
         self.sentences = []
         pass
 
+    def __str__(self):
+        return "Doc#{id}".format(id=self.ID)
 
-class Sentence(SmartRecord):
+
+class Sentence(object):
 
     def __init__(self, ident=0, text='', documentID=None):
         self.ID = None
@@ -76,6 +83,10 @@ class Sentence(SmartRecord):
         self.filename = None
         # self.dmrs = []
         # self.parseTrees = []
+        self.words = []
+        self.concepts = []
+        self.cmap = {}  # concept.ID -> concept objects
+        self.wmap = {}  # word.ID -> word objects
 
     def getInactiveInterpretation(self):
         return [repr for repr in self.interpretations if repr.mode == "inactive"]
@@ -106,6 +117,23 @@ class Sentence(SmartRecord):
     def __str__(self):
         return "({col}\{cor}\{did}\Sent#{i})`{t}`".format(col=self.collection, cor=self.corpus, did=self.documentID, i=self.ident, t=self.text)
 
+    def import_tags(self, tagged_sent):
+        # add words
+        word_map = {}
+        for idx, w in enumerate(tagged_sent):
+            # TODO: add POS if possible
+            wobj = Word(widx=idx, word=w.label, lemma=w.lemma if w.lemma else w.label, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
+            word_map[w] = wobj
+            self.words.append(wobj)
+        # add concepts
+        for idx, c in enumerate(tagged_sent.concepts):
+            cobj = Concept(cidx=idx, clemma=c.clemma, tag=c.tag, sent=self)
+            self.concepts.append(cobj)
+            # add cwlinks
+            for w in c.words:
+                wobj = word_map[w]
+                cobj.words.append(wobj)
+
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
         isfsent = ISFSentence(self.text, str(self.ID))
@@ -113,7 +141,7 @@ class Sentence(SmartRecord):
             # we should use XML first as it has sense information
             xml_raw = i.find_raw(ParseRaw.XML)
             if xml_raw is not None:
-                logger.warning("Using DMRS XML raw")
+                logger.debug("Using DMRS XML raw")
                 p = isfsent.add(dmrs_xml=xml_raw.text)
                 p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                 p.ident = i.rid
@@ -124,10 +152,34 @@ class Sentence(SmartRecord):
                     p = isfsent.add(mrs_str=mrs_raw.text)
                     p.ID = i.ID  # parse ID should have the same ID as interpretation obj
                     p.ident = i.rid
+                else:
+                    # TODO:build XML from DMRSes?
+                    pass
         return isfsent
 
 
-class Interpretation(SmartRecord):
+class ParseRaw(object):
+
+    JSON = 'json'
+    XML = 'xml'
+    MRS = 'mrs'  # MRS string - e.g. ACE output
+
+    def __init__(self, text='', ID=None, ident='', rtype=XML):
+        self.ID = ID
+        self.ident = ident
+        self.text = text
+        self.rtype = rtype
+
+    def __repr__(self):
+        txt = self.text if len(self.text) < 50 else self.text[:25] + '...' + self.text[-25:]
+        return "[{}:{}]".format(self.rtype, txt.strip())
+
+    def __str__(self):
+        # return repr(self)
+        return self.text
+
+
+class Interpretation(object):
 
     INACTIVE = 0
     ACTIVE = 1
@@ -144,32 +196,14 @@ class Interpretation(SmartRecord):
     def __str__(self):
         return u"Interpretation [ID={rid}, mode={mode}]".format(rid=self.rid, mode=self.mode)
 
+    def add_raw(self, text='', ID=None, ident='', rtype=ParseRaw.XML):
+        self.raws.append(ParseRaw(text, ID, ident, rtype))
+
     def find_raw(self, rtype):
         for r in self.raws:
             if r.rtype == rtype:
                 return r
         return None
-
-
-class ParseRaw(SmartRecord):
-
-    JSON = 'json'
-    XML = 'xml'
-    MRS = 'mrs'  # MRS string - e.g. ACE output
-
-    def __init__(self, text='', ID=None, ident='', rtype=JSON):
-        self.ID = ID
-        self.ident = ident
-        self.text = text
-        self.rtype = rtype
-
-    def __repr__(self):
-        txt = self.text if len(self.text) < 50 else self.text[:25] + '...' + self.text[-25:]
-        return "[{}:{}]".format(self.rtype, txt.strip())
-
-    def __str__(self):
-        # return repr(self)
-        return self.text
 
 
 class ParseTree:
@@ -194,7 +228,7 @@ class ParseNode:
         return u"{type}: {value}".format(type=self.nodetype, value=self.value)
 
 
-class DMRS(SmartRecord):
+class DMRS(object):
     """
     DMRS object default constructor
     """
@@ -225,10 +259,10 @@ class DMRS(SmartRecord):
         nodes = [str(n) for n in self.nodes if str(n.nodeid) != '0']
         links = [str(l) for l in self.links]
 
-        return "dmrs {{\n{nl}\n}} ".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nl=' ; \n'.join(nodes + links))
+        return "dmrs {{\n{nl}\n}} ".format(ident=self.ident, cfrom=self.cfrom, to=self.cto, surface=self.surface, nl=';\n'.join(nodes + links))
 
 
-class Node(SmartRecord):
+class Node(object):
     """
     Node object constructor
     """
@@ -264,12 +298,12 @@ class Node(SmartRecord):
             pred = Pred.realpred(self.rplemma, self.rppos, self.rpsense if self.rpsense else None).short_form()
         sensetag = ''
         if self.sense:
-            sensetag = 'synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma, self.sense.score)
-        carg = 'CARG=+' if self.carg else ''
-        return "{nodeid} [ {pred}<{cfrom}:{cto}> {sortinfo} {sensetag} {carg} ]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, sensetag=sensetag, pred=pred, carg=carg)
+            sensetag = ' synsetid={} synset_lemma={} synset_score={}'.format(self.sense.synsetid, self.sense.lemma, self.sense.score)
+        carg = '("{}")'.format(self.carg) if self.carg else ''
+        return "{nodeid} [{pred}<{cfrom}:{cto}>{carg} {sortinfo}{sensetag}]".format(nodeid=self.nodeid, cfrom=self.cfrom, cto=self.cto, sortinfo=self.sortinfo, sensetag=sensetag, pred=pred, carg=carg)
 
 
-class Sense(SmartRecord):
+class Sense(object):
     def __init__(self, lemma='', pos='', synsetid='', score=0):
         self.lemma = lemma
         self.pos = pos
@@ -277,7 +311,7 @@ class Sense(SmartRecord):
         self.score = score
 
 
-class SortInfo(SmartRecord):
+class SortInfo(object):
     """
     sortinfo of a Node
     """
@@ -304,7 +338,7 @@ class SortInfo(SmartRecord):
             return ' '.join(('{}={}'.format(k.upper(), str(v)) for (k, v) in valdict))
 
 
-class GpredValue(SmartRecord):
+class GpredValue(object):
     """
     Gpred (grammar predicate) value
     """
@@ -312,8 +346,11 @@ class GpredValue(SmartRecord):
         self.ID = None
         self.value = value
 
+    def __str__(self):
+        return "#{}({})".format(self.ID, self.value)
 
-class Lemma(SmartRecord):
+
+class Lemma(object):
     """
     Lemma of Real pred
     """
@@ -321,8 +358,11 @@ class Lemma(SmartRecord):
         self.ID = None
         self.lemma = lemma
 
+    def __str__(self):
+        return "#{}({})".format(self.ID, self.lemma)
 
-class Link(SmartRecord):
+
+class Link(object):
     """
     DMRS links
     """
@@ -338,3 +378,67 @@ class Link(SmartRecord):
 
     def __str__(self):
         return "{fromNode}:{rargname}/{post} -> {toNode}".format(fromNode=self.fromNode.nodeid, toNode=self.toNode.nodeid, post=self.post if self.post else '', rargname=self.rargname if self.rargname else '')
+
+
+class Word(object):
+    """
+    Human annotator layer: Words
+    """
+    def __init__(self, widx=-1, word='', lemma='', pos='', cfrom=-1, cto=-1, sent=None):
+        self.ID = None
+        if sent:
+            self.sid = sent.ID
+            self.sent = sent
+        else:
+            self.sid = -1
+        self.widx = widx
+        self.word = word
+        self.pos = pos
+        self.lemma = lemma
+        self.cfrom = cfrom
+        self.cto = cto
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "`{w}`<{cf}:{ct}>".format(w=self.word, cf=self.cfrom, ct=self.cto)
+
+
+class Concept(object):
+    """
+    Human annotator layer: Concepts
+    """
+    def __init__(self, cidx=-1, clemma=None, tag=None, sent=None):
+        self.ID = None
+        if sent:
+            self.sid = sent.ID
+            self.sent = sent
+        else:
+            self.sid = -1
+            self.sent = None
+        self.cidx = cidx
+        self.clemma = clemma
+        self.tag = tag
+        self.words = []
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "`{lemma}`:{tag}".format(lemma=self.clemma, tag=self.tag)
+
+
+class CWLink(object):
+    """
+    Human annotator layer: Word-Concept Links
+    """
+    def __init__(self, wid=-1, cid=-1):
+        self.wid = wid
+        self.cid = cid
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "c#{}->w#{}".format(self.cid, self.wid)

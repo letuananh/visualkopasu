@@ -47,13 +47,15 @@ import logging
 import unittest
 
 from chirptext.leutile import FileHelper
-from coolisf.util import Grammar
-from coolisf.model import Sentence, Parse, MRS, DMRS
+from chirptext.deko import txt2mecab
+from chirptext.texttaglib import TaggedSentence
+from coolisf.util import GrammarHub
+from coolisf import Lexsem, tag_gold
 
-from visualkopasu.kopasu.util import getSentenceFromRawXML
-from visualkopasu.kopasu.util import getSentenceFromFile, getSentenceFromXML
-from visualkopasu.kopasu.util import getDMRSFromXML
-from visualkopasu.kopasu.util import RawXML
+from visualkopasu.kopasu.xmldao import getSentenceFromRawXML
+from visualkopasu.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML
+from visualkopasu.kopasu.xmldao import getDMRSFromXML
+from visualkopasu.kopasu.xmldao import RawXML
 from visualkopasu.kopasu.bibman import Biblioteche, Biblioteca
 from visualkopasu.kopasu.models import Document
 from visualkopasu.kopasu.models import ParseRaw
@@ -66,41 +68,6 @@ TEST_FILE = os.path.join(TEST_DIR, '10565.xml.gz')
 TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 
 
-class TestRawXML(unittest.TestCase):
-
-    ERG = Grammar()
-
-    def test_read_from_xml(self):
-        raw = RawXML.from_file(TEST_FILE)
-        self.assertEqual(raw.text, 'I took a step forward.')
-        self.assertEqual(len(raw), 1)
-        # should have both MRS and DMRS
-        self.assertGreater(len(raw[0].mrs_str()), 0)
-        logging.debug(raw[0].mrs.text)
-        self.assertGreater(len(raw[0].dmrs_str()), 0)
-        logging.debug(raw[0].dmrs_str())
-
-    def test_read_10044(self):
-        raw = RawXML.from_file(TEST_FILE2)
-        # test RawXML.RawParse > DMRS and MRS
-        m = MRS(raw[0].mrs.text)
-        self.assertIsNotNone(m.obj())
-        self.assertIsNotNone(m.to_dmrs())
-        # save 10044 to XML file
-        x = raw[0].dmrs_str()
-        f = os.path.join(TEST_DIR, 'v10044.xml')
-        with open(f, 'w') as outfile:
-            outfile.write(x)
-        # read it back
-        print("Reading from {}".format(f))
-        with open(f, 'r') as infile:
-            x = infile.read()
-            print(len(x))
-            d = DMRS(x)
-            self.assertIsNotNone(d.obj())
-        # seems OK
-
-
 class TestDAOBase(unittest.TestCase):
 
     # We create a dummy corpora collection (visko unittest collection)
@@ -109,7 +76,8 @@ class TestDAOBase(unittest.TestCase):
     corpus_name = 'testcorpus'
     doc_name = '1stdoc'
     bib = Biblioteca(bibname, root=bibroot)
-    ERG = Grammar()
+    ghub = GrammarHub()
+    ERG = ghub.ERG
 
     @classmethod
     def setUpClass(cls):
@@ -118,7 +86,6 @@ class TestDAOBase(unittest.TestCase):
         FileHelper.create_dir(cls.bibroot)
         db_path = cls.bib.sqldao.db_path
         logging.debug("Setting up database file at %s" % (db_path,))
-        cls.bib.sqldao.prepare(backup=False, silent=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -174,8 +141,7 @@ class TestDMRSDAO(TestDAOBase):
 
     def test_xml_dao(self):
         logging.info("Test ISF sense reading")
-        ERG = Grammar()
-        sent = ERG.parse('The dog barks.')
+        sent = self.ERG.parse('The dog barks.')
         # ISF sentence can be exported to visko directly
         sent_node = sent.to_visko_xml()
         self.assertIsNotNone(sent_node)
@@ -229,9 +195,14 @@ class TestDMRSSQLite(TestDAOBase):
     def ensure_corpus(self):
         ''' Ensure that testcorpus exists'''
         logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
-        self.bib.create_corpus(self.corpus_name)
-        c = self.bib.sqldao.getCorpus(self.corpus_name)
-        return c[0]
+        # ensure corpus
+        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
+        if not corpuses:
+            self.bib.create_corpus(self.corpus_name)
+            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
+        else:
+            corpus = corpuses[0]
+        return corpus
 
     def ensure_doc(self):
         ''' Ensure that testcorpus exists'''
@@ -240,7 +211,9 @@ class TestDMRSSQLite(TestDAOBase):
         if not docs:
             doc = Document(name=self.doc_name, corpusID=corpus.ID)
             self.bib.sqldao.saveDocument(doc)
-        return self.bib.sqldao.getDocumentByName(self.doc_name)[0]
+        else:
+            doc = docs[0]
+        return doc
 
     def ensure_sent(self):
         doc = self.ensure_doc()
@@ -253,7 +226,7 @@ class TestDMRSSQLite(TestDAOBase):
 
     def test_create_a_corpus(self):
         logging.info("Test creating a new corpus")
-        self.bib.create_corpus(self.corpus_name)
+        self.ensure_corpus()
         # test retriving created corpus
         logging.debug("Connecting to {}".format(self.bib.sqldao.db_path))
         corpora = self.bib.sqldao.getCorpus(self.corpus_name)
@@ -273,9 +246,7 @@ class TestDMRSSQLite(TestDAOBase):
     def test_create_document(self):
         logging.info("Test creating document")
         corpus = self.ensure_corpus()
-        doc = Document(name=self.doc_name, corpusID=corpus.ID)
-        self.bib.sqldao.saveDocument(doc)
-
+        doc = self.ensure_doc()
         # test retrieving doc
         doc = self.bib.sqldao.getDocumentByName(self.doc_name)[0]
         self.assertIsNotNone(doc)
@@ -304,8 +275,8 @@ class TestDMRSSQLite(TestDAOBase):
         self.assertEqual(repr(actual_sentence[0].raws[1]), '[xml:<dmrs cfrom="-1" cto="-1"...   </link>\n    </dmrs>]')
 
     def test_get_sentences_with_dummy(self):
+        doc = self.ensure_doc()
         self.ensure_sent()
-        doc = self.bib.sqldao.getDocumentByName(self.doc_name)[0]
         sents = self.bib.sqldao.getSentences(doc.ID, True)
         self.assertGreater(len(sents), 0)
         self.assertEqual(len(sents[0]), 1)
@@ -316,7 +287,7 @@ class TestDMRSSQLite(TestDAOBase):
         raw = ParseRaw('<xml></xml>', rtype=ParseRaw.XML)
         self.assertEqual(raw.rtype, ParseRaw.XML)
         jraw = ParseRaw()
-        self.assertEqual(jraw.rtype, ParseRaw.JSON)
+        self.assertEqual(jraw.rtype, ParseRaw.XML)
 
         # Test empty select
         sent = self.ensure_sent()
@@ -329,6 +300,99 @@ class TestDMRSSQLite(TestDAOBase):
         logging.debug(raws)
         pass
 
+    def test_doc(self):
+        self.ensure_sent()
+        dao = self.bib.sqldao
+        doc = dao.getDocumentByName(self.doc_name)[0]
+        # clear info
+        # Test store grammar, tagger, parse_count and lang
+        doc.grammar = None
+        doc.tagger = None
+        doc.parse_count = None
+        doc.lang = None
+        dao.saveDocument(doc)
+        doc = dao.getDocumentByName(self.doc_name)[0]
+        print(doc)
+        self.assertIsNone(doc.grammar)
+        self.assertIsNone(doc.tagger)
+        self.assertIsNone(doc.parse_count)
+        self.assertIsNone(doc.lang)
+        # Test store grammar, tagger, parse_count and lang
+        doc.grammar = "ERG"
+        doc.tagger = "lelesk"
+        doc.parse_count = 5
+        doc.lang = "en"
+        dao.saveDocument(doc)
+        doc = dao.getDocumentByName(self.doc_name)[0]
+        self.assertEqual(doc.grammar, "ERG")
+        self.assertEqual(doc.tagger, "lelesk")
+        self.assertEqual(doc.parse_count, 5)
+        self.assertEqual(doc.lang, "en")
+
+    def test_clear_doc_info(self):
+        self.ensure_sent()
+        dao = self.bib.sqldao
+        doc = dao.getDocumentByName(self.doc_name)[0]
+        # clear info
+        # Test store grammar, tagger, parse_count and lang
+        doc.grammar = None
+        doc.tagger = None
+        doc.parse_count = None
+        doc.lang = None
+        dao.saveDocument(doc)
+        doc = dao.getDocumentByName(self.doc_name)[0]
+        print(doc)
+        self.assertIsNone(doc.grammar)
+        self.assertIsNone(doc.tagger)
+        self.assertIsNone(doc.parse_count)
+        self.assertIsNone(doc.lang)
+
+
+class TestHumanAnnotation(TestDAOBase):
+
+    def test_adding_human_annotations(self):
+        txt = "ロボットの子は猫が好きです。"
+        sent = self.ghub.JACYMC.parse("ロボットの子は猫が好きです。", 1)
+        self.assertGreaterEqual(len(sent), 1)
+        # Create gold profile now ...
+        tagged_sent = TaggedSentence(sent.text)
+        words = txt2mecab(txt).words
+        tagged_sent.import_tokens(words)
+        # Add concepts
+        tagged_sent.tag('ロボット', '02761392-n', 0)  # ロボット: 02761392-n
+        tagged_sent.tag('猫', '02121620-n', 4)  # 猫: 02121620-n
+        tagged_sent.tag('好き', '01292683-a', 6)  # 好き: 01292683-a
+        # make robotto-no-ko a MWE
+        tagged_sent.tag('ロボットの子', '10285313-n', 0, 1, 2)  # 子: 10285313-n (男の子)
+        # Now perform sense-tagging
+        tag_gold(sent[0].dmrs(), tagged_sent, sent.text, mode=Lexsem.STRICT)
+        print(sent[0].dmrs().tags)
+        # to visko
+        vsent = getSentenceFromXML(sent.tag_xml().to_visko_xml())
+        vsent.import_tags(tagged_sent)
+        print(vsent.words)
+        for c in vsent.concepts:
+            print(c, c.words)
+        # save to DB
+        dao = self.bib.sqldao
+        # ensure corpus
+        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
+        if not corpuses:
+            self.bib.create_corpus(self.corpus_name)
+            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
+        else:
+            corpus = corpuses[0]
+        # ensure doc
+        docs = dao.getDocumentByName(self.doc_name)
+        if not docs:
+            doc = Document(name=self.doc_name, corpusID=corpus.ID)
+            self.bib.sqldao.saveDocument(doc)
+        else:
+            doc = docs[0]
+        vsent.documentID = doc.ID
+        dao.saveSentence(vsent)
+        dao.save_annotations(vsent)
+
 
 class TestBiblioteche(TestDAOBase):
 
@@ -339,12 +403,13 @@ class TestBiblioteche(TestDAOBase):
         pass
 
 
+class TestNewDAO(unittest.TestCase):
+
+    def test_new_dao(self):
+        pass
+
+
 ########################################################################
 
-
-def main():
-    unittest.main()
-
-
 if __name__ == "__main__":
-    main()
+    unittest.main()

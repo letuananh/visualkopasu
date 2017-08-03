@@ -36,7 +36,7 @@ __status__ = "Prototype"
 ########################################################################
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 class SQLiteQuery:
@@ -327,11 +327,7 @@ class LiteSearchEngine:
                 return -1
             q.query = "SELECT COUNT(*) FROM (%s LIMIT ?)" % q.query
             q.params = q.params + [self.limit]
-            logger.debug(q)
-            rows = self.dao.query(q)
-            #logger.debug(rows)
-            if rows and len(rows) == 1 and len(rows[0]):
-                return rows[0][0]
+            return self.dao.query(q)[0][0]
         return -1
 
     def get_dmrs(self, dmrs_filter_query):
@@ -348,12 +344,34 @@ class LiteSearchEngine:
         rows = self.dao.query(query)
         return rows
 
+    def search_by_ident(self, ident):
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.interpretationID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
+            FROM dmrs
+                LEFT JOIN interpretation ON dmrs.interpretationID = interpretation.ID
+                LEFT JOIN sentence ON interpretation.sentenceID = sentence.ID
+                LEFT JOIN document ON sentence.documentID = document.ID
+                LEFT JOIN corpus ON document.corpusID = corpus.ID
+            WHERE sentence.ident = ?
+            LIMIT ?''',
+                            params=[ident, self.limit])
+        logger.debug(query)
+        rows = self.dao.query(query)
+        return rows
+
     def search(self, query_text):
         clauses = DMRSQueryParser.parse(query_text)
 
         if clauses is None:
             raise Exception("Invalid query (%s)" % (query_text,))
             return None
+        elif len(clauses) == 1 and len(clauses[0]) == 1 and clauses[0][0].startswith('#'):
+            # search by SID
+            rows = self.search_by_ident(clauses[0][0][1:])
+            # Build search results
+            results = self.dao.build_search_result(rows, True)
+            for res in results:
+                setattr(res, "collection_name", self.dao.name)
+            return results
 
         node_queries = []
         link_queries = []
@@ -394,7 +412,7 @@ class LiteSearchEngine:
         # Build search results
         results = self.dao.build_search_result(rows, True)
         for res in results:
-            res.set_property("collection_name", self.dao.name)
+            setattr(res, "collection_name", self.dao.name)
         return results
 
 

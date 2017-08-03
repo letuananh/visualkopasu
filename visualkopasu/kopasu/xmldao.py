@@ -19,14 +19,18 @@ XML-based data access layer for VisualKopasu project.
 import os.path
 import shutil
 import gzip
+import codecs
 import lxml
+from lxml import etree
 
+from chirptext.anhxa import update_data
 from chirptext.leutile import FileHelper
+from coolisf.model import Sentence as ISFSentence
 from visualkopasu.util import getLogger
-from .util import getSentenceFromFile
 from .util import getSubFolders
 from .util import getFiles
 from .util import is_valid_name
+from .models import Sentence, Interpretation, DMRS, ParseRaw, Node, SortInfo, Link, Sense
 
 logger = getLogger('visko.dao')
 
@@ -149,3 +153,230 @@ class XMLDocumentDAO:
         full_path = self.getPath(sentenceID)
         # Parse the file
         return getSentenceFromFile(full_path)
+
+
+class RawXML(object):
+    ''' Visko sentence in RAW XML format (preprocessor)
+    '''
+
+    def __init__(self, raw=None, xml=None):
+        self.raw = raw  # XML string
+        self.text = ''
+        self.xml = xml
+        self.parses = []
+        if self.raw is not None or self.xml is not None:
+            self.parse()
+
+    def parse(self):
+        if self.raw is not None:
+            logger.debug("RawXML: creating XML object from XML string")
+            self.xml = etree.XML(self.raw)
+        else:
+            self.raw = etree.tostring(self.xml, encoding='utf-8', pretty_print=True).decode('utf-8')
+        self.text = self.xml.find('text').text
+        for p in self.xml.findall('interpretation'):
+            mrs = p.findall('mrs')
+            dmrs = p.findall('dmrs')
+            parse = RawParse(p)
+            if not mrs:
+                logger.warning("MRS node does not exist")
+            elif len(mrs) == 1:
+                parse.mrs = mrs[0]
+            else:
+                logger.warning("Multiple MRS nodes")
+            if dmrs is not None and len(dmrs) == 1:
+                parse.dmrs = dmrs[0]
+            else:
+                logger.warning("Multiple DMRS nodes")
+            self.parses.append(parse)
+
+    def __iter__(self):
+        return iter(self.parses)
+
+    def __len__(self):
+        return len(self.parses)
+
+    def __getitem__(self, key):
+        return self.parses[key]
+
+    def __str__(self):
+        return "{} ({} parse(s))".format(self.text, len(self))
+
+    def to_isf(self):
+        sent = ISFSentence(self.text)
+        for p in self.parses:
+            sent.add(mrs_str=p.mrs.text)
+        return sent
+
+    @staticmethod
+    def from_file(filename):
+        ''' Read RawXML from .xml file or .gz file
+        '''
+        if filename.endswith('.gz'):
+            with gzip.open(filename, 'rt', encoding='utf-8') as gzfile:
+                return RawXML(gzfile.read())
+        else:
+            with codecs.open(filename, encoding='utf-8') as infile:
+                return RawXML(infile.read())
+
+
+class RawParse(object):
+    ''' A raw parse (e.g. ACE MRS string) '''
+
+    def __init__(self, node=None, mrs=None, dmrs=None):
+        self.node = node  # interpretation node
+        self.mrs = mrs  # from mrs string
+        self.dmrs = dmrs  # from dmrs_xml_str
+
+    def mrs_str(self):
+        return etree.tostring(self.mrs).decode('utf-8') if self.mrs is not None else ''
+
+    def dmrs_str(self):
+        return etree.tostring(self.dmrs).decode('utf-8') if self.dmrs is not None else ''
+
+
+def getSentenceFromFile(file_path):
+    ''' Get sentence from either .xml file or .gz file '''
+    raw = RawXML.from_file(file_path)  # supports both .xml file and .gz file now
+    filename = os.path.basename(file_path)
+    return getSentenceFromRawXML(raw, filename)
+
+
+def getSentenceFromXMLString(xmlcontent):
+    if isinstance(xmlcontent, etree._Element):
+        raw = RawXML(xml=xmlcontent)
+    else:
+        raw = RawXML(raw=xmlcontent)
+    return getSentenceFromRawXML(raw)
+
+
+def getSentenceFromXML(xml_node):
+    ''' etree node to Sentence object '''
+    return getSentenceFromRawXML(RawXML(xml=xml_node))
+
+
+def getSentenceFromRawXML(raw, filename=None):
+    # Build Sentence object
+    sid = raw.xml.attrib['id']
+    text = raw.xml.find('text').text
+    sentence = Sentence(sid, text)
+    if filename:
+        sentence.filename = filename
+
+    for idx, parse in enumerate(raw):
+        interpretation = Interpretation()
+        interpretation.rid = parse.node.attrib['id']
+        interpretation.mode = parse.node.attrib['mode']
+        if parse.mrs is not None:
+            # add raw MRS
+            interpretation.raws.append(ParseRaw(parse.mrs.text, rtype=ParseRaw.MRS))
+        if parse.dmrs is not None:
+            interpretation.raws.append(ParseRaw(parse.dmrs_str(), rtype=ParseRaw.XML))
+
+        sentence.interpretations.append(interpretation)
+        # XXX: parse all synthetic trees
+
+        # parse all DMRS
+        dmrs = getDMRSFromXML(parse.dmrs)
+        interpretation.dmrs.append(dmrs)
+    return sentence
+
+
+def getDMRSFromXMLString(xmlcontent):
+    '''
+        Get DMRS object from XML string
+    '''
+    root = etree.XML(xmlcontent)
+    if root.tag == 'interpretation':
+        root = root.findall('dmrs')[0]
+    return getDMRSFromXML(root)
+
+
+def getDMRSFromXML(dmrs_tag):
+    ''' Get DMRS from XML node
+    '''
+    dmrs = DMRS()
+    dmrs.ident = dmrs_tag.attrib['ident'] if 'ident' in dmrs_tag.attrib else ''
+    dmrs.cfrom = dmrs_tag.attrib['cfrom'] if 'cfrom' in dmrs_tag.attrib else ''
+    dmrs.cto = dmrs_tag.attrib['cto'] if 'cto' in dmrs_tag.attrib else ''
+    dmrs.surface = dmrs_tag.attrib['surface'] if 'surface' in dmrs_tag.attrib else ''
+
+    # parse all nodes inside
+    for node_tag in dmrs_tag.findall('node'):
+        temp_node = Node(node_tag.attrib['nodeid'], node_tag.attrib['cfrom'], node_tag.attrib['cto'])
+        update_data(node_tag.attrib, temp_node, *(x for x in ('surface', 'base', 'carg') if x in node_tag.attrib))
+        # temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
+
+        # Parse sense info
+        sensegold_tag = node_tag.find('sensegold')
+        if sensegold_tag is not None:
+            # if we have sensegold, use it instead
+            sense_info = Sense()
+            sense_info.lemma = sensegold_tag.attrib['lemma']
+            sense_info.synsetid = sensegold_tag.attrib['synsetid']
+            sense_info.pos = sense_info.synsetid[-1]
+            sense_info.score = '999'
+            temp_node.sense = sense_info
+            logger.debug("Using gold => %s" % (sense_info.synsetid))
+            pass
+        else:
+            sense_tag = node_tag.find('sense')
+            if sense_tag is not None:
+                sense_info = Sense()
+                update_data(sense_tag.attrib, sense_info)
+                temp_node.sense = sense_info
+
+        # TODO: parse sort info
+        sortinfo_tag = node_tag.find("sortinfo")
+        if sortinfo_tag is not None:
+            sortinfo = SortInfo()
+            update_data(sortinfo_tag.attrib, sortinfo)
+            temp_node.sortinfo = sortinfo
+        # FIXME: parse gpred
+        gpred_tag = node_tag.find("gpred")
+        if gpred_tag is not None:
+            temp_node.gpred = gpred_tag.text
+        # TODO: parse realpred
+        realpred_tag = node_tag.find("realpred")
+        if realpred_tag is not None:
+            if 'lemma' in realpred_tag.attrib:
+                temp_node.rplemma = realpred_tag.attrib['lemma']
+            if 'pos' in realpred_tag.attrib:
+                temp_node.rppos = realpred_tag.attrib['pos']
+            if 'sense' in realpred_tag.attrib:
+                temp_node.rpsense = realpred_tag.attrib['sense']
+        # Completed parsing, add the node_tag to DMRS object
+        dmrs.nodes.append(temp_node)
+        # end for nodes
+    # create a map of nodes (by id)
+    node_map = dict(list(zip([n.nodeid for n in dmrs.nodes], dmrs.nodes)))
+
+    # parse all links inside
+    for link_tag in dmrs_tag.findall('link'):
+        fromNodeID = link_tag.attrib['from']
+        toNodeID = link_tag.attrib['to']
+        if fromNodeID == '0':
+            # we need to create a dummy node with ID = 0
+            node_zero = Node('0')
+            node_zero.sortinfo = SortInfo()
+            node_zero.gpred = 'unknown_root'
+            node_map['0'] = node_zero
+            dmrs.nodes.append(node_zero)
+        if fromNodeID not in node_map or toNodeID not in node_map:
+            logger.error("ERROR: Invalid nodeID [%s -> %s] in link_tag: %s" % (fromNodeID, toNodeID, link_tag))
+        else:
+            fromNode = node_map[fromNodeID]
+            toNode = node_map[toNodeID]
+            temp_link = Link(fromNode, toNode)
+
+            # TODO: parse post
+            post_tag = link_tag.find("post")
+            if post_tag is not None:
+                temp_link.post = post_tag.text
+            rargname_tag = link_tag.find("rargname")
+            if rargname_tag is not None:
+                temp_link.rargname = rargname_tag.text
+            # end for link_tag
+            dmrs.links.append(temp_link)
+    # finished, add dmrs object to interpretation
+    return dmrs

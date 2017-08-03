@@ -16,10 +16,16 @@
   {% csrf_token %}
   <div class="input-group input-group-lg">
     <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
-    <span class="input-group-addon">Processor</span>
+    <span class="input-group-addon">WSD</span>
+    <select id="input_tagger" name="input_tagger" class="form-control input-sm" title="Tagger">
+      {% for t, txt in TAGGERS.items %}
+      <option {% if t == input_tagger %}selected="selected"{% endif %} value="{{t}}">{{txt}}</option>
+      {% endfor %}
+    </select>
+    <span class="input-group-addon">Grammar</span>
     <select id="input_parser" name="input_parser" class="form-control input-small" title="Processor">
-      {% for p in PROCESSORS %}
-      <option {% if p == input_parser %}selected="selected"{% endif %} value="{{p}}">{{p}}</option>
+      {% for p, txt in PROCESSORS.items %}
+      <option {% if p == input_parser %}selected="selected"{% endif %} value="{{p}}">{{txt}}</option>
       {% endfor %}
     </select>
     <span class="input-group-addon">Parse Count</span>

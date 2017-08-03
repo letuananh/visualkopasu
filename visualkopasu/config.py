@@ -35,9 +35,6 @@ class ViskoConfig:
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
 
-    # Setup scripts root
-    SETUP_SCRIPTS_ROOT = os.path.join(PROJECT_ROOT, 'visualkopasu', 'console', 'scripts')
-
     # Django database - DO NOT CHANGE THIS!
     DATABASES_default_ENGINE = 'django.db.backends.sqlite3'
     DATABASES_default_NAME = os.path.join(PROJECT_ROOT, 'data/visko.db')

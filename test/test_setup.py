@@ -48,9 +48,9 @@ import unittest
 
 from visualkopasu.kopasu import Biblioteca
 
-from visualkopasu.console.setup import parse_document
-from visualkopasu.console.setup import get_raw_doc_folder
-from visualkopasu.console.setup import convert_document
+from visualkopasu.merchant.redwood import parse_document
+from visualkopasu.tools import get_raw_doc_folder
+from visualkopasu.tools import convert_document
 from test.test_dmrs_dao import validate_sentence
 from visualkopasu.kopasu.util import is_valid_name
 
@@ -100,8 +100,6 @@ class TestConsoleSetup(unittest.TestCase):
         parse_document(raw_folder, testbib.textdao.path, corpus_name, doc_name)
 
         print("Test generated XML file")
-        # sent1010 = cb100dao.getSentence(1010)
-        # validate_sentence(self, sent1010)
         convert_document(collection_name, corpus_name, doc_name)
 
         print("DB: %s" % (testbib.sqldao.db_path,))
@@ -112,9 +110,5 @@ class TestConsoleSetup(unittest.TestCase):
 
 ########################################################################
 
-def main():
-    unittest.main()
-
-
 if __name__ == "__main__":
-    main()
+    unittest.main()

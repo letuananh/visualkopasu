@@ -25,9 +25,8 @@ import os
 import argparse
 
 from visualkopasu.config import ViskoConfig as vkconfig
-from visualkopasu.kopasu import Biblioteca
-from .simple_parser import parse_document
-from .text_to_sqlite import convert
+from visualkopasu.merchant.redwood import parse_document
+from visualkopasu.merchant.morph import xml2db
 
 ########################################################################
 
@@ -40,61 +39,40 @@ __maintainer__ = "Le Tuan Anh"
 __email__ = "tuananh.ke@gmail.com"
 __status__ = "Prototype"
 
+
 ########################################################################
-
-if sys.version_info >= (3, 0):
-    def confirm(msg='Do you want to proceed (yes/no)? '):
-        return input(msg).lower() in ['y', 'yes', 'ok']
-else:
-    def confirm(msg='Do you want to proceed (yes/no)? '):
-        return raw_input(msg).lower() in ['y', 'yes', 'ok']
-
-
-def draw_separator():
-    print("-" * 80)
-
 
 def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
 
 
-def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=False, has_raw=False):
-    source_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
-    dest_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
+def convert_document(collection_name, corpus_name, doc_name, answer=None, active_only=False, use_raw=False):
+    ''' Convert XML to DB '''
+    raw_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
+    collection_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, collection_name)
     print("Attempting to parse document from raw text into XML")
-    print("Source folder: %s" % source_folder)
-    print("Destination folder: %s" % dest_folder)
+    print("Source folder: %s" % raw_folder)
+    print("Collection folder: %s" % collection_folder)
     print("Biblioteca: %s" % collection_name)
     print("Corpus name: %s" % corpus_name)
     print("Document name: %s" % doc_name)
-    # Convert raw text to XML first if needed
-    if has_raw:
-        draw_separator()
-        parse_document(source_folder, dest_folder, corpus_name, doc_name, active_only=active_only)
     # Convert XML to SQLite3
-    draw_separator()
+    if use_raw:
+        parse_document(raw_folder, collection_folder, corpus_name, doc_name)
     # create a bib
-    bib = Biblioteca(collection_name)
-    if os.path.exists(bib.sqldao.db_path):
-        print("Now, I'm going to alter the content of the database: %s" % bib.sqldao.db_path)
-        if not (answer or confirm("Do you want to continue? (yes/no): ")):
-            return False
-    else:
-        bib.sqldao.prepare()
-    convert(collection_name, corpus_name, doc_name)
+    xml2db(collection_name, corpus_name, doc_name)
     print("All Done!")
-    draw_separator()
     return answer
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Data import tool")
+    parser = argparse.ArgumentParser(description="Visko toolbox")
 
     parser.add_argument('biblioteca', help='Biblioteca name')
     parser.add_argument('corpus', help='Corpus name')
     parser.add_argument('doc', help='Document name')
     parser.add_argument('-a', '--active', help='Only import active interpretations', action='store_true')
-    parser.add_argument('-r', '--raw', help='Import from Raw to XML and then to SQLite', action='store_true')
+    parser.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
     parser.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
@@ -103,7 +81,7 @@ if __name__ == '__main__':
         # Parse input arguments
         args = parser.parse_args()
         if args.biblioteca and args.corpus and args.doc:
-            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, has_raw=(args.raw))
+            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, use_raw=args.raw)
         else:
             parser.print_help()
     pass

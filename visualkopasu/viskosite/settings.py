@@ -38,8 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'visualkopasu.visko2',
-    'visualkopasu.visko1'
+    'visualkopasu.visko2'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -79,12 +78,12 @@ WSGI_APPLICATION = 'visualkopasu.viskosite.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': vkconfig.DATABASES_default_ENGINE, # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': vkconfig.DATABASES_default_NAME, # Or path to database file if using sqlite3.
-        'USER': '', # Not used with sqlite3.
-        'PASSWORD': '', # Not used with sqlite3.
-        'HOST': '', # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '', # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': vkconfig.DATABASES_default_ENGINE,  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': vkconfig.DATABASES_default_NAME,  # Or path to database file if using sqlite3.
+        'USER': '',  # Not used with sqlite3.
+        'PASSWORD': '',  # Not used with sqlite3.
+        'HOST': '',  # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '',  # Set to empty string for default. Not used with sqlite3.
     }
 }
 

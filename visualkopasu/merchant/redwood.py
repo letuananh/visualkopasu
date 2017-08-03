@@ -119,6 +119,7 @@ def parse(source_file, destination, active_only=True):
 
 
 def parse_document(source_folder, collection_folder, corpus_name, doc_name, active_only=True):
+    ''' Convert FCB (redwood) format to XML format '''
     all_files = [f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f))]
     all_files.sort()
     destination_folder = os.path.join(collection_folder, corpus_name, doc_name)
@@ -143,7 +144,6 @@ def parse_document(source_folder, collection_folder, corpus_name, doc_name, acti
             os.rename(output_file, destination)
         else:
             logging.debug(destination + " is found!")
-        
     print("Total consumed time = %5.2f secs" % total_time)
 
 
@@ -152,6 +152,7 @@ def main():
     doc_name = "cb"
     source_folder = os.path.join(vkconfig.BIBLIOTECHE_ROOT, "raw", corpus_name, doc_name)
     parse_document(source_folder, vkconfig.BIBLIOTECHE_ROOT, corpus_name, doc_name)
+
 
 if __name__ == "__main__":
     # main()

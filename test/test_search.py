@@ -104,6 +104,13 @@ class TestDMRSSearch(unittest.TestCase):
         sents = self.engine.search('(want /ARG1 G:pron_rel) AND ready')
         self.assertGreaterEqual(len(sents), 0)
 
+    def test_search_by_sid(self):
+        ident = '#1930'
+        q = DMRSQueryParser.parse(ident)
+        print(q)
+        sents = self.engine.search('#1930')
+        print(sents)
+
 
 ########################################################################
 
