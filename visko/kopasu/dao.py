@@ -245,9 +245,9 @@ class SQLiteCorpusDAO(ViskoSchema):
             # choose a new ident
             if a_sentence.ident in (-1, '-1', '', None):
                 # create a new ident
-                a_sentence.ident = self.ds.select_scalar('SELECT max(id)+1 FROM sentence')
+                a_sentence.ident = str(self.ds.select_scalar('SELECT max(id)+1 FROM sentence'))
                 if not a_sentence.ident:
-                    a_sentence.ident = 1
+                    a_sentence.ident = "1"
             # save sentence
             a_sentence.ID = self.sentence.save(a_sentence, ctx=ctx)
             # save readings
