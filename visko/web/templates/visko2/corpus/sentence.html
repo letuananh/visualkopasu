@@ -8,11 +8,10 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item">Sent #{{ sid }}</li>
+  <li class="breadcrumb-item">Sent #{{ sid }} - No. of readings: <span id="parse_count">0</span></li>
 </ol>
 
 {% if sent != None %}
-<div class="dmrs_sentence_text">Parse count: <span id="parse_count">0</span></div>
 <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
 
 <!-- Synset Information -->
@@ -105,7 +104,7 @@ There is no parse for this sentence.
                 console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
               }
             },
-            error: function(jqxhr){
+           error: function(jqxhr){
               if (console != undefined && console.writeline != undefined) {
                 console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
               }

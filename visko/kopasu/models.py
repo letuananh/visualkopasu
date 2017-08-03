@@ -81,12 +81,29 @@ class Sentence(object):
         self.collection = None
         self.readings = []
         self.filename = None
-        # self.dmrs = []
-        # self.parseTrees = []
+        # human annotation layer
         self.words = []
         self.concepts = []
         self.cmap = {}  # concept.ID -> concept objects
         self.wmap = {}  # word.ID -> word objects
+
+    def import_tags(self, tagged_sent):
+        ''' Import a chirptext.texttaglib.TaggedSentence as human annotations '''
+        # add words
+        word_map = {}
+        for idx, w in enumerate(tagged_sent):
+            # TODO: add POS if possible
+            wobj = Word(widx=idx, word=w.label, lemma=w.lemma if w.lemma else w.label, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
+            word_map[w] = wobj
+            self.words.append(wobj)
+        # add concepts
+        for idx, c in enumerate(tagged_sent.concepts):
+            cobj = Concept(cidx=idx, clemma=c.clemma, tag=c.tag, sent=self)
+            self.concepts.append(cobj)
+            # add cwlinks
+            for w in c.words:
+                wobj = word_map[w]
+                cobj.words.append(wobj)
 
     def getInactiveReading(self):
         return [repr for repr in self.readings if repr.mode == "inactive"]
@@ -116,23 +133,6 @@ class Sentence(object):
 
     def __str__(self):
         return "({col}\{cor}\{did}\Sent#{i})`{t}`".format(col=self.collection, cor=self.corpus, did=self.documentID, i=self.ident, t=self.text)
-
-    def import_tags(self, tagged_sent):
-        # add words
-        word_map = {}
-        for idx, w in enumerate(tagged_sent):
-            # TODO: add POS if possible
-            wobj = Word(widx=idx, word=w.label, lemma=w.lemma if w.lemma else w.label, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
-            word_map[w] = wobj
-            self.words.append(wobj)
-        # add concepts
-        for idx, c in enumerate(tagged_sent.concepts):
-            cobj = Concept(cidx=idx, clemma=c.clemma, tag=c.tag, sent=self)
-            self.concepts.append(cobj)
-            # add cwlinks
-            for w in c.words:
-                wobj = word_map[w]
-                cobj.words.append(wobj)
 
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
@@ -389,6 +389,7 @@ class Word(object):
             self.sent = sent
         else:
             self.sid = -1
+            self.sent = None
         self.widx = widx
         self.word = word
         self.pos = pos
