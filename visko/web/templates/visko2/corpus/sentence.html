@@ -23,6 +23,7 @@
   <li><a data-toggle="tab" href="#raw">pyDelphin</a></li>
   <li><a data-toggle="tab" href="#xml">XML</a></li>
   <li><a data-toggle="tab" href="#json">JSON</a></li>
+  <li><a data-toggle="tab" href="#latex">LaTeX</a></li>
 </ul>
 <div class="tab-content">
   <div id="visko" class="tab-pane active">
@@ -43,6 +44,9 @@
   </div>
   <div id="json" class="tab-pane">
     <div id="jsons"></div>
+  </div>
+  <div id="latex" class="tab-pane">
+    <pre><code id="latexes"></code></pre>
   </div>
 </div>
 
@@ -121,6 +125,7 @@ There is no parse for this sentence.
    $('#dmrses').empty();
    $('#jsons').empty();
    $('#dvizes').empty();
+   $('#latexes').empty();
    response = undefined;
  }
  
@@ -184,6 +189,11 @@ There is no parse for this sentence.
        display_json(parse, pid);
      });
      highlight('#jsons');
+   }
+   // LaTeX
+   else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
+     display_latex(response.latex);
+     highlight('#latex');
    }
    // end if
  }

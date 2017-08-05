@@ -744,6 +744,15 @@ function display_json(parse, parseid, container){
     $('#' + container).append(div_raw);
 }
 
+/**
+ * Display LaTeX code (to a pre/code block)
+ **/
+function display_latex(latex, container){
+    if (container == undefined) { container = 'latexes'; }
+    $('#' + container).text(latex);
+}
+
+
 // Render active visualizer
 function visualise(response, visko_parse_header, dviz_parse_header){       
     if (response == undefined) {
