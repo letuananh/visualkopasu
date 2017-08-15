@@ -22,8 +22,9 @@ import gzip
 import codecs
 import lxml
 from lxml import etree
-
+import json
 from chirptext.anhxa import update_data
+from chirptext.texttaglib import TaggedSentence
 from chirptext.leutile import FileHelper
 from coolisf.model import Sentence as ISFSentence
 
@@ -263,7 +264,15 @@ def getSentenceFromRawXML(raw, filename=None):
     sentence = Sentence(sid, text)
     if filename:
         sentence.filename = filename
-
+    # read shallow if available
+    shallow_tag = raw.xml.find('shallow')
+    if shallow_tag is not None and shallow_tag.text:
+        shallow = TaggedSentence.from_json(json.loads(shallow_tag.text))
+        sentence.import_tags(shallow)
+        for c in shallow.concepts:
+            if c.flag == 'E':
+                sentence.flag = Sentence.ERROR
+    # import parses
     for idx, parse in enumerate(raw):
         reading = Reading()
         reading.rid = parse.node.attrib['id']

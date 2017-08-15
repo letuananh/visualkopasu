@@ -69,7 +69,7 @@ class ViskoSchema(Schema):
         self.add_table('document', ['ID', 'name', 'corpusID', 'title',
                                     'grammar', 'tagger', 'parse_count', 'lang'],
                        proto=Document, alias='doc').set_id('ID')
-        self.add_table('sentence', ['ID', 'ident', 'text', 'documentID'],
+        self.add_table('sentence', ['ID', 'ident', 'text', 'documentID', 'flag'],
                        proto=Sentence).set_id('ID')
         self.add_table('reading', ['ID', 'ident', 'mode', 'sentenceID'],
                        proto=Reading).set_id('ID').field_map(ident='rid')
@@ -94,9 +94,9 @@ class ViskoSchema(Schema):
         self.add_table('dmrs_link', ['ID', 'fromNodeID', 'toNodeID', 'dmrsID', 'post', 'rargname'],
                        proto=Link, alias='link').set_id('ID')
         # Human annotation related tables
-        self.add_table('word', ['ID', 'sid', 'widx', 'word', 'lemma', 'pos', 'cfrom', 'cto'],
+        self.add_table('word', ['ID', 'sid', 'widx', 'word', 'lemma', 'pos', 'cfrom', 'cto', 'comment'],
                        proto=Word).set_id('ID')
-        self.add_table('concept', ['ID', 'sid', 'cidx', 'clemma', 'tag'],
+        self.add_table('concept', ['ID', 'sid', 'cidx', 'clemma', 'tag', 'flag', 'comment'],
                        proto=Concept).set_id('ID')
         self.add_table('cwl', ['cid', 'wid'],
                        proto=CWLink)
@@ -250,6 +250,9 @@ class SQLiteCorpusDAO(ViskoSchema):
                     a_sentence.ident = "1"
             # save sentence
             a_sentence.ID = self.sentence.save(a_sentence, ctx=ctx)
+            # save shallow
+            if a_sentence.shallow is not None:
+                self.save_annotations_with_context(a_sentence, ctx=ctx)
             # save readings
             for reading in a_sentence.readings:
                 # Update sentenceID
@@ -398,6 +401,7 @@ class SQLiteCorpusDAO(ViskoSchema):
 
     def getSentence(self, sentenceID, mode=None, readingIDs=None, skip_details=False, get_raw=True):
         a_sentence = self.sentence.by_id(sentenceID)
+        self.get_annotations(sentenceID, a_sentence)
         if a_sentence is not None:
             # retrieve all readings
             conditions = 'sentenceID=?'
@@ -433,20 +437,21 @@ class SQLiteCorpusDAO(ViskoSchema):
         # delete sentence obj
         self.sentence.delete("ID=?", (sentenceID,))
 
-    def get_annotations(self, sentenceID, sent_obj):
-        sent = self.getSentence(sentenceID, skip_details=True, get_raw=False)
+    def get_annotations(self, sentenceID, sent_obj=None):
+        if sent_obj is None:
+            sent_obj = self.getSentence(sentenceID, skip_details=True, get_raw=False)
         # select words
         # select concepts
-        sent.words = self.Word.select("sid=?", (sentenceID,))
-        wmap = {w.ID: w for w in sent.words}
-        sent.concepts = self.Concept.select("sid=?", (sentenceID,))
-        cmap = {c.ID: c for c in sent.concepts}
+        sent_obj.words = self.word.select("sid=?", (sentenceID,))
+        wmap = {w.ID: w for w in sent_obj.words}
+        sent_obj.concepts = self.concept.select("sid=?", (sentenceID,))
+        cmap = {c.ID: c for c in sent_obj.concepts}
         # link concept-word
-        links = self.CWLink.select("cid IN (SELECT ID from concept WHERE sid=?)", (sentenceID,))
+        links = self.cwl.select("cid IN (SELECT ID from concept WHERE sid=?)", (sentenceID,))
         for lnk in links:
             cmap[lnk.cid].words.append(wmap[lnk.wid])
         # return annotation
-        return sent
+        return sent_obj
 
     def save_annotations(self, sent_obj, ctx=None):
         if ctx:
@@ -457,13 +462,13 @@ class SQLiteCorpusDAO(ViskoSchema):
 
     def save_annotations_with_context(self, sent_obj, ctx):
         for word in sent_obj.words:
-            word.sid = word.sent.ID if word.sent else word.sid
+            word.sid = sent_obj.ID
             word.ID = self.word.save(word, ctx=ctx)
         for concept in sent_obj.concepts:
-            concept.sid = concept.sent.ID if concept.sent else concept.sid
+            concept.sid = sent_obj.ID
             concept.ID = self.concept.save(concept, ctx=ctx)
             for word in concept.words:
                 # save links
-                print("Saving", CWLink(wid=word.ID, cid=concept.ID))
+                logger.debug("Saving", CWLink(wid=word.ID, cid=concept.ID))
                 self.cwl.save(CWLink(wid=word.ID, cid=concept.ID), ctx=ctx)
                 pass

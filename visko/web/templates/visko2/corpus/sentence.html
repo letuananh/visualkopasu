@@ -8,13 +8,16 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item">Sent #{{ sid }} - No. of readings: <span id="parse_count">0</span></li>
+  <li class="breadcrumb-item">Sent #{{ sid }} - (Ident: #{{sent_ident}}) - No. of readings: <span id="parse_count">0</span></li>
 </ol>
 
 {% if sent != None %}
 <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
-
+<div id="sentences"></div>
+<div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;">
+</div>
 <!-- Synset Information -->
+<div id="message_box"></div>
 <div id="synsets"></div>
 
 <ul id="alltabs" class="nav nav-tabs">
@@ -63,6 +66,7 @@ There is no parse for this sentence.
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/tagging.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 <link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
@@ -86,6 +90,13 @@ There is no parse for this sentence.
 <script src="{% static 'js/shinchan.js' %}"></script>
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
+<!-- IMI support -->
+<script src="{% static 'js/tagging.js' %}"></script>
+<script>
+ Visko.find_tag = function(tag) {
+   find_synset(tag)();
+ }
+</script>
 
 {% include 'visko2/delviz.html' %}
 
@@ -126,6 +137,7 @@ There is no parse for this sentence.
    $('#jsons').empty();
    $('#dvizes').empty();
    $('#latexes').empty();
+   $('#sentences').empty();
    response = undefined;
  }
  
@@ -194,6 +206,10 @@ There is no parse for this sentence.
    else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
      display_latex(response.latex);
      highlight('#latex');
+   }
+   // Visualize IMI
+   if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
+     Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
    }
    // end if
  }

@@ -1,0 +1,26 @@
+.TaggedSentence .TaggedToken {
+    color: darkblue;
+    font-weight: bold;
+}
+
+.TaggedSentence .MWE {
+    color: darkgreen;
+    font-weight: bold;
+}
+
+.TaggedSentence .MWEActive {
+    color: red;
+    font-weight: bold;
+}
+
+.TaggedSentence .current {
+    text-decoration: underline;
+}
+
+.concept_list {
+    font-weight: bold;
+}
+
+.concept_list .label {
+    margin-right: 5px;
+}

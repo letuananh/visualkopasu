@@ -66,6 +66,8 @@ from visko.kopasu.models import ParseRaw
 # CONFIGURATION
 #-----------------------------------------------------------------------
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TEST_FILE = os.path.join(TEST_DIR, '1300.xml.gz')
@@ -165,7 +167,7 @@ class TestDMRSDAO(TestDAOBase):
         s.tag(method='mfs')  # fast tagging
         # bring it to visko
         vs = getSentenceFromXML(s.to_visko_xml())
-        print(vs[0].dmrs[0])
+        logger.debug(vs[0].dmrs[0])
 
     def test_dmrs_from_coolisf(self):
         # use CoolISF to generate Visko sentence XML
@@ -360,26 +362,35 @@ class TestHumanAnnotation(TestDAOBase):
             print(c, c.words)
         # save to DB
         dao = self.bib.sqldao
-        # ensure corpus
-        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
-        if not corpuses:
-            self.bib.create_corpus(self.corpus_name)
-            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
-        else:
-            corpus = corpuses[0]
-        # ensure doc
-        docs = dao.getDocumentByName(self.doc_name)
-        if not docs:
-            doc = Document(name=self.doc_name, corpusID=corpus.ID)
-            self.bib.sqldao.saveDocument(doc)
-        else:
-            doc = docs[0]
+        doc = self.ensure_doc()
         vsent.documentID = doc.ID
         dao.saveSentence(vsent)
         dao.save_annotations(vsent)
 
     def test_retrieving_annotations(self):
-        pass
+        txt = "ロボットの子は猫が好きです。"
+        json_sent = {'tokens': [{'label': 'ロボット', 'cto': 4, 'cfrom': 0}, {'label': 'の', 'cto': 6, 'cfrom': 5}, {'label': '子', 'cto': 8, 'cfrom': 7}, {'label': 'は', 'cto': 10, 'cfrom': 9}, {'label': '猫', 'cto': 12, 'cfrom': 11}, {'label': 'が', 'cto': 14, 'cfrom': 13}, {'label': '好き', 'cto': 17, 'cfrom': 15}, {'label': 'です', 'cto': 20, 'cfrom': 18}, {'label': '。', 'cto': 22, 'cfrom': 21}], 'concepts': [{'clemma': 'ロボット', 'words': [0], 'tag': '02761392-n'}, {'clemma': '猫', 'words': [4], 'tag': '02121620-n'}, {'clemma': '好き', 'words': [6], 'tag': '01292683-a'}, {'clemma': 'ロボットの子', 'words': [0, 1, 2], 'tag': '10285313-n', 'flag': 'E'}], 'text': 'ロボット の 子 は 猫 が 好き です 。 \n'}
+        # ISF sentence
+        isent = self.ghub.JACYMC.parse(txt, 1)
+        isent.shallow = TaggedSentence.from_json(json_sent)
+        # save to Visko
+        vxml = isent.tag_xml().to_visko_xml()
+        vsent = getSentenceFromXML(vxml)
+        dao = self.bib.sqldao
+        doc = self.ensure_doc()
+        vsent.documentID = doc.ID
+        dao.saveSentence(vsent)  # this should save the annotations as well
+        # retrieve them
+        vsent2 = dao.get_annotations(vsent.ID)
+        v2_json = vsent2.shallow.to_json()
+        logger.debug("Words: {}".format(vsent2.words))
+        logger.debug("Concepts: {}".format([(x, x.words) for x in vsent2.concepts]))
+        logger.debug("v2_json: {}".format(v2_json))
+        # compare to json_sent
+        self.assertEqual(v2_json["text"], json_sent["text"])
+        self.assertEqual(v2_json["tokens"], json_sent["tokens"])
+        self.assertEqual(v2_json["concepts"], json_sent["concepts"])
+        self.assertEqual(v2_json, json_sent)
 
 
 ########################################################################

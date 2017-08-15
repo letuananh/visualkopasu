@@ -376,7 +376,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
                      'col': collection_name,
                      'corpus': corpus,
                      'doc': doc,
-                     'sid': sent_id})
+                     'sid': sent_id, 'sent_ident': sent.ident})
     # update reparse count
     input_results = RESULTS[-1]
     for r in RESULTS:

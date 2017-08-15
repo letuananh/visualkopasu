@@ -795,3 +795,25 @@ function visualise(response, visko_parse_header, dviz_parse_header){
     }
     // end if
 }
+
+/**
+ * Show a dismissable message box
+ **/
+function show_alert(msg, mother){
+    var alert_div = $("<div class='alert alert-dismissible'>");
+    alert_div.addClass("alert-danger");
+    alert_div.attr("role", "alert");
+    // Add dismiss button
+    var btn = $("<button type='button' class='close' data-dismiss='alert' aria-label='Close'>");
+    btn.append($("<span aria-hidden='true'>&times;</span>"));
+    alert_div.append(btn);
+    alert_div.append(msg);
+    if (mother == undefined && $("#message_box").length) {
+        mother = "#message_box";
+    }
+    if (mother) {
+        var msgdiv = $(mother);
+        msgdiv.append(alert_div);
+    }
+    return alert_div;
+}

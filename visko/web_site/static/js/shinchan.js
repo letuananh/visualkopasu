@@ -14,10 +14,15 @@
  **/
 
 var ChibiJS;
+var ちび;
+
 if(ChibiJS == undefined){
     // ChibiJS module
-    ChibiJS = new function(){ }
-    ChibiJS.ShinChan = new function(){ }    
+    ChibiJS = new function(){};
+    if(ちび == undefined){
+        ちび = ChibiJS;
+    }
+    ChibiJS.ShinChan = new function(){};
 }
 
 /**
@@ -31,6 +36,11 @@ ChibiJS.IDGenerator = new function (){
         return current_id++;
     }
 }
+
+ChibiJS.newid = function(){
+    return ChibiJS.IDGenerator.generate();
+};
+
 
 //
 // Data structures

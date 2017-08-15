@@ -115,8 +115,15 @@
     <!-- Yawol modal script -->
     <script>
      function ym_search() {
+       $("#yawol_modal_msgbox").empty();
        var query = $('#ym_query').val();
-       get_yawol().search_synset(query, $('#ym_synsets'));
+       get_yawol().search_synset(query, $('#ym_synsets'), undefined, find_synset_error_modal);
+     }
+
+     function find_synset_error_modal(jqxhr, query) {
+       ym_clear();
+       $("#yawol_modal_msgbox").empty();
+       show_alert("Could not query " + query, "#yawol_modal_msgbox");
      }
 
      function ym_clear() {
@@ -162,6 +169,7 @@
                 <button type="button" class="btn btn-primary btn-lg" name="btnYMSearch" id="btnYMSearch" value="parse">Search</button>
               </span>
             </div>
+            <div id="yawol_modal_msgbox"></div>
             <!-- Display synsets -->
             <div id="ym_synsets"></div>
           </div>

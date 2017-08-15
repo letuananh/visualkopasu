@@ -54,7 +54,7 @@
     </thead>
 
     {% for sentence in sentences %}
-    <tr>
+    <tr {% if sentence.is_error %}class="danger"{% endif %}>
       <td>{{ sentence.ID }}</td>
       <td>{{ sentence.ident }}</td>
       <td>

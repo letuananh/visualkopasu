@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "sentence" (
     , "ident" VARCHAR
     , "text" TEXT
     , "documentID" INTEGER
+    , "flag" INTEGER
     , FOREIGN KEY(documentID) REFERENCES document(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -148,6 +149,7 @@ CREATE TABLE IF NOT EXISTS "word" (
     ,"pos" TEXT
     ,"cfrom" INTEGER
     ,"cto" INTEGER
+    ,"comment" TEXT
     ,FOREIGN KEY(sid) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -157,6 +159,8 @@ CREATE TABLE IF NOT EXISTS "concept" (
     ,"cidx" INTEGER
     ,"clemma" TEXT
     ,"tag" TEXT
+    ,"flag" TEXT
+    ,"comment" TEXT
     ,FOREIGN KEY(sid) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 

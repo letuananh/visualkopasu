@@ -64,8 +64,15 @@
  }
  
  function find_synset(synsetid) {
-   return function(){ 
-     get_yawol().search_synset(synsetid);
+   return function(){
+     $("#message_box").empty();
+     get_yawol().search_synset(synsetid, undefined, undefined, find_synset_error);
    };
+ }
+
+ function find_synset_error(jqxhr, query) {
+   $("#message_box").empty();
+   get_yawol().clear();
+   show_alert("Could not find synset " + query);
  }
 </script>

@@ -20,6 +20,7 @@ Data models for VisualKopasu project.
 
 import logging
 from delphin.mrs import Pred
+from chirptext.texttaglib import TaggedSentence, Token
 from coolisf.model import Sentence as ISFSentence
 
 ########################################################################
@@ -72,11 +73,15 @@ class Document(object):
 
 class Sentence(object):
 
+    GOLD = 1
+    ERROR = 2
+
     def __init__(self, ident=0, text='', documentID=None):
         self.ID = None
         self.ident = ident
         self.text = text
         self.documentID = documentID
+        self.flag = None
         self.corpus = None
         self.collection = None
         self.readings = []
@@ -93,17 +98,44 @@ class Sentence(object):
         word_map = {}
         for idx, w in enumerate(tagged_sent):
             # TODO: add POS if possible
-            wobj = Word(widx=idx, word=w.label, lemma=w.lemma if w.lemma else w.label, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
+            wobj = Word(widx=idx, word=w.label, lemma=w.lemma, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
             word_map[w] = wobj
             self.words.append(wobj)
         # add concepts
         for idx, c in enumerate(tagged_sent.concepts):
             cobj = Concept(cidx=idx, clemma=c.clemma, tag=c.tag, sent=self)
+            cobj.comment = c.comment if c.comment else ''
+            cobj.flag = c.flag if c.flag else ''
             self.concepts.append(cobj)
             # add cwlinks
             for w in c.words:
                 wobj = word_map[w]
                 cobj.words.append(wobj)
+
+    @property
+    def shallow(self):
+        if not self.words:
+            return None
+        else:
+            tsent = TaggedSentence(self.text)
+            for word in self.words:
+                tk = tsent.add_token(word.word, word.cfrom, word.cto)
+                if word.lemma:
+                    tk.tag(word.lemma, tagtype=Token.LEMMA)
+                if word.pos:
+                    tk.tag(word.pos, tagtype=Token.POS)
+                if word.comment:
+                    tk.tag(word.comment, tagtype=Token.COMMENT)
+            for concept in self.concepts:
+                wids = [self.words.index(w) for w in concept.words]
+                c = tsent.tag(concept.clemma, concept.tag, *wids)
+                if concept.flag:
+                    c.flag = concept.flag
+                if concept.comment:
+                    c.comment = concept.comment
+                pass
+            return tsent
+        pass
 
     def getInactiveReading(self):
         return [repr for repr in self.readings if repr.mode == "inactive"]
@@ -119,6 +151,9 @@ class Sentence(object):
             has_raw = has_raw and len(i.raws) > 0
         return has_raw
 
+    def is_error(self):
+        return self.flag == Sentence.ERROR
+
     def __len__(self):
         return len(self.readings)
 
@@ -133,10 +168,11 @@ class Sentence(object):
 
     def __str__(self):
         return "({col}\{cor}\{did}\Sent#{i})`{t}`".format(col=self.collection, cor=self.corpus, did=self.documentID, i=self.ident, t=self.text)
-
+    
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
         isfsent = ISFSentence(self.text, str(self.ID))
+        isfsent.shallow = self.shallow
         for i in self:
             # we should use XML first as it has sense information
             xml_raw = i.find_raw(ParseRaw.XML)
@@ -396,6 +432,7 @@ class Word(object):
         self.lemma = lemma
         self.cfrom = cfrom
         self.cto = cto
+        self.comment = ''
 
     def __repr__(self):
         return str(self)
@@ -419,6 +456,8 @@ class Concept(object):
         self.cidx = cidx
         self.clemma = clemma
         self.tag = tag
+        self.flag = None
+        self.comment = ''
         self.words = []
 
     def __repr__(self):
