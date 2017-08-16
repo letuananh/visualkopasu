@@ -97,8 +97,9 @@ class Sentence(object):
         # add words
         word_map = {}
         for idx, w in enumerate(tagged_sent):
-            # TODO: add POS if possible
-            wobj = Word(widx=idx, word=w.label, lemma=w.lemma, pos=None, cfrom=w.cfrom, cto=w.cto, sent=self)
+            wobj = Word(widx=idx, word=w.label, lemma=w.lemma, pos=w.pos, cfrom=w.cfrom, cto=w.cto, sent=self)
+            if w.comment:
+                wobj.comment = w.comment
             word_map[w] = wobj
             self.words.append(wobj)
         # add concepts

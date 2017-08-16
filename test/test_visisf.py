@@ -65,6 +65,8 @@ from visko.kopasu.util import xml_to_str
 
 logging.basicConfig(level=logging.WARNING)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
+if not os.path.isdir(TEST_DIR):
+    os.makedirs(TEST_DIR)
 TEST_FILE = os.path.join(TEST_DIR, '10022.xml.gz')
 TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 
@@ -228,6 +230,13 @@ class TestMain(unittest.TestCase):
         #
         dmrs_xml = dmrs_str_to_xml(str(d), sent.text)
         logging.info("DMRS XML: {}".format(dmrs_xml))
+
+    def test_read_from_xml_with_imi(self):
+        sent = getSentenceFromFile(TEST_FILE)
+        self.assertIsNotNone(sent.shallow)
+        self.assertEqual(sent.shallow[1].pos, "PRP$")
+        self.assertEqual(sent.shallow[1].lemma, "my")
+        self.assertGreater(len(sent.shallow.concepts), 0)
 
 
 class TestDMRSParser(unittest.TestCase):
