@@ -82,6 +82,7 @@ class Sentence(object):
         self.text = text
         self.documentID = documentID
         self.flag = None
+        self.comment = None
         self.corpus = None
         self.collection = None
         self.readings = []

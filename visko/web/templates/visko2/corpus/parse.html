@@ -16,85 +16,87 @@
 {% if sent %}
 <!-- <h3>Sentence #{{sid}} | Parse #{{parse.ident}}</h3> -->
 <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
-
+<div id="sentences"></div>
+<div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;">
+</div>
 <!-- Synset Information -->
 <div id="synsets"></div>
 
 <ul id="alltabs" class="nav nav-tabs">
-  <li class="active"><a data-toggle="tab" href="#visko">DMRS</a></li>
-  <li><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
-  <li><a data-toggle="tab" href="#raw">pyDelphin</a></li>
-  <li><a data-toggle="tab" href="#xml">XML</a></li>
-  <li><a data-toggle="tab" href="#json">JSON</a></li>
-  <li><a data-toggle="tab" href="#latex">LaTeX</a></li>
-  <li><a data-toggle="tab" href="#debug">Debug</a></li>
+      <li class="active"><a data-toggle="tab" href="#visko">DMRS</a></li>
+      <li><a data-toggle="tab" href="#delviz">delphin-viz</a></li>
+      <li><a data-toggle="tab" href="#raw">pyDelphin</a></li>
+      <li><a data-toggle="tab" href="#xml">XML</a></li>
+      <li><a data-toggle="tab" href="#json">JSON</a></li>
+      <li><a data-toggle="tab" href="#latex">LaTeX</a></li>
+      <li><a data-toggle="tab" href="#debug">Debug</a></li>
 </ul>
 <div class="tab-content">
-  <div id="visko" class="tab-pane active" style="padding: 10px;">
-    <!-- DMRSes container -->
-    <div style="overflow-y: auto; min-height: 100px;">
-      <div id="dmrses"></div>
+      <div id="visko" class="tab-pane active" style="padding: 10px;">
+        <!-- DMRSes container -->
+        <div style="overflow-y: auto; min-height: 100px;">
+          <div id="dmrses"></div>
     </div>
-    <!-- Edit DMRS -->
-    <!-- <h3>Edit DMRS</h3> -->
-    <form>
-      {% csrf_token %}
-      <div class="form-group">
-        <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{vdmrs}}</textarea>
+        <!-- Edit DMRS -->
+        <!-- <h3>Edit DMRS</h3> -->
+        <form>
+          {% csrf_token %}
+          <div class="form-group">
+            <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{vdmrs}}</textarea>
       </div>
-      <button type="button" id="btnReset" name="btnReset" class="btn btn-lg btn-warning">Reset</button>
-      <button type="button" id="btnParse" name="btnParse" class="btn btn-lg btn-primary">Parse</button>
-      <button type="button" id="btnSave" name="btnSave" value="insert" class="btn btn-lg btn-default">Save As New DMRS</button>
-      <button type="button" id="btnOverwrite" name="btnOverwrite" value="save" class="btn btn-lg btn-danger">Overwrite</button>
-      <button type="button" id="btnDelete" name="btnDelete" class="btn btn-lg btn-danger">Delete</button>
+          <button type="button" id="btnReset" name="btnReset" class="btn btn-lg btn-warning">Reset</button>
+          <button type="button" id="btnParse" name="btnParse" class="btn btn-lg btn-primary">Parse</button>
+          <button type="button" id="btnSave" name="btnSave" value="insert" class="btn btn-lg btn-default">Save As New DMRS</button>
+          <button type="button" id="btnOverwrite" name="btnOverwrite" value="save" class="btn btn-lg btn-danger">Overwrite</button>
+          <button type="button" id="btnDelete" name="btnDelete" class="btn btn-lg btn-danger">Delete</button>
     </form>
-    <!-- End Edit DMRS -->
+        <!-- End Edit DMRS -->
   </div>
-  <div id="delviz" class="tab-pane" style="padding: 10px;">
-    <div style="overflow-y: auto; height: 700px;">
-      <div id='dvizes'></div>
+      <div id="delviz" class="tab-pane" style="padding: 10px;">
+        <div style="overflow-y: auto; height: 700px;">
+          <div id='dvizes'></div>
     </div>
   </div>
-  <div id="raw" class="tab-pane">
-    <div id="raws"></div>
+      <div id="raw" class="tab-pane">
+        <div id="raws"></div>
   </div>
-  <div id="xml" class="tab-pane">
-    <pre><code id="xmlcontent"></code></pre>
+      <div id="xml" class="tab-pane">
+        <pre><code id="xmlcontent"></code></pre>
   </div>
-  <div id="json" class="tab-pane">
-    <div id="jsons"></div>
+      <div id="json" class="tab-pane">
+        <div id="jsons"></div>
   </div>
-  <div id="latex" class="tab-pane">
-    <pre><code id="latexes"></code></pre>
+      <div id="latex" class="tab-pane">
+        <pre><code id="latexes"></code></pre>
   </div>
-  <div id="debug" class="tab-pane">
-    <!-- Control Panel and Console -->
-    <div id="toolbar" class="input-group" style="padding: 10px 0px;">
-      <div class="input-group-btn">
-        <input type="button" class="btn btn-primary" id="btnDebug" name="btnDebug" value="Debug"/>
-        <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
-        <input type="checkbox" id="consoletoggle" checked data-toggle="toggle" data-on="Console" data-off="Console" data-width="100">Console</input>
+      <div id="debug" class="tab-pane">
+        <!-- Control Panel and Console -->
+        <div id="toolbar" class="input-group" style="padding: 10px 0px;">
+          <div class="input-group-btn">
+            <input type="button" class="btn btn-primary" id="btnDebug" name="btnDebug" value="Debug"/>
+            <button type="button" id="btnClear" name="btnClear" class="btn btn-default">Clear Console</button>
+            <input type="checkbox" id="consoletoggle" checked data-toggle="toggle" data-on="Console" data-off="Console" data-width="100">Console</input>
       </div>
     </div>
-    <div id="console" style="overflow: auto; max-height: 80vh;"></div>
-    <!-- End console UI -->
+        <div id="console" style="overflow: auto; max-height: 80vh;"></div>
+        <!-- End console UI -->
   </div>
 </div>
 {% endif %}
 
 <!-- Error dialog -->
 <div class="modal fade bs-example-modal-sm" id="errorDialog" tabindex="-1" role="dialog" aria-labelledby="errorDialogModal">
-  <div class="modal-dialog modal-sm" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button btn-error" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="errorDialogModal">Error</h4>
+      <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button btn-error" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="errorDialogModal">Error</h4>
       </div>
-      <div class="modal-body">
-        <span id="errorMessage"></span>
+          <div class="modal-body">
+            <span id="errorMessage"></span>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -102,22 +104,22 @@
 
 <!-- Deletion confirmation dialog -->
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
+      <div class="modal-dialog">
+        <div class="modal-content">
+          
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
       </div>
-      
-      <div class="modal-body">
-        <p>You are about to delete this parse, this procedure is irreversible.</p>
-        <p>Do you want to proceed?</p>
+          
+          <div class="modal-body">
+            <p>You are about to delete this parse, this procedure is irreversible.</p>
+            <p>Do you want to proceed?</p>
       </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <a class="btn btn-danger btn-ok" id="btnActualDelete">Delete</a>
+          
+          <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <a class="btn btn-danger btn-ok" id="btnActualDelete">Delete</a>
       </div>
     </div>
   </div>
@@ -135,6 +137,7 @@
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/tagging.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 <link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
@@ -158,6 +161,13 @@
 <script src="{% static 'js/shinchan.js' %}"></script>
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
+<!-- IMI support -->
+<script src="{% static 'js/tagging.js' %}"></script>
+<script>
+ Visko.find_tag = function(tag) {
+   find_synset(tag)();
+ }
+</script>
 
 {% include 'visko2/delviz.html' %}
 
@@ -302,6 +312,7 @@
    $('#jsons').empty();
    $('#dvizes').empty();
    $('#latexes').empty();
+   $('#sentences').empty();
    response = undefined;
  }
  
@@ -364,9 +375,13 @@
      display_latex(response.latex);
      highlight('#latex');
    }
+   // Visualize IMI
+   if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
+     Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
+   }
    // end if
  }
-  
+ 
  /** Show debug info **/
  function debug() {
    console.writeline("Lorem ipsum");

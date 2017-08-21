@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS "sentence" (
     , "text" TEXT
     , "documentID" INTEGER
     , "flag" INTEGER
+    , "comment" TEXT
     , FOREIGN KEY(documentID) REFERENCES document(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 

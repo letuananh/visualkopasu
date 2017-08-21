@@ -69,7 +69,7 @@ class ViskoSchema(Schema):
         self.add_table('document', ['ID', 'name', 'corpusID', 'title',
                                     'grammar', 'tagger', 'parse_count', 'lang'],
                        proto=Document, alias='doc').set_id('ID')
-        self.add_table('sentence', ['ID', 'ident', 'text', 'documentID', 'flag'],
+        self.add_table('sentence', ['ID', 'ident', 'text', 'documentID', 'flag', 'comment'],
                        proto=Sentence).set_id('ID')
         self.add_table('reading', ['ID', 'ident', 'mode', 'sentenceID'],
                        proto=Reading).set_id('ID').field_map(ident='rid')
@@ -377,7 +377,7 @@ class SQLiteCorpusDAO(ViskoSchema):
                     sense_info = Sense()
                     sense_info.synsetid = a_node.synsetid
                     sense_info.score = a_node.synset_score
-                    sense_info.lemma = a_node.rplemma
+                    sense_info.lemma = a_node.rplemma if a_node.rplemma else ''
                     sense_info.pos = a_node.synsetid[-1]
                     a_node.sense = sense_info
             # retrieve all links
