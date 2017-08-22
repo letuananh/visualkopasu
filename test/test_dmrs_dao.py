@@ -58,7 +58,7 @@ from visko.kopasu.xmldao import getDMRSFromXML
 from visko.kopasu.xmldao import RawXML
 from visko.kopasu.dao import SQLiteCorpusDAO
 from visko.kopasu.bibman import Biblioteche, Biblioteca
-from visko.kopasu.models import Document
+from visko.kopasu.models import Document, Sentence
 from visko.kopasu.models import ParseRaw
 
 
@@ -392,12 +392,20 @@ class TestHumanAnnotation(TestDAOBase):
         self.assertEqual(v2_json, json_sent)
 
     def test_commenting(self):
+        sent = Sentence("Some dogs barked.")
+        note = "This sentence needs to be checked"
         dao = self.bib.sqldao
-        sent = self.ensure_sent()
-        note = "This is a note"
-        dao.note_sentence(sent.ID, note)
+        doc = self.ensure_doc()
+        sent.documentID = doc.ID
+        sent.comment = note
+        dao.saveSentence(sent)
         actual = dao.read_note_sentence(sent.ID)
         self.assertEqual(note, actual)
+        # update comment
+        note2 = "This sentence has been checked"
+        dao.note_sentence(sent.ID, note2)
+        actual = dao.read_note_sentence(sent.ID)
+        self.assertEqual(actual, note2)
 
 
 ########################################################################
