@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS "reading" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT
     , "ident" VARCHAR NOT NULL 
     , "mode" VARCHAR
-    , "sentenceID" INTEGER NOT NULL 
+    , "sentenceID" INTEGER NOT NULL
+    , "comment" TEXT
     , FOREIGN KEY(sentenceID) REFERENCES sentence(ID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 

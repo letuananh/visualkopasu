@@ -75,6 +75,7 @@ class Sentence(object):
 
     GOLD = 1
     ERROR = 2
+    WARNING = 3
 
     def __init__(self, ident=0, text='', documentID=None):
         self.ID = None
@@ -170,7 +171,7 @@ class Sentence(object):
 
     def __str__(self):
         return "({col}\{cor}\{did}\Sent#{i})`{t}`".format(col=self.collection, cor=self.corpus, did=self.documentID, i=self.ident, t=self.text)
-    
+
     def to_isf(self):
         ''' Convert Visko Sentence to ISF sentence'''
         isfsent = ISFSentence(self.text, str(self.ID))
@@ -229,6 +230,7 @@ class Reading(object):
         self.dmrs = dmrs if dmrs else list()
         self.parse_trees = trees if trees else list()
         self.sentenceID = None
+        self.comment = None
         self.raws = raws if raws else list()
 
     def __str__(self):

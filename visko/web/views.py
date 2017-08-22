@@ -475,7 +475,7 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
     new_parse.sentenceID = sent.ID
     new_parse.dmrs.append(dmrs)
     new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-    dao.saveReading(new_parse, doc.ID)
+    dao.save_reading(new_parse)
     if new_parse.ID:
         # complete
         return {"success": True, "url": reverse('visko2:view_parse', args=[col, cor, did, sid, new_parse.ID])}

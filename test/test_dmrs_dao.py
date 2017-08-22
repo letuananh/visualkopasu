@@ -365,7 +365,6 @@ class TestHumanAnnotation(TestDAOBase):
         doc = self.ensure_doc()
         vsent.documentID = doc.ID
         dao.saveSentence(vsent)
-        dao.save_annotations(vsent)
 
     def test_retrieving_annotations(self):
         txt = "ロボットの子は猫が好きです。"
@@ -391,6 +390,14 @@ class TestHumanAnnotation(TestDAOBase):
         self.assertEqual(v2_json["tokens"], json_sent["tokens"])
         self.assertEqual(v2_json["concepts"], json_sent["concepts"])
         self.assertEqual(v2_json, json_sent)
+
+    def test_commenting(self):
+        dao = self.bib.sqldao
+        sent = self.ensure_sent()
+        note = "This is a note"
+        dao.note_sentence(sent.ID, note)
+        actual = dao.read_note_sentence(sent.ID)
+        self.assertEqual(note, actual)
 
 
 ########################################################################
