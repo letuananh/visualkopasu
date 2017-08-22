@@ -1,6 +1,6 @@
 {% extends 'visko2/base.html' %}
 {% load staticfiles %}
-
+{% load visko2_tags %}
 {% block content %}
 
 <ol class="breadcrumb">
@@ -59,6 +59,9 @@
       <td>{{ sentence.ident }}</td>
       <td>
         <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+        {% if sentence.comment %}
+        <span class="label label-default">Note</span> <span class="sent_comment" style="font-style: italic; color: darkgray;">{{ sentence.comment|multilines }}</span>
+        {% endif %}
       </td>
       <td>{{ sentence|length}}</td>
       <td>

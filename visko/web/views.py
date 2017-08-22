@@ -387,7 +387,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
     c.update({'input_results': input_results, 'RESULTS': RESULTS})
     # retrieve original XML
     try:
-        c.update({'sent': sent.to_isf()})
+        c.update({'sent': sent})
     except Exception as e:
         print("Error: {}".format(e))
         raise
@@ -425,6 +425,22 @@ def rest_fetch(request, col, cor, did, sid, pid=None):
     else:
         sent = dao.getSentence(sid).to_isf()
     return sent2json(sent)
+
+
+@csrf_protect
+@jsonp
+def rest_note_sentence(request, col, cor, did, sid):
+    name = request.POST.get('name', '')  # should be sent_comment
+    value = request.POST.get('value', '')  # value
+    pk = request.POST.get('pk', '')  # sent_id
+    dao = get_bib(col).sqldao
+    sent = dao.getSentence(sid)
+    if name != 'sent_comment' or not pk or int(pk) != sent.ID:
+        logger.warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
+        raise Exception("Invalid sentence information was provided")
+    else:
+        dao.note_sentence(sent.ID, value)
+        return {}
 
 
 @csrf_protect

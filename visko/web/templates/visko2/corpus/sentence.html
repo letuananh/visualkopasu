@@ -1,6 +1,6 @@
 {% extends 'visko2/base.html' %}
 {% load staticfiles %}
-
+{% load visko2_tags %}
 {% block content %}
 
 <ol class="breadcrumb">
@@ -52,6 +52,8 @@
     <pre><code id="latexes"></code></pre>
   </div>
 </div>
+
+<span class="label label-default">Sentence's note</span>&nbsp;<a id="sent_comment" data-url="{% url 'visko2:rest_note_sentence' col=col cor=corpus.name did=doc.ID sid=sid %}" data-pk="{{sid}}" data-type="textarea" data-rows="5" data-placeholder="Please share your thoughts..." data-title="Enter comments" class="editable editable-pre-wrapped editable-click" data-emptytext=":: Click to comment ::" href="#">{% if sent.comment %}{{sent.comment}}{% endif %}</a>
 
 {% else %}
 There is no parse for this sentence.
@@ -220,6 +222,15 @@ There is no parse for this sentence.
  function initialise(){
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      visualise();
+   });
+   // Show comment
+   $("#sent_comment").editable({
+     ajaxOptions: {
+       headers: { 'X-CSRFToken': "{{ csrf_token }}" }
+     },
+     error: function(){
+       return "Failed to save comment for this sentence";
+     }
    });
  }
  
