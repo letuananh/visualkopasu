@@ -76,8 +76,8 @@ class Biblioteca:
         self.corpora = []
 
     def create_corpus(self, corpus_name):
-        self.sqldao.createCorpus(corpus_name)
-        self.textdao.createCorpus(corpus_name)
+        self.sqldao.create_corpus(corpus_name)
+        self.textdao.create_corpus(corpus_name)
 
     def get_sql_corpora(self):
         self.corpora = self.sqldao.getCorpora()

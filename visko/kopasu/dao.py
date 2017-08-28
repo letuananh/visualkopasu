@@ -132,7 +132,7 @@ class CachedTable():
             else:
                 logger.debug(("Cache error: ID [%s] exists!" % key))
 
-    def getByValue(self, value, new_object=None, ctx=None):
+    def by_value(self, value, new_object=None, ctx=None):
         if value not in self.cacheMap:
             # insert a new record
             if new_object is None:
@@ -149,11 +149,11 @@ class CachedTable():
             self.cache(new_object)
         return self.cacheMap[value]
 
-    def getByID(self, *ID):
+    def by_id(self, *ID, ctx=None):
         k = tuple(ID)
         if k not in self.cacheMapByID:
             # select from database
-            obj = self.table.by_id(*ID)
+            obj = self.table.by_id(*ID, ctx=ctx)
             self.cache(obj)
         return self.cacheMapByID[k]
 
@@ -183,19 +183,22 @@ class SQLiteCorpusDAO(ViskoSchema):
         return self.corpus.select()
 
     def getCorpus(self, corpus_name):
-        return self.corpus.select('name=?', (corpus_name,))
+        # corpus name is unique
+        return self.corpus.select_single('name=?', (corpus_name,))
 
     def getCorpusByID(self, corpusID):
         return self.corpus.by_id(corpusID)
 
-    def createCorpus(self, corpus_name, ctx=None):
+    def create_corpus(self, corpus_name, ctx=None):
         if ctx is None:
             with self.ctx() as ctx:
-                return self.createCorpus(corpus_name, ctx=ctx)
+                return self.create_corpus(corpus_name, ctx=ctx)
         # ctx was ensured
         if not is_valid_name(corpus_name):
             raise Exception("Invalid corpus name (provided: {}) - Visko only accept names using alphanumeric characters".format(corpus_name))
-        return ctx.corpus.save(Corpus(corpus_name))
+        corpus = Corpus(corpus_name)
+        corpus.ID = ctx.corpus.save(corpus)
+        return corpus
 
     def saveDocument(self, doc, *fields, ctx=None):
         if not is_valid_name(doc.name):
@@ -207,26 +210,28 @@ class SQLiteCorpusDAO(ViskoSchema):
     def getDocumentOfCorpus(self, corpusID):
         return self.doc.select('corpusID=?', (corpusID,))
 
-    def getDocuments(self):
-        return self.doc.select()
-
     def getDocument(self, docID):
         return self.doc.by_id(docID)
 
     def getDocumentByName(self, doc_name):
         return self.doc.select('name=?', (doc_name,))
 
-    def getSentences(self, docID, add_dummy_parses=True):
+    def getSentences(self, docID, flag=None, add_dummy_parses=True):
+        where = 'documentID = ?'
+        params = [docID]
+        if flag:
+            where += ' AND flag = ?'
+            params.append(flag)
         if add_dummy_parses:
             query = '''
             SELECT sentence.*, count(reading.ID) AS 'parse_count'
             FROM sentence LEFT JOIN reading
             ON sentence.ID = reading.sentenceID
-            WHERE documentID = ?
+            WHERE {where}
             GROUP BY sentenceID ORDER BY sentence.ID;
-            '''
+            '''.format(where=where)
             with self.ctx() as ctx:
-                rows = ctx.execute(query, (docID,))
+                rows = ctx.execute(query, params)
                 sents = []
                 for row in rows:
                     sent = self.sentence.to_obj(row)
@@ -234,7 +239,7 @@ class SQLiteCorpusDAO(ViskoSchema):
                     sents.append(sent)
                 return sents
         else:
-            return self.Sentence.select('documentID=?', (docID,))
+            return self.Sentence.select(where, params)
 
     def query(self, query_obj):
         return self.ds.select(query_obj.query, query_obj.params)
@@ -252,7 +257,7 @@ class SQLiteCorpusDAO(ViskoSchema):
                 return self.read_note_sentence(sent_id, ctx=ctx)
         return ctx.sentence.by_id(sent_id, columns=['comment']).comment
 
-    def saveSentence(self, a_sentence, ctx=None):
+    def save_sent(self, a_sentence, ctx=None):
         """
         Save sentence object (with all DMRSes, raws & shallow readings inside)
         """
@@ -261,15 +266,15 @@ class SQLiteCorpusDAO(ViskoSchema):
             raise ValueError("Sentence object cannot be None")
         if ctx is None:
             with self.ctx() as ctx:
-                return self.saveSentence(a_sentence, ctx=ctx)
+                return self.save_sent(a_sentence, ctx=ctx)
         # ctx is not None now
         if not a_sentence.ID:
             # choose a new ident
             if a_sentence.ident in (-1, '-1', '', None):
                 # create a new ident (it must be a string)
                 a_sentence.ident = str(self.ds.select_scalar('SELECT max(id)+1 FROM sentence'))
-                if not a_sentence.ident:
-                    a_sentence.ident = "1"
+            if not a_sentence.ident:
+                a_sentence.ident = "1"
             # save sentence
             a_sentence.ID = ctx.sentence.save(a_sentence)
             # save shallow
@@ -322,11 +327,11 @@ class SQLiteCorpusDAO(ViskoSchema):
                 # save realpred
                 if node.rplemma:
                     # Escape lemma
-                    lemma = self.lemmaCache.getByValue(node.rplemma, ctx=ctx)
+                    lemma = self.lemmaCache.by_value(node.rplemma, ctx=ctx)
                     node.rplemmaID = lemma.ID
                 # save gpred
                 if node.gpred:
-                    gpred_value = self.gpredCache.getByValue(node.gpred, ctx=ctx)
+                    gpred_value = self.gpredCache.by_value(node.gpred, ctx=ctx)
                     node.gpred_valueID = gpred_value.ID
                 # save sense
                 if node.sense:
@@ -363,7 +368,7 @@ class SQLiteCorpusDAO(ViskoSchema):
             if sentenceID in sentences_by_id:
                 # update reading
                 a_reading = Reading(ID=readingID)
-                # self.getReading(a_reading)
+                # self.get_reading(a_reading)
                 sentences_by_id[sentenceID].readings.append(a_reading)
             else:
                 if no_more_query:
@@ -377,27 +382,30 @@ class SQLiteCorpusDAO(ViskoSchema):
                 a_sentence.readings.append(a_reading)
                 sentences.append(a_sentence)
                 sentences_by_id[sentenceID] = a_sentence
-            #sentences.append(a_sentence)
+            # sentences.append(a_sentence)
         logger.debug(("Sentence count: %s" % len(sentences)))
         return sentences
 
-    def getReading(self, a_reading):
+    def get_reading(self, a_reading, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.get_reading(a_reading, ctx=ctx)
         # retrieve all DMRSes
-        a_reading.dmrs = self.dmrs.select('readingID=?', (a_reading.ID,))
+        a_reading.dmrs = ctx.dmrs.select('readingID=?', (a_reading.ID,))
         for a_dmrs in a_reading.dmrs:
             # retrieve all nodes
-            a_dmrs.nodes = self.node.select('dmrsID=?', (a_dmrs.ID,))
+            a_dmrs.nodes = ctx.node.select('dmrsID=?', (a_dmrs.ID,))
             for a_node in a_dmrs.nodes:
                 # retrieve sortinfo
-                list_sortinfo = self.sortinfo.select('dmrs_nodeID=?', (a_node.ID,))
+                list_sortinfo = ctx.sortinfo.select('dmrs_nodeID=?', (a_node.ID,))
                 if len(list_sortinfo) == 1:
                     a_node.sortinfo = list_sortinfo[0]
                 # retrieve realpred
                 if a_node.rplemmaID:
-                    a_node.rplemma = self.lemmaCache.getByID(int(a_node.rplemmaID)).lemma
+                    a_node.rplemma = self.lemmaCache.by_id(int(a_node.rplemmaID), ctx=ctx).lemma
                 # retrieve gpred
                 if a_node.gpred_valueID:
-                    a_node.gpred = self.gpredCache.getByID(int(a_node.gpred_valueID)).value
+                    a_node.gpred = self.gpredCache.by_id(int(a_node.gpred_valueID), ctx=ctx).value
                 # create sense object
                 if a_node.synsetid:
                     sense_info = Sense()
@@ -407,7 +415,7 @@ class SQLiteCorpusDAO(ViskoSchema):
                     sense_info.pos = a_node.synsetid[-1]
                     a_node.sense = sense_info
             # retrieve all links
-            a_dmrs.links = self.link.select('dmrsID=?', (a_dmrs.ID,))
+            a_dmrs.links = ctx.link.select('dmrsID=?', (a_dmrs.ID,))
             # update link node
             for a_link in a_dmrs.links:
                 a_link.fromNode = a_dmrs.getNodeById(a_link.fromNodeID, True)[0]
@@ -417,18 +425,26 @@ class SQLiteCorpusDAO(ViskoSchema):
     def saveParseRaw(self, a_raw, ctx=None):
         self.parse_raw.save(a_raw, ctx=ctx)
 
-    def get_raw(self, readingID, reading=None):
-        raws = self.parse_raw.select('readingID=?', (readingID,))
+    def get_raw(self, readingID, reading=None, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.get_raw(readingID, reading, ctx=ctx)
+        # ctx is not None
+        raws = ctx.parse_raw.select('readingID=?', (readingID,))
         if reading is not None:
             for raw in raws:
                 raw.readingID = reading.ID
                 reading.raws.append(raw)
         return raws
 
-    def getSentence(self, sentenceID, mode=None, readingIDs=None, skip_details=False, get_raw=True):
-        a_sentence = self.sentence.by_id(sentenceID)
+    def getSentence(self, sentenceID, mode=None, readingIDs=None, skip_details=False, get_raw=True, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.getSentence(sentenceID, mode, readingIDs, skip_details, get_raw, ctx=ctx)
+        # ctx was ensured
+        a_sentence = ctx.sentence.by_id(sentenceID)
         if a_sentence is not None:
-            self.get_annotations(sentenceID, a_sentence)
+            self.get_annotations(sentenceID, a_sentence, ctx=ctx)
             # retrieve all readings
             conditions = 'sentenceID=?'
             params = [a_sentence.ID]
@@ -438,12 +454,12 @@ class SQLiteCorpusDAO(ViskoSchema):
             if readingIDs and len(readingIDs) > 0:
                 conditions += ' AND ID IN ({params_holder})'.format(params_holder=",".join((["?"] * len(readingIDs))))
                 params.extend(readingIDs)
-            a_sentence.readings = self.reading.select(conditions, params)
+            a_sentence.readings = ctx.reading.select(conditions, params)
             for a_reading in a_sentence.readings:
                 if get_raw:
-                    self.get_raw(a_reading.ID, a_reading)
+                    self.get_raw(a_reading.ID, a_reading, ctx=ctx)
                 if not skip_details:
-                    self.getReading(a_reading)
+                    self.get_reading(a_reading, ctx=ctx)
         else:
             logging.debug("No sentence with ID={} was found".format(sentenceID))
         # Return
@@ -463,17 +479,21 @@ class SQLiteCorpusDAO(ViskoSchema):
         # delete sentence obj
         self.sentence.delete("ID=?", (sentenceID,))
 
-    def get_annotations(self, sentenceID, sent_obj=None):
+    def get_annotations(self, sentenceID, sent_obj=None, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.get_annotations(sentenceID, sent_obj, ctx=ctx)
+        # ctx is not None now
         if sent_obj is None:
-            sent_obj = self.getSentence(sentenceID, skip_details=True, get_raw=False)
+            sent_obj = self.getSentence(sentenceID, skip_details=True, get_raw=False, ctx=ctx)
         # select words
         # select concepts
-        sent_obj.words = self.word.select("sid=?", (sentenceID,))
+        sent_obj.words = ctx.word.select("sid=?", (sentenceID,))
         wmap = {w.ID: w for w in sent_obj.words}
-        sent_obj.concepts = self.concept.select("sid=?", (sentenceID,))
+        sent_obj.concepts = ctx.concept.select("sid=?", (sentenceID,))
         cmap = {c.ID: c for c in sent_obj.concepts}
         # link concept-word
-        links = self.cwl.select("cid IN (SELECT ID from concept WHERE sid=?)", (sentenceID,))
+        links = ctx.cwl.select("cid IN (SELECT ID from concept WHERE sid=?)", (sentenceID,))
         for lnk in links:
             cmap[lnk.cid].words.append(wmap[lnk.wid])
         # return annotation
@@ -495,3 +515,38 @@ class SQLiteCorpusDAO(ViskoSchema):
                 logger.debug("Saving", CWLink(wid=word.ID, cid=concept.ID))
                 ctx.cwl.save(CWLink(wid=word.ID, cid=concept.ID))
                 pass
+
+    def flag_sent(self, sid, flag, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.flag_sent(sid, flag, ctx=ctx)
+        # update flag
+        return ctx.sentence.update(new_values=(flag,), where='ID=?', where_values=(sid,), columns=('flag',))
+
+    def next_sentid(self, sid, flag=None, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.next_sentid(sid, flag, ctx=ctx)
+        sent_obj = ctx.sentence.by_id(sid, columns=('ID', 'documentID'))
+        docid = sent_obj.documentID
+        where = 'ID > ? AND documentID == ?'
+        params = [sid, docid]
+        if flag is not None:
+            where += " AND flag = ?"
+            params.append(flag)
+        next_sent = ctx.sentence.select_single(where=where, values=params, orderby="documentID, ID", limit=1)
+        return next_sent.ID if next_sent is not None else None
+
+    def prev_sentid(self, sid, flag=None, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.prev_sentid(sid, flag, ctx=ctx)
+        sent_obj = ctx.sentence.by_id(sid, columns=('ID', 'documentID'))
+        docid = sent_obj.documentID
+        where = 'ID < ? AND documentID == ?'
+        params = [sid, docid]
+        if flag is not None:
+            where += " AND flag = ?"
+            params.append(flag)
+        prev_sent = ctx.sentence.select_single(where=where, values=params, orderby="documentID DESC, ID DESC", limit=1)
+        return prev_sent.ID if prev_sent is not None else None

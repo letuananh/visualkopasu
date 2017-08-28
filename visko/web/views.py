@@ -234,7 +234,7 @@ def create_doc(request, collection_name, corpus_name):
     bib = get_bib(collection_name)
     try:
         # create SQLite doc
-        corpus = bib.sqldao.getCorpus(corpus_name)[0]
+        corpus = bib.sqldao.getCorpus(corpus_name)
         bib.sqldao.saveDocument(Document(doc_name, corpusID=corpus.ID, title=doc_title))
         # create XML doc
         cdao = bib.textdao.getCorpusDAO(corpus_name)
@@ -249,7 +249,6 @@ def create_doc(request, collection_name, corpus_name):
 
 def create_sent(request, collection_name, corpus_name, doc_id):
     bib = get_bib(collection_name)
-    # corpus = dao.getCorpus(corpus_name)[0]
     doc = bib.sqldao.getDocument(doc_id)
     input_results = int(request.POST.get('input_results', 5))
     if input_results not in RESULTS:
@@ -267,7 +266,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
             # Just create a sentence with no parse
             s = Sentence(text=sentence_text)
             s.documentID = doc.ID
-            bib.sqldao.saveSentence(s)
+            bib.sqldao.save_sent(s)
         elif input_parser in PROCESSORS:
             isent = ghub.parse(sentence_text, input_parser, pc=input_results, tagger=input_tagger)
             xsent = isent.tag_xml().to_visko_xml()
@@ -276,7 +275,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
             vsent.documentID = doc.ID
             try:
                 logger.debug("Visko sent: {} | length: {}".format(vsent, len(vsent)))
-                bib.sqldao.saveSentence(vsent)
+                bib.sqldao.save_sent(vsent)
                 # save XML
                 docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
                 docdao.save_sentence(xsent, vsent.ID)
@@ -331,7 +330,7 @@ def list_corpus(request, collection_name):
 @csrf_protect
 def list_doc(request, collection_name, corpus_name):
     dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)[0]
+    corpus = dao.getCorpus(corpus_name)
     corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
     for doc in corpus.documents:
         doc.corpus = corpus
@@ -342,14 +341,15 @@ def list_doc(request, collection_name, corpus_name):
 
 
 @csrf_protect
-def list_sent(request, collection_name, corpus_name, doc_id, input_results=5, input_parser='ERG'):
+def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_results=5, input_parser='ERG'):
     dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)[0]
+    corpus = dao.getCorpus(corpus_name)
     doc = dao.getDocument(doc_id)
-    sentences = dao.getSentences(doc_id)
+    sentences = dao.getSentences(doc_id, flag=flag)
     c = get_context({'collection_name': collection_name,
                      'corpus': corpus,
                      'doc': doc,
+                     'flag': flag,
                      'sentences': sentences},
                     title='Document: ' + doc.title if doc.title else doc.name)
     c.update(ISF_DEFAULT)
@@ -363,11 +363,14 @@ def list_sent(request, collection_name, corpus_name, doc_id, input_results=5, in
     return render(request, "visko2/corpus/document.html", c)
 
 
-def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
+def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None):
     dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)[0]
-    doc = dao.getDocument(doc_id)
-    sent = dao.getSentence(sent_id)
+    with dao.ctx() as ctx:
+        corpus = dao.getCorpus(corpus_name)
+        doc = dao.getDocument(doc_id)
+        sent = dao.getSentence(sent_id)
+        next_sid = dao.next_sentid(sent.ID, flag, ctx=ctx)
+        prev_sid = dao.prev_sentid(sent.ID, flag, ctx=ctx)
     # sent.ID = sent_id
     # if len(sent) == 1:
     #     # redirect to first parse to edit quicker
@@ -376,7 +379,10 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
                      'col': collection_name,
                      'corpus': corpus,
                      'doc': doc,
-                     'sid': sent_id, 'sent_ident': sent.ident})
+                     'sid': sent_id, 'sent_ident': sent.ident,
+                     'next_sid': next_sid,
+                     'prev_sid': prev_sid,
+                     'flag': flag})
     # update reparse count
     input_results = RESULTS[-1]
     for r in RESULTS:
@@ -398,7 +404,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id):
 @csrf_protect
 def view_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
-    corpus = dao.getCorpus(cor)[0]
+    corpus = dao.getCorpus(cor)
     doc = dao.getDocument(did)
     sent = dao.getSentence(sid, readingIDs=(pid,))
     c = get_context({'title': 'Sentence: ' + sent.text,
@@ -447,8 +453,6 @@ def rest_note_sentence(request, col, cor, did, sid):
 @jsonp
 def rest_dmrs_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
-    # corpus = dao.getCorpus(cor)[0]
-    # doc = dao.getDocument(did)
     sent = dao.getSentence(sid, readingIDs=(pid,))
     dmrs_raw = request.POST.get('dmrs', '')
     dmrs_xml = dmrs_str_to_xml(dmrs_raw)
@@ -465,8 +469,6 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
     if action not in ('insert', 'replace'):
         raise Exception("Invalid action provided")
     dao = get_bib(col).sqldao
-    # corpus = dao.getCorpus(cor)[0]
-    doc = dao.getDocument(did)
     sent = dao.getSentence(sid, readingIDs=(pid,))
 
     # Parse given DMRS

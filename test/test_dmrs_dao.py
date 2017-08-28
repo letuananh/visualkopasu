@@ -49,7 +49,7 @@ import unittest
 from chirptext.leutile import FileHelper
 from chirptext.deko import txt2mecab
 from chirptext.texttaglib import TaggedSentence
-from coolisf.util import GrammarHub
+from coolisf.util import GrammarHub, sent2json
 from coolisf import Lexsem, tag_gold
 
 from visko.kopasu.xmldao import getSentenceFromRawXML
@@ -72,6 +72,9 @@ logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TEST_FILE = os.path.join(TEST_DIR, '1300.xml.gz')
 TEST_FILE2 = os.path.join(TEST_DIR, '10022.xml.gz')
+# Test data
+SENT_TEXT = "ロボットの子は猫が好きです。"
+SENT_TAGS = {'tokens': [{'label': 'ロボット', 'cto': 4, 'cfrom': 0}, {'label': 'の', 'cto': 6, 'cfrom': 5}, {'label': '子', 'cto': 8, 'cfrom': 7}, {'label': 'は', 'cto': 10, 'cfrom': 9}, {'label': '猫', 'cto': 12, 'cfrom': 11}, {'label': 'が', 'cto': 14, 'cfrom': 13}, {'label': '好き', 'cto': 17, 'cfrom': 15}, {'label': 'です', 'cto': 20, 'cfrom': 18}, {'label': '。', 'cto': 22, 'cfrom': 21}], 'concepts': [{'clemma': 'ロボット', 'words': [0], 'tag': '02761392-n'}, {'clemma': '猫', 'words': [4], 'tag': '02121620-n'}, {'clemma': '好き', 'words': [6], 'tag': '01292683-a'}, {'clemma': 'ロボットの子', 'words': [0, 1, 2], 'tag': '10285313-n', 'flag': 'E'}], 'text': 'ロボット の 子 は 猫 が 好き です 。 \n'}
 
 
 #-----------------------------------------------------------------------
@@ -106,12 +109,10 @@ class TestDAOBase(unittest.TestCase):
         ''' Ensure that testcorpus exists'''
         logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
         # ensure corpus
-        corpuses = self.bib.sqldao.getCorpus(self.corpus_name)
-        if not corpuses:
+        corpus = self.bib.sqldao.getCorpus(self.corpus_name)
+        if not corpus:
             self.bib.create_corpus(self.corpus_name)
-            corpus = self.bib.sqldao.getCorpus(self.corpus_name)[0]
-        else:
-            corpus = corpuses[0]
+            corpus = self.bib.sqldao.getCorpus(self.corpus_name)
         return corpus
 
     def ensure_doc(self):
@@ -131,7 +132,7 @@ class TestDAOBase(unittest.TestCase):
         sent.documentID = doc.ID
         sent_obj = self.bib.sqldao.getSentence(sentenceID=1)
         if sent_obj is None:
-            return self.bib.sqldao.saveSentence(sent)
+            return self.bib.sqldao.save_sent(sent)
         else:
             return sent_obj
 
@@ -210,10 +211,9 @@ class TestDMRSSQLite(TestDAOBase):
     def test_create_a_corpus(self):
         logging.info("Test creating a new corpus")
         self.ensure_corpus()
-        corpora = self.bib.sqldao.getCorpus(self.corpus_name)
-        self.assertIsNotNone(corpora)
-        self.assertGreater(len(corpora), 0)
-        self.assertEqual(corpora[0].name, self.corpus_name)
+        corpus = self.bib.sqldao.getCorpus(self.corpus_name)
+        self.assertIsNotNone(corpus)
+        self.assertEqual(corpus.name, self.corpus_name)
         # we should have an SQLite DB file ...
         self.assertTrue(os.path.isfile(self.bib.sqldao.db_path))
         # and a directory to store XML files
@@ -239,7 +239,7 @@ class TestDMRSSQLite(TestDAOBase):
 
         doc = self.ensure_doc()
         sentence.documentID = doc.ID
-        sentence = self.bib.sqldao.saveSentence(sentence)
+        sentence = self.bib.sqldao.save_sent(sentence)
 
         # verify that the sentence has been inserted
         actual_sentence = self.bib.sqldao.getSentence(sentenceID=sentence.ID)
@@ -364,21 +364,19 @@ class TestHumanAnnotation(TestDAOBase):
         dao = self.bib.sqldao
         doc = self.ensure_doc()
         vsent.documentID = doc.ID
-        dao.saveSentence(vsent)
+        dao.save_sent(vsent)
 
     def test_retrieving_annotations(self):
-        txt = "ロボットの子は猫が好きです。"
-        json_sent = {'tokens': [{'label': 'ロボット', 'cto': 4, 'cfrom': 0}, {'label': 'の', 'cto': 6, 'cfrom': 5}, {'label': '子', 'cto': 8, 'cfrom': 7}, {'label': 'は', 'cto': 10, 'cfrom': 9}, {'label': '猫', 'cto': 12, 'cfrom': 11}, {'label': 'が', 'cto': 14, 'cfrom': 13}, {'label': '好き', 'cto': 17, 'cfrom': 15}, {'label': 'です', 'cto': 20, 'cfrom': 18}, {'label': '。', 'cto': 22, 'cfrom': 21}], 'concepts': [{'clemma': 'ロボット', 'words': [0], 'tag': '02761392-n'}, {'clemma': '猫', 'words': [4], 'tag': '02121620-n'}, {'clemma': '好き', 'words': [6], 'tag': '01292683-a'}, {'clemma': 'ロボットの子', 'words': [0, 1, 2], 'tag': '10285313-n', 'flag': 'E'}], 'text': 'ロボット の 子 は 猫 が 好き です 。 \n'}
         # ISF sentence
-        isent = self.ghub.JACYMC.parse(txt, 1)
-        isent.shallow = TaggedSentence.from_json(json_sent)
+        isent = self.ghub.JACYMC.parse(SENT_TEXT, 1)
+        isent.shallow = TaggedSentence.from_json(SENT_TAGS)
         # save to Visko
         vxml = isent.tag_xml().to_visko_xml()
         vsent = getSentenceFromXML(vxml)
         dao = self.bib.sqldao
         doc = self.ensure_doc()
         vsent.documentID = doc.ID
-        dao.saveSentence(vsent)  # this should save the annotations as well
+        dao.save_sent(vsent)  # this should save the annotations as well
         # retrieve them
         vsent2 = dao.get_annotations(vsent.ID)
         v2_json = vsent2.shallow.to_json()
@@ -386,26 +384,64 @@ class TestHumanAnnotation(TestDAOBase):
         logger.debug("Concepts: {}".format([(x, x.words) for x in vsent2.concepts]))
         logger.debug("v2_json: {}".format(v2_json))
         # compare to json_sent
-        self.assertEqual(v2_json["text"], json_sent["text"])
-        self.assertEqual(v2_json["tokens"], json_sent["tokens"])
-        self.assertEqual(v2_json["concepts"], json_sent["concepts"])
-        self.assertEqual(v2_json, json_sent)
+        self.assertEqual(v2_json["text"], SENT_TAGS["text"])
+        self.assertEqual(v2_json["tokens"], SENT_TAGS["tokens"])
+        self.assertEqual(v2_json["concepts"], SENT_TAGS["concepts"])
+        self.assertEqual(v2_json, SENT_TAGS)
 
     def test_commenting(self):
-        sent = Sentence("Some dogs barked.")
-        note = "This sentence needs to be checked"
-        dao = self.bib.sqldao
-        doc = self.ensure_doc()
-        sent.documentID = doc.ID
-        sent.comment = note
-        dao.saveSentence(sent)
-        actual = dao.read_note_sentence(sent.ID)
-        self.assertEqual(note, actual)
-        # update comment
-        note2 = "This sentence has been checked"
-        dao.note_sentence(sent.ID, note2)
-        actual = dao.read_note_sentence(sent.ID)
-        self.assertEqual(actual, note2)
+        dao = SQLiteCorpusDAO(':memory:', 'temp')
+        with dao.ctx() as ctx:
+            corpus = dao.create_corpus('test', ctx=ctx)
+            doc = Document(name='testdoc', corpusID=corpus.ID)
+            dao.saveDocument(doc, ctx=ctx)
+            sent = Sentence(text="Some dogs barked.")
+            note = "This sentence needs to be checked"
+            sent.documentID = doc.ID
+            sent.comment = note
+            dao.save_sent(sent, ctx=ctx)
+            actual = dao.read_note_sentence(sent.ID, ctx=ctx)
+            self.assertEqual(note, actual)
+            # update comment
+            note2 = "This sentence has been checked"
+            dao.note_sentence(sent.ID, note2, ctx=ctx)
+            actual = dao.read_note_sentence(sent.ID, ctx=ctx)
+            self.assertEqual(actual, note2)
+
+    def test_get_prev_next(self):
+        dao = SQLiteCorpusDAO(':memory:', 'temp')
+        with dao.ctx() as ctx:
+            corpus = dao.create_corpus('test', ctx=ctx)
+            doc1 = Document(name='doc1', corpusID=corpus.ID)
+            dao.saveDocument(doc1, ctx=ctx)
+            doc2 = Document(name='doc2', corpusID=corpus.ID)
+            dao.saveDocument(doc2, ctx=ctx)
+            dao.save_sent(Sentence(text="It rains.", documentID=doc1.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="雨が降る。", documentID=doc2.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="I like cats.", documentID=doc1.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="猫が好きです。", documentID=doc2.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="教師です。", documentID=doc2.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="I'm a teacher.", documentID=doc1.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="お休みなさい。", documentID=doc2.ID), ctx=ctx)
+            dao.save_sent(Sentence(text="Good night.", documentID=doc1.ID), ctx=ctx)
+            dao.flag_sent(2, Sentence.WARNING, ctx=ctx)
+            dao.flag_sent(5, Sentence.WARNING, ctx=ctx)
+            sents = ctx.sentence.select()
+            self.assertEqual(len(sents), 8)
+            # prev_sent
+            self.assertEqual(dao.next_sentid(1, ctx=ctx), 3)
+            self.assertEqual(dao.next_sentid(3, ctx=ctx), 6)
+            self.assertEqual(dao.next_sentid(6, ctx=ctx), 8)
+            self.assertEqual(dao.prev_sentid(7, ctx=ctx), 5)
+            self.assertEqual(dao.prev_sentid(5, ctx=ctx), 4)
+            self.assertEqual(dao.prev_sentid(4, ctx=ctx), 2)
+            self.assertEqual(dao.prev_sentid(2, ctx=ctx), None)
+            # next prev by flag
+            self.assertEqual(dao.next_sentid(2, Sentence.WARNING, ctx=ctx), 5)
+            self.assertEqual(dao.next_sentid(4, Sentence.WARNING, ctx=ctx), 5)
+            self.assertEqual(dao.next_sentid(5, Sentence.WARNING, ctx=ctx), None)
+            self.assertEqual(dao.prev_sentid(5, Sentence.WARNING, ctx=ctx), 2)
+            self.assertEqual(dao.prev_sentid(2, Sentence.WARNING, ctx=ctx), None)
 
 
 ########################################################################

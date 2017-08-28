@@ -79,17 +79,14 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
     # Retrieve corpus information first
     print("Retrieving corpus ...")
     corpus = sqliteDAO.getCorpus(corpus_name)
-    if not corpus:
+    if corpus is None:
         print("Corpus doesn't exist. Attempting to create one")
-        sqliteDAO.createCorpus(corpus_name=corpus_name)
+        sqliteDAO.create_corpus(corpus_name=corpus_name)
         corpus = sqliteDAO.getCorpus(corpus_name)
-        if not corpus:
+        if corpus is None:
             print(corpus)
             print("Tried to create corpus but failed ... Setup tool will terminate now.")
             return
-    elif len(corpus) > 1:
-        print("Multiple corpora exist. Script will stop now. Please double check the database consistency.")
-        return
     # Now make sure the document exists
     docs = sqliteDAO.getDocumentByName(doc_name=doc_name)
     if len(docs) > 1:
@@ -119,7 +116,7 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
             timer.end()
             # write sentence to DB
             timer.start()
-            sqliteDAO.saveSentence(sentence, ctx=ctx)
+            sqliteDAO.save_sent(sentence, ctx=ctx)
             timer.end("Sentence %s was saved to SQLite DB ..." % id)
         logger.info("Document has been imported.")
     logger.info("DONE! Please see log file for more details")

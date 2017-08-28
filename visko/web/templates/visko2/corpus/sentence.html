@@ -1,6 +1,5 @@
 {% extends 'visko2/base.html' %}
 {% load staticfiles %}
-{% load visko2_tags %}
 {% block content %}
 
 <ol class="breadcrumb">
@@ -8,7 +7,35 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item">Sent #{{ sid }} - (Ident: #{{sent_ident}}) - No. of readings: <span id="parse_count">0</span></li>
+  <li class="breadcrumb-item">Sent #{{ sid }} - (Ident: #{{sent_ident}}) - No. of readings: <span id="parse_count">0</span>
+    {% if prev_sid %}
+    {% if flag %}
+    <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=prev_sid flag=flag %}" class="btn btn-default btn-sm">
+      {% else %}
+      <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=prev_sid %}" class="btn btn-default btn-sm">
+        {% endif %}
+      <span class="glyphicon glyphicon-backward" aria-hidden="true"></span>
+    </a>
+    {% else %}
+    <a href="#" class="btn btn-default btn-sm disabled">
+      <span class="glyphicon glyphicon-backward" aria-hidden="true"></span>
+    </a>
+    {% endif %}
+    {% if next_sid is not None %}
+    {% if flag %}
+    <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=next_sid flag=flag %}" class="btn btn-default btn-sm">
+      {% else %}
+      <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=next_sid %}" class="btn btn-default btn-sm">
+        {% endif %}
+      <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+    </a>
+    {% else %}
+    <a href="#" class="btn btn-default btn-sm disabled">
+      <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+    </a>
+    {% endif %}
+
+  </li>
 </ol>
 
 {% if sent != None %}
@@ -33,6 +60,10 @@
     <div style="overflow-y: auto; height: 600px;">
       <!-- DMRSes container -->
       <div id="dmrses"></div>
+      <div style="margin-top: 5px;">
+        <span class="label label-default">Sentence's note</span>
+        <a id="sent_comment" data-url="{% url 'visko2:rest_note_sentence' col=col cor=corpus.name did=doc.ID sid=sid %}" data-pk="{{sid}}" data-type="textarea" data-rows="5" data-placeholder="Please share your thoughts..." data-title="Enter comments" class="editable editable-pre-wrapped editable-click" data-emptytext=":: Click to comment ::" href="#">{% if sent.comment %}{{sent.comment}}{% endif %}</a>
+      </div>
     </div>
   </div>
   <div id="delviz" class="tab-pane">
@@ -52,8 +83,6 @@
     <pre><code id="latexes"></code></pre>
   </div>
 </div>
-
-<span class="label label-default">Sentence's note</span>&nbsp;<a id="sent_comment" data-url="{% url 'visko2:rest_note_sentence' col=col cor=corpus.name did=doc.ID sid=sid %}" data-pk="{{sid}}" data-type="textarea" data-rows="5" data-placeholder="Please share your thoughts..." data-title="Enter comments" class="editable editable-pre-wrapped editable-click" data-emptytext=":: Click to comment ::" href="#">{% if sent.comment %}{{sent.comment}}{% endif %}</a>
 
 {% else %}
 There is no parse for this sentence.
@@ -169,6 +198,8 @@ There is no parse for this sentence.
    if (response == undefined) {
      return;
    }
+   // Display text
+   $("#sentence_text").text(response['sent']);
    var parses = $(response['parses']);
    // if using delviz
    if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){

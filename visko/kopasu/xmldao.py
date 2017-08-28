@@ -61,7 +61,7 @@ class XMLCorpusCollection:
         corpus_path = os.path.join(self.path, corpus_name)
         return XMLCorpusDAO(corpus_path, corpus_name)
 
-    def createCorpus(self, corpus_name):
+    def create_corpus(self, corpus_name):
         if not is_valid_name(corpus_name):
             raise Exception("Invalid corpus name (provided: {}".format(corpus_name))
         FileHelper.create_dir(os.path.join(self.path, corpus_name))

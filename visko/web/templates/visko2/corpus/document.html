@@ -11,6 +11,17 @@
 </ol>
 
 <h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
+<div>
+  {% if flag %}
+  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">All</a> |
+  Error Only
+  {% else %}
+  All |
+  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID flag="2" %}">
+    Error Only
+  </a>
+  {% endif %}
+</div>
 
 <form method="POST" action="{% url 'visko2:create_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" style="padding-bottom: 20px;">
   {% csrf_token %}
@@ -58,7 +69,12 @@
       <td>{{ sentence.ID }}</td>
       <td>{{ sentence.ident }}</td>
       <td>
-        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+        {% if flag %}
+        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID flag=flag %}">{{sentence.text}}</a>
+        {% else %}
+        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a>
+        {% endif %}
+        <br/>
         {% if sentence.comment %}
         <span class="label label-default">Note</span> <span class="sent_comment" style="font-style: italic; color: darkgray;">{{ sentence.comment|multilines }}</span>
         {% endif %}

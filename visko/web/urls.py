@@ -25,7 +25,9 @@ urlpatterns = [
     url(r'^corpus/(?P<collection_name>\w+)/?$', views.list_corpus, name='list_corpus'),
     url(r'^corpus/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/?$', views.list_doc, name='list_doc'),
     url(r'^corpus/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/(?P<doc_id>\w+)/?$', views.list_sent, name='list_sent'),
+    url(r'^corpus/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/(?P<doc_id>\w+)/flag/(?P<flag>\w+)/?$', views.list_sent, name='list_sent'),
     url(r'^corpus/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/(?P<doc_id>\w+)/(?P<sent_id>\d+)/?$', views.list_parse, name='list_parse'),
+    url(r'^corpus/(?P<collection_name>\w+)/(?P<corpus_name>\w+)/(?P<doc_id>\w+)/(?P<sent_id>\d+)/flag/(?P<flag>\w+)/?$', views.list_parse, name='list_parse'),
     url(r'^corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/?$', views.view_parse, name='view_parse'),
 
     # REST APIs
