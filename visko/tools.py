@@ -25,6 +25,7 @@ import os
 import argparse
 from lxml import etree
 
+from chirptext import confirm
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
@@ -101,6 +102,82 @@ def export_sqlite(args):
         print("Done")
 
 
+def store_report(args):
+    bib = Biblioteca(args.biblioteca, root=args.root)
+    dao = bib.sqldao
+    corpus = dao.getCorpus(args.corpus)
+    doc = dao.get_doc(args.doc)
+    report_loc = bib.textdao.getCorpusDAO(args.corpus).getDocumentDAO(args.doc).path + ".report.xml"
+    if not os.path.exists(report_loc):
+        print("There is no report to import.")
+        return False
+    elif corpus is None or doc is None or corpus.ID != doc.corpusID:
+        print("Document does not exist ({}/{}/{} was provided)".format(args.biblioteca, args.corpus, args.doc))
+        return False
+    else:
+        with dao.ctx() as ctx:
+            # read doc sents
+            sents = dao.getSentences(doc.ID, ctx=ctx)
+            sent_map = {s.ident: s for s in sents}
+            # read comments
+            tree = etree.iterparse(report_loc)
+            for event, element in tree:
+                if event == 'end' and element.tag == 'sent':
+                    id = element.get('ID')
+                    ident = element.get('ident')
+                    # flag = element.get('flag')
+                    # text = element.find('text').text
+                    comment = element.find('comment').text
+                    # import comment here
+                    # Only import comments to sentences with empty comment
+                    if comment and ident in sent_map and not sent_map[ident].comment:
+                        sent = sent_map[ident]
+                        print("comment to #{} ({}): {}".format(id, ident, comment))
+                        dao.note_sentence(sent.ID, comment.strip(), ctx=ctx)
+                    element.clear()
+
+
+def gen_report(args):
+    bib = Biblioteca(args.biblioteca, root=args.root)
+    dao = bib.sqldao
+    corpus = dao.getCorpus(args.corpus)
+    doc = dao.get_doc(args.doc)
+    report_loc = bib.textdao.getCorpusDAO(args.corpus).getDocumentDAO(args.doc).path + ".report.xml"
+    if os.path.exists(report_loc) and not confirm("Report file exists. Do you want to continue (Y/N)? "):
+        print("Program aborted.")
+        return False
+    elif corpus is None or doc is None or corpus.ID != doc.corpusID:
+        print("Document does not exist ({}/{}/{} was provided)".format(args.biblioteca, args.corpus, args.doc))
+    else:
+        # found doc
+        sents = dao.getSentences(doc.ID)
+        doc_node = etree.Element("document")
+        doc_node.set("id", str(doc.ID))
+        doc_node.set("collection", args.biblioteca)
+        doc_node.set("corpus", corpus.name)
+        doc_node.set("name", doc.name)
+        if doc.title:
+            doc_node.set("title", doc.title)
+        # save comments
+        for sent in sents:
+            if args.concise and not (sent.comment or sent.flag):
+                continue
+            sent_node = etree.SubElement(doc_node, 'sent')
+            sent_node.set('ID', str(sent.ID))
+            sent_node.set('ident', str(sent.ident))
+            if sent.flag:
+                sent_node.set('flag', str(sent.flag))
+            text_node = etree.SubElement(sent_node, 'text')
+            text_node.text = sent.text
+            comment_node = etree.SubElement(sent_node, 'comment')
+            cmt = '\n\t\t{}\n'.format(sent.comment.replace('\n', '\n\t\t')) if sent.comment else ''
+            comment_node.text = etree.CDATA(cmt)
+        print("Saving sentences to {}".format(report_loc))
+        with open(report_loc, 'wb') as outfile:
+            outfile.write(etree.tostring(doc_node, pretty_print=True, encoding="utf-8"))
+        print("Done")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
@@ -125,6 +202,24 @@ if __name__ == '__main__':
     export_task.add_argument('filename', help='Backup filename')
     export_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
     export_task.set_defaults(func=export_sqlite)
+
+    # generate report (using comments)
+    report_task = tasks.add_parser("report", help="Generate report")
+    report_task.add_argument('biblioteca', help='Biblioteca name')
+    report_task.add_argument('corpus', help='Corpus name')
+    report_task.add_argument('doc', help='Document name')
+    report_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
+    report_task.add_argument('--concise', help="Only report commented sentences", default=True, action='store_true')
+    report_task.set_defaults(func=gen_report)
+
+    # store report into document
+    store_report_task = tasks.add_parser("comment", help="Import comments")
+    store_report_task.add_argument('biblioteca', help='Biblioteca name')
+    store_report_task.add_argument('corpus', help='Corpus name')
+    store_report_task.add_argument('doc', help='Document name')
+    store_report_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
+    store_report_task.add_argument('--concise', help="Only report commented sentences", default=True, action='store_true')
+    store_report_task.set_defaults(func=store_report)
 
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help

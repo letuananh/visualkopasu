@@ -214,7 +214,11 @@ class SQLiteCorpusDAO(ViskoSchema):
         # doc.name is unique
         return self.doc.select_single('name=?', (doc_name,))
 
-    def getSentences(self, docID, flag=None, add_dummy_parses=True):
+    def getSentences(self, docID, flag=None, add_dummy_parses=True, ctx=None):
+        if ctx is None:
+            with self.ctx() as ctx:
+                return self.getSentences(docID, flag, add_dummy_parses, ctx=ctx)
+        # ctx is not None
         where = 'documentID = ?'
         params = [docID]
         if flag:
@@ -228,16 +232,15 @@ class SQLiteCorpusDAO(ViskoSchema):
             WHERE {where}
             GROUP BY sentenceID ORDER BY sentence.ID;
             '''.format(where=where)
-            with self.ctx() as ctx:
-                rows = ctx.execute(query, params)
-                sents = []
-                for row in rows:
-                    sent = self.sentence.to_obj(row)
-                    sent.readings = [None] * row['parse_count']
-                    sents.append(sent)
-                return sents
+            rows = ctx.execute(query, params)
+            sents = []
+            for row in rows:
+                sent = self.sentence.to_obj(row)
+                sent.readings = [None] * row['parse_count']
+                sents.append(sent)
+            return sents
         else:
-            return self.Sentence.select(where, params)
+            return ctx.Sentence.select(where, params)
 
     def query(self, query_obj):
         return self.ds.select(query_obj.query, query_obj.params)
