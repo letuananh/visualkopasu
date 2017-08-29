@@ -18,23 +18,23 @@ References:
 
 # Copyright (c) 2017, Le Tuan Anh <tuananh.ke@gmail.com>
 #
-#Permission is hereby granted, free of charge, to any person obtaining a copy
-#of this software and associated documentation files (the "Software"), to deal
-#in the Software without restriction, including without limitation the rights
-#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the Software is
-#furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-#The above copyright notice and this permission notice shall be included in
-#all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-#THE SOFTWARE.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 __author__ = "Le Tuan Anh"
 __email__ = "<tuananh.ke@gmail.com>"
@@ -88,23 +88,19 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
             print("Tried to create corpus but failed ... Setup tool will terminate now.")
             return
     # Now make sure the document exists
-    docs = sqliteDAO.getDocumentByName(doc_name=doc_name)
-    if len(docs) > 1:
-        print("Multiple docs [name=%s] was found" % doc_name)
-        print("Error! Script will be terminated.")
-        return False
-    elif len(docs) == 1:
+    doc = sqliteDAO.get_doc(doc_name)
+    if doc is not None:
         print("Document exists. Document will NOT be saved to database.")
         return False
-    elif len(docs) == 0:
+    else:
         print("Doc %s cannot be found. Attempting to create the document ..." % doc_name)
-        sqliteDAO.saveDocument(Document(doc_name, corpus[0].ID))
-        docs = sqliteDAO.getDocumentByName(doc_name=doc_name)
-        if len(docs) != 1:
+        sqliteDAO.saveDocument(Document(doc_name, corpus.ID))
+        doc = sqliteDAO.get_doc(doc_name)
+        if doc is None:
             print("Tried to create document but failed. Script will be terminated now.")
             return False
         else:
-            print("Importing into document `%s` (id=%s)" % (doc_name, docs[0].ID))
+            print("Importing into document `%s` (id=%s)" % (doc.name, doc.ID))
 
     sentenceIDs = textDAO.getSentences()
     with sqliteDAO.ctx() as ctx:
@@ -112,7 +108,7 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
             # read sentence from XML
             timer.start("-> Importing sentence %s from XML ..." % id)
             sentence = textDAO.getSentence(id)
-            sentence.documentID = docs[0].ID
+            sentence.documentID = doc.ID
             timer.end()
             # write sentence to DB
             timer.start()

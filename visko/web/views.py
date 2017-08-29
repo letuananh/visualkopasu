@@ -249,7 +249,7 @@ def create_doc(request, collection_name, corpus_name):
 
 def create_sent(request, collection_name, corpus_name, doc_id):
     bib = get_bib(collection_name)
-    doc = bib.sqldao.getDocument(doc_id)
+    doc = bib.sqldao.doc.by_id(doc_id)
     input_results = int(request.POST.get('input_results', 5))
     if input_results not in RESULTS:
         input_results = 5
@@ -295,7 +295,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
 
 def delete_sent(request, collection_name, corpus_name, doc_id, sent_id):
     bib = get_bib(collection_name)
-    doc = bib.sqldao.getDocument(doc_id)
+    doc = bib.sqldao.doc.by_id(doc_id)
     try:
         bib.sqldao.delete_sent(sent_id)
         docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
@@ -344,7 +344,7 @@ def list_doc(request, collection_name, corpus_name):
 def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_results=5, input_parser='ERG'):
     dao = get_bib(collection_name).sqldao
     corpus = dao.getCorpus(corpus_name)
-    doc = dao.getDocument(doc_id)
+    doc = dao.doc.by_id(doc_id)
     sentences = dao.getSentences(doc_id, flag=flag)
     c = get_context({'collection_name': collection_name,
                      'corpus': corpus,
@@ -367,7 +367,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None
     dao = get_bib(collection_name).sqldao
     with dao.ctx() as ctx:
         corpus = dao.getCorpus(corpus_name)
-        doc = dao.getDocument(doc_id)
+        doc = dao.doc.by_id(doc_id)
         sent = dao.getSentence(sent_id)
         next_sid = dao.next_sentid(sent.ID, flag, ctx=ctx)
         prev_sid = dao.prev_sentid(sent.ID, flag, ctx=ctx)
@@ -405,7 +405,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None
 def view_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     corpus = dao.getCorpus(cor)
-    doc = dao.getDocument(did)
+    doc = dao.doc.by_id(did)
     sent = dao.getSentence(sid, readingIDs=(pid,))
     c = get_context({'title': 'Sentence: ' + sent.text,
                      'col': col,

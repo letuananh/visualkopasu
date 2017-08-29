@@ -50,6 +50,8 @@ import unittest
 from chirptext.texttaglib import TagInfo
 from coolisf.util import GrammarHub
 from coolisf.model import MRS, DMRS
+from visko.kopasu.models import Document, Sentence
+from visko.kopasu.dao import SQLiteCorpusDAO
 from visko.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
 from visko.kopasu.xmldao import getSentenceFromFile
 from visko.kopasu.xmldao import RawXML
@@ -135,12 +137,25 @@ class TestMain(unittest.TestCase):
         print(vsent[0].dmrs[0])
 
     def test_visko2isf(self):
-        isent = ERG.parse('I saw a girl with a telescope.', parse_count=10)
+        # ISF to Visko
+        note = "This sentence has been imported to Visko"
+        isent = ERG.parse('I saw a girl with a telescope.', parse_count=2)
+        isent.comment = note
         vsent = getSentenceFromXML(isent.to_visko_xml())
-        # convert back to isf
-        isent2 = vsent.to_isf()
+        # Manipulate sentence with Visko
+        dao = SQLiteCorpusDAO(':memory:', 'temp')
+        with dao.ctx() as ctx:
+            corpus = dao.create_corpus('test', ctx=ctx)
+            doc = dao.saveDocument(Document(name='testdoc', corpusID=corpus.ID), ctx=ctx)
+            vsent.documentID = doc.ID
+            dao.save_sent(vsent, ctx=ctx)
+            # retrieve vsent2 from DB
+            vsent2 = dao.getSentence(vsent.ID, ctx=ctx)
+        # Visko back to ISF
+        isent2 = vsent2.to_isf()
         self.assertIsNotNone(isent2)
         self.assertEqual(len(isent), len(isent2))
+        self.assertEqual(isent2.comment, note)
 
     def test_str_to_dmrs(self):
         dstr = '''dmrs {
@@ -188,8 +203,7 @@ class TestMain(unittest.TestCase):
 } '''
         dx = dmrs_str_to_xml(dstr)
         ds = xml_to_str(dx)
-        
-        pass
+        self.assertTrue(ds)
 
     def test_full_flow(self):
         sent = ERG.parse("My name is Sherlock Holmes")

@@ -23,8 +23,10 @@ Database setup script for VisualKopasu
 import sys
 import os
 import argparse
+from lxml import etree
 
 from visko.config import ViskoConfig as vkconfig
+from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
 from visko.merchant.morph import xml2db
 
@@ -65,23 +67,69 @@ def convert_document(collection_name, corpus_name, doc_name, answer=None, active
     return answer
 
 
+def import_xml(args):
+    answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, use_raw=args.raw)
+    return answer
+
+
+def export_sqlite(args):
+    bib = Biblioteca(args.biblioteca, root=args.root)
+    dao = bib.sqldao
+    corpus = dao.getCorpus(args.corpus)
+    doc = dao.get_doc(args.doc)
+    if os.path.exists(args.filename):
+        print("Output path exists. Cannot export data")
+        return False
+    elif corpus is None or doc is None or corpus.ID != doc.corpusID:
+        print("Document does not exist ({}/{}/{} was provided)".format(args.biblioteca, args.corpus, args.doc))
+    else:
+        # found doc
+        sents = dao.getSentences(doc.ID)
+        doc_node = etree.Element("document")
+        doc_node.set("id", str(doc.ID))
+        doc_node.set("name", doc.name)
+        if doc.title:
+            doc_node.set("title", doc.title)
+        print("Reading sentences from SQLite")
+        for sentinfo in sents:
+            sent = dao.getSentence(sentinfo.ID)
+            sent_node = sent.to_isf().to_visko_xml()
+            doc_node.append(sent_node)
+        print("Saving sentences to {}".format(args.filename))
+        with open(args.filename, 'wb') as outfile:
+            outfile.write(etree.tostring(doc_node, pretty_print=True, encoding="utf-8"))
+        print("Done")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
-    parser.add_argument('biblioteca', help='Biblioteca name')
-    parser.add_argument('corpus', help='Corpus name')
-    parser.add_argument('doc', help='Document name')
-    parser.add_argument('-a', '--active', help='Only import active readings', action='store_true')
-    parser.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
-    parser.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
+    tasks = parser.add_subparsers(help='Task to be done')
+
+    # import XML => SQLite
+    import_task = tasks.add_parser("import", help="Import sentences in XML format")
+    import_task.add_argument('biblioteca', help='Biblioteca name')
+    import_task.add_argument('corpus', help='Corpus name')
+    import_task.add_argument('doc', help='Document name')
+    import_task.add_argument('-f', '--file', help='XML file (a big XML file instead of many small XML files)')
+    import_task.add_argument('-a', '--active', help='Only import active readings', action='store_true')
+    import_task.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
+    import_task.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
+    import_task.set_defaults(func=import_xml)
+
+    # export SQLite => XML
+    export_task = tasks.add_parser("export", help="Export SQLite to XML")
+    export_task.add_argument('biblioteca', help='Biblioteca name')
+    export_task.add_argument('corpus', help='Corpus name')
+    export_task.add_argument('doc', help='Document name')
+    export_task.add_argument('filename', help='Backup filename')
+    export_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
+    export_task.set_defaults(func=export_sqlite)
+
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
         parser.print_help()
     else:
         # Parse input arguments
         args = parser.parse_args()
-        if args.biblioteca and args.corpus and args.doc:
-            answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, use_raw=args.raw)
-        else:
-            parser.print_help()
-    pass
+        args.func(args)

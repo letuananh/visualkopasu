@@ -210,11 +210,9 @@ class SQLiteCorpusDAO(ViskoSchema):
     def getDocumentOfCorpus(self, corpusID):
         return self.doc.select('corpusID=?', (corpusID,))
 
-    def getDocument(self, docID):
-        return self.doc.by_id(docID)
-
-    def getDocumentByName(self, doc_name):
-        return self.doc.select('name=?', (doc_name,))
+    def get_doc(self, doc_name):
+        # doc.name is unique
+        return self.doc.select_single('name=?', (doc_name,))
 
     def getSentences(self, docID, flag=None, add_dummy_parses=True):
         where = 'documentID = ?'

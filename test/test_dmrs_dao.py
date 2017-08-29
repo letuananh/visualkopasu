@@ -53,7 +53,7 @@ from coolisf.util import GrammarHub, sent2json
 from coolisf import Lexsem, tag_gold
 
 from visko.kopasu.xmldao import getSentenceFromRawXML
-from visko.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML
+from visko.kopasu.xmldao import getSentenceFromFile, getSentenceFromXML, getSentenceFromXMLString
 from visko.kopasu.xmldao import getDMRSFromXML
 from visko.kopasu.xmldao import RawXML
 from visko.kopasu.dao import SQLiteCorpusDAO
@@ -70,8 +70,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logging.basicConfig(level=logging.INFO)  # change to DEBUG for more info
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TEST_FILE = os.path.join(TEST_DIR, '1300.xml.gz')
-TEST_FILE2 = os.path.join(TEST_DIR, '10022.xml.gz')
+TEST_FILE = os.path.join(TEST_DIR, '10022.xml.gz')
+TEST_FILE2 = os.path.join(TEST_DIR, '10044.xml.gz')
 # Test data
 SENT_TEXT = "ロボットの子は猫が好きです。"
 SENT_TAGS = {'tokens': [{'label': 'ロボット', 'cto': 4, 'cfrom': 0}, {'label': 'の', 'cto': 6, 'cfrom': 5}, {'label': '子', 'cto': 8, 'cfrom': 7}, {'label': 'は', 'cto': 10, 'cfrom': 9}, {'label': '猫', 'cto': 12, 'cfrom': 11}, {'label': 'が', 'cto': 14, 'cfrom': 13}, {'label': '好き', 'cto': 17, 'cfrom': 15}, {'label': 'です', 'cto': 20, 'cfrom': 18}, {'label': '。', 'cto': 22, 'cfrom': 21}], 'concepts': [{'clemma': 'ロボット', 'words': [0], 'tag': '02761392-n'}, {'clemma': '猫', 'words': [4], 'tag': '02121620-n'}, {'clemma': '好き', 'words': [6], 'tag': '01292683-a'}, {'clemma': 'ロボットの子', 'words': [0, 1, 2], 'tag': '10285313-n', 'flag': 'E'}], 'text': 'ロボット の 子 は 猫 が 好き です 。 \n'}
@@ -99,6 +99,8 @@ class TestDAOBase(unittest.TestCase):
         # prepare bibroot directory
         FileHelper.create_dir(cls.bibroot)
         db_path = cls.bib.sqldao.db_path
+        if os.path.isfile(db_path):
+            os.unlink(db_path)
         logging.debug("Setting up database file at %s" % (db_path,))
 
     @classmethod
@@ -110,7 +112,7 @@ class TestDAOBase(unittest.TestCase):
         logging.debug("Test bib loc: {}".format(self.bib.sqldao.db_path))
         # ensure corpus
         corpus = self.bib.sqldao.getCorpus(self.corpus_name)
-        if not corpus:
+        if corpus is None:
             self.bib.create_corpus(self.corpus_name)
             corpus = self.bib.sqldao.getCorpus(self.corpus_name)
         return corpus
@@ -118,12 +120,10 @@ class TestDAOBase(unittest.TestCase):
     def ensure_doc(self):
         ''' Ensure that testcorpus exists'''
         corpus = self.ensure_corpus()
-        docs = self.bib.sqldao.getDocumentByName(self.doc_name)
-        if not docs:
+        doc = self.bib.sqldao.get_doc(self.doc_name)
+        if doc is None:
             doc = Document(name=self.doc_name, corpusID=corpus.ID)
             self.bib.sqldao.saveDocument(doc)
-        else:
-            doc = docs[0]
         return doc
 
     def ensure_sent(self):
@@ -228,7 +228,7 @@ class TestDMRSSQLite(TestDAOBase):
         corpus = self.ensure_corpus()
         doc = self.ensure_doc()
         # test retrieving doc
-        doc = self.bib.sqldao.getDocumentByName(self.doc_name)[0]
+        doc = self.bib.sqldao.get_doc(self.doc_name)
         self.assertIsNotNone(doc)
         self.assertEqual(doc.name, self.doc_name)
         self.assertEqual(doc.corpusID, corpus.ID)
@@ -257,7 +257,7 @@ class TestDMRSSQLite(TestDAOBase):
     def test_get_sentences_with_dummy(self):
         doc = self.ensure_doc()
         self.ensure_sent()
-        sents = self.bib.sqldao.getSentences(doc.ID, True)
+        sents = self.bib.sqldao.getSentences(doc.ID)
         self.assertGreater(len(sents), 0)
         self.assertEqual(len(sents[0]), 1)
         self.assertIsNone(sents[0][0])
@@ -283,7 +283,7 @@ class TestDMRSSQLite(TestDAOBase):
     def test_doc(self):
         self.ensure_sent()
         dao = self.bib.sqldao
-        doc = dao.getDocumentByName(self.doc_name)[0]
+        doc = dao.get_doc(self.doc_name)
         # clear info
         # Test store grammar, tagger, parse_count and lang
         doc.grammar = None
@@ -291,8 +291,7 @@ class TestDMRSSQLite(TestDAOBase):
         doc.parse_count = None
         doc.lang = None
         dao.saveDocument(doc)
-        doc = dao.getDocumentByName(self.doc_name)[0]
-        print(doc)
+        doc = dao.get_doc(self.doc_name)
         self.assertIsNone(doc.grammar)
         self.assertIsNone(doc.tagger)
         self.assertIsNone(doc.parse_count)
@@ -303,7 +302,7 @@ class TestDMRSSQLite(TestDAOBase):
         doc.parse_count = 5
         doc.lang = "en"
         dao.saveDocument(doc)
-        doc = dao.getDocumentByName(self.doc_name)[0]
+        doc = dao.get_doc(self.doc_name)
         self.assertEqual(doc.grammar, "ERG")
         self.assertEqual(doc.tagger, "lelesk")
         self.assertEqual(doc.parse_count, 5)
@@ -312,7 +311,7 @@ class TestDMRSSQLite(TestDAOBase):
     def test_clear_doc_info(self):
         self.ensure_sent()
         dao = self.bib.sqldao
-        doc = dao.getDocumentByName(self.doc_name)[0]
+        doc = dao.get_doc(self.doc_name)
         # clear info
         # Test store grammar, tagger, parse_count and lang
         doc.grammar = None
@@ -320,8 +319,7 @@ class TestDMRSSQLite(TestDAOBase):
         doc.parse_count = None
         doc.lang = None
         dao.saveDocument(doc)
-        doc = dao.getDocumentByName(self.doc_name)[0]
-        print(doc)
+        doc = dao.get_doc(self.doc_name)
         self.assertIsNone(doc.grammar)
         self.assertIsNone(doc.tagger)
         self.assertIsNone(doc.parse_count)
@@ -407,6 +405,16 @@ class TestHumanAnnotation(TestDAOBase):
             dao.note_sentence(sent.ID, note2, ctx=ctx)
             actual = dao.read_note_sentence(sent.ID, ctx=ctx)
             self.assertEqual(actual, note2)
+            # note is retrieved together with other sentence's info
+            sent = dao.getSentence(sent.ID, ctx=ctx)
+            self.assertEqual(sent.comment, note2)
+            # comment is preserved in ISF sentence
+            isent = sent.to_isf()
+            isent_json = sent2json(isent)
+            self.assertEqual(isent_json['comment'], note2)
+            # convert it back to Visko sentence
+            vsent = getSentenceFromXMLString(isent_json['xml'])
+            self.assertEqual(vsent.comment, note2)
 
     def test_get_prev_next(self):
         dao = SQLiteCorpusDAO(':memory:', 'temp')

@@ -176,6 +176,10 @@ class Sentence(object):
         ''' Convert Visko Sentence to ISF sentence'''
         isfsent = ISFSentence(self.text, str(self.ID))
         isfsent.shallow = self.shallow
+        if self.flag:
+            isfsent.flag = self.flag
+        if self.comment:
+            isfsent.comment = self.comment
         for i in self:
             # we should use XML first as it has sense information
             xml_raw = i.find_raw(ParseRaw.XML)

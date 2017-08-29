@@ -264,6 +264,10 @@ def getSentenceFromRawXML(raw, filename=None):
     sentence = Sentence(sid, text)
     if filename:
         sentence.filename = filename
+    # read comments if available
+    comment_tag = raw.xml.find('comment')
+    if comment_tag is not None:
+        sentence.comment = comment_tag.text
     # read shallow if available
     shallow_tag = raw.xml.find('shallow')
     if shallow_tag is not None and shallow_tag.text:
