@@ -49,21 +49,21 @@ __credits__ = []
 
 import logging
 from chirptext import Timer
-from visko.kopasu.models import Document
+from coolisf.model import Document
 from visko.kopasu.bibman import Biblioteca
 
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # CONFIGURATION
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # FUNCTIONS
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 def xml2db(collection_name, corpus_name, doc_name, dbname=None):
     '''
@@ -78,11 +78,11 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
 
     # Retrieve corpus information first
     print("Retrieving corpus ...")
-    corpus = sqliteDAO.getCorpus(corpus_name)
+    corpus = sqliteDAO.get_corpus(corpus_name)
     if corpus is None:
         print("Corpus doesn't exist. Attempting to create one")
         sqliteDAO.create_corpus(corpus_name=corpus_name)
-        corpus = sqliteDAO.getCorpus(corpus_name)
+        corpus = sqliteDAO.get_corpus(corpus_name)
         if corpus is None:
             print(corpus)
             print("Tried to create corpus but failed ... Setup tool will terminate now.")
@@ -94,7 +94,7 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
         return False
     else:
         print("Doc %s cannot be found. Attempting to create the document ..." % doc_name)
-        sqliteDAO.saveDocument(Document(doc_name, corpus.ID))
+        sqliteDAO.save_doc(Document(doc_name, corpus.ID))
         doc = sqliteDAO.get_doc(doc_name)
         if doc is None:
             print("Tried to create document but failed. Script will be terminated now.")
@@ -102,17 +102,17 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
         else:
             print("Importing into document `%s` (id=%s)" % (doc.name, doc.ID))
 
-    sentenceIDs = textDAO.getSentences()
+    sentids = textDAO.get_sents()
     with sqliteDAO.ctx() as ctx:
-        for id in sentenceIDs:
+        for sentid in sentids:
             # read sentence from XML
-            timer.start("-> Importing sentence %s from XML ..." % id)
-            sentence = textDAO.getSentence(id)
-            sentence.documentID = doc.ID
+            timer.start("-> Importing sentence %s from XML ..." % sentid)
+            sentence = textDAO.get_sent(sentid)
+            sentence.docID = doc.ID
             timer.end()
             # write sentence to DB
             timer.start()
             sqliteDAO.save_sent(sentence, ctx=ctx)
-            timer.end("Sentence %s was saved to SQLite DB ..." % id)
+            timer.end("Sentence {} was saved to SQLite DB (sentID={})...".format(sentid, sentence.ID))
         logger.info("Document has been imported.")
     logger.info("DONE! Please see log file for more details")

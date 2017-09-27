@@ -49,12 +49,11 @@ class TestDMRSSearch(unittest.TestCase):
 
     def test_lower_case(self):
         sents = self.engine.search('linus')
-        print(sents)
+        self.assertTrue(sents)
 
     def test_build_node_query(self):
         clauses = DMRSQueryParser.parse('G:named_rel')
         nq = DMRSQueryParser.parse_node(clauses[0][0])
-        print(nq.to_query())
         q = nq.to_query()
         self.assertEqual(q.query, ('SELECT DISTINCT dmrsID FROM dmrs_node node WHERE gpred_valueID = (SELECT ID FROM dmrs_node_gpred_value WHERE value = ?)'))
         self.assertEqual(q.params, ['named_rel'])
@@ -79,17 +78,17 @@ class TestDMRSSearch(unittest.TestCase):
         self.assertGreaterEqual(len(sents), 1)
 
     def test_search_pred(self):
-        sents = self.engine.search('G:pron_rel')
+        sents = self.engine.search('G:pron')
         self.assertGreater(len(sents), 10)
 
     def test_search_compound(self):
-        sents = self.engine.search('G:pron_rel AND code')
+        sents = self.engine.search('G:pron AND code')
         self.assertGreater(len(sents), 5)
 
     def test_search_compound2(self):
-        cs = DMRSQueryParser.parse('G:named_rel AND bazaar')
-        self.assertEqual(cs, [['G:named_rel'], ['bazaar']])
-        sents = self.engine.search('G:named_rel AND bazaar')
+        cs = DMRSQueryParser.parse('G:named AND bazaar')
+        self.assertEqual(cs, [['G:named'], ['bazaar']])
+        sents = self.engine.search('G:named AND bazaar')
         self.assertGreaterEqual(len(sents), 1)
 
     def test_search_link(self):
@@ -97,19 +96,19 @@ class TestDMRSSearch(unittest.TestCase):
         self.assertGreaterEqual(len(sents), 0)
         sents = self.engine.search('(want /ARG2 get)')
         self.assertGreaterEqual(len(sents), 0)
-        sents = self.engine.search('(want /ARG1 G:pron_rel)')
+        sents = self.engine.search('(want /ARG1 G:pron)')
         self.assertGreaterEqual(len(sents), 0)
 
     def test_complex_search(self):
-        sents = self.engine.search('(want /ARG1 G:pron_rel) AND ready')
+        sents = self.engine.search('(want /ARG1 G:pron) AND ready')
         self.assertGreaterEqual(len(sents), 0)
 
     def test_search_by_sid(self):
         ident = '#1930'
         q = DMRSQueryParser.parse(ident)
-        print(q)
+        self.assertTrue(q)
         sents = self.engine.search('#1930')
-        print(sents)
+        self.assertTrue(sents)
 
 
 ########################################################################

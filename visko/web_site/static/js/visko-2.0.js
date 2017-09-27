@@ -799,9 +799,12 @@ function visualise(response, visko_parse_header, dviz_parse_header){
 /**
  * Show a dismissable message box
  **/
-function show_alert(msg, mother){
+function show_alert(msg, mother, type){
+    if (!type) {
+        type = "danger";
+    }
     var alert_div = $("<div class='alert alert-dismissible'>");
-    alert_div.addClass("alert-danger");
+    alert_div.addClass("alert-" + type);
     alert_div.attr("role", "alert");
     // Add dismiss button
     var btn = $("<button type='button' class='close' data-dismiss='alert' aria-label='Close'>");

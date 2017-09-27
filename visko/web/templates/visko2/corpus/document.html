@@ -13,13 +13,25 @@
 <h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
 <div>
   {% if flag %}
-  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">All</a> |
-  Error Only
+  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">All</a>
   {% else %}
-  All |
+  All
+  {% endif %}
+  |
+  {% if flag != "2" %}
   <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID flag="2" %}">
     Error Only
   </a>
+  {% else %}
+  Error Only
+  {% endif %}
+  |
+  {% if flag != "3" %}
+  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID flag="3" %}">
+    Warning Only
+  </a>
+  {% else %}
+  Warning Only
   {% endif %}
 </div>
 
@@ -65,7 +77,7 @@
     </thead>
 
     {% for sentence in sentences %}
-    <tr {% if sentence.is_error %}class="danger"{% endif %}>
+    <tr {% if sentence.is_error %}class="danger"{% elif sentence.is_warning %}class="warning"{% elif sentence.is_gold %}class="success"{% endif %}>
       <td>{{ sentence.ID }}</td>
       <td>{{ sentence.ident }}</td>
       <td>

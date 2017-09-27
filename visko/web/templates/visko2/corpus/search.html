@@ -38,11 +38,11 @@
       <td>{{ forloop.counter }}</td>
       <td>{{ sentence.ident }}</td>
       <td>
-        <a target="search_results" href="{% url 'visko2:list_parse' collection_name=sentence.collection corpus_name=sentence.corpus doc_id=sentence.documentID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+        <a target="search_results" href="{% url 'visko2:list_parse' collection_name=sentence.collection.name corpus_name=sentence.corpus.name doc_id=sentence.docID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
       </td>
       <td>
         {% for parse in sentence %}
-        <a target="search_results" href="{% url 'visko2:view_parse' col=sentence.collection cor=sentence.corpus did=sentence.documentID sid=sentence.ID pid=parse.ID %}">#{{ parse.ID }}</a>&nbsp;
+        <a target="search_results" href="{% url 'visko2:view_parse' col=sentence.collection.name cor=sentence.corpus.name did=sentence.docID sid=sentence.ID pid=parse.ID %}">#{{ parse.ID }}</a>&nbsp;
         {% endfor %}
       </td>
     </tr>

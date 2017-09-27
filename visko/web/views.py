@@ -39,20 +39,21 @@ from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse
 
 from chirptext.texttaglib import TagInfo
-from coolisf.util import GrammarHub, sent2json
+from coolisf import GrammarHub
+from coolisf.util import sent2json
+from coolisf.morph import Transformer
+from coolisf.model import Document, Reading, Sentence
 
 from djangoisf.views import jsonp, TAGGERS
-from visko.util import getLogger
 from visko.kopasu import Biblioteche, Biblioteca
-from visko.kopasu.xmldao import getSentenceFromXML, getDMRSFromXML
-from visko.kopasu.util import dmrs_str_to_xml, xml_to_str
-from visko.kopasu.models import Document, ParseRaw, Reading, Sentence
+
 from visko.kopasu.dmrs_search import LiteSearchEngine
 
 
 ########################################################################
 
-logger = getLogger('visko2.ui', logging.DEBUG)  # level = INFO (default)
+logger = logging.getLogger(__name__)  # level = INFO (default)
+logger.setLevel(logging.INFO)
 SEARCH_LIMIT = 10000
 
 # TODO: Make this more flexible
@@ -65,6 +66,11 @@ ISF_DEFAULT = {'input_results': 5, 'RESULTS': RESULTS,
                'PROCESSORS': PROCESSORS, 'input_parser': 'ERG',
                'input_tagger': TagInfo.LELESK, 'TAGGERS': TAGGERS,
                'input_sentence': "Abrahams' dogs barked."}
+SENT_FLAGS = [{'value': str(Sentence.NONE), 'text': 'None'},
+              {'value': str(Sentence.GOLD), 'text': 'Gold'},
+              {'value': str(Sentence.ERROR), 'text': 'Error'},
+              {'value': str(Sentence.WARNING), 'text': 'Warning'}]
+SENT_FLAG_MAP = {i['value']: i['text'] for i in SENT_FLAGS}
 
 
 def getAllCollections():
@@ -73,13 +79,13 @@ def getAllCollections():
         corpora = None
         if os.path.isfile(collection.sqldao.db_path):
             # there is a collection with this name
-            corpora = collection.sqldao.getCorpora()
+            corpora = collection.sqldao.corpus.select()
             collection.corpora = corpora if corpora is not None else []
             logger.debug("corpora of {}: {} | {}".format(collection.name, corpora, collection.corpora))
             # get all available corpus inside
             for corpus in collection.corpora:
                 corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
-                corpus.documents = collection.sqldao.getDocumentOfCorpus(corpus.ID)
+                corpus.documents = collection.sqldao.get_docs(corpus.ID)
                 for doc in corpus.documents:
                     doc.corpus = corpus
     for col in collections:
@@ -156,6 +162,21 @@ def isf(request):
     return render(request, "visko2/isf/index.html", c)
 
 
+def isf_editor(request):
+    c = get_context(ISF_DEFAULT, title="ISF - DMRS Editor")
+    if request.method == 'POST':
+        input_sentence = request.POST.get('input_sentence')
+        input_parser = request.POST.get('input_parser')
+        input_tagger = request.POST.get('input_tagger')
+        input_results = int(request.POST.get('input_results'))
+        c.update({'input_sentence': input_sentence,
+                  'input_parser': input_parser,
+                  'input_tagger': input_tagger,
+                  'input_results': input_results})
+    print(c)
+    return render(request, "visko2/isf/editor.html", c)
+
+
 def yawol(request):
     c = get_context(ISF_DEFAULT, title="Yawol REST Client")
     return render(request, "visko2/yawol/index.html", c)
@@ -193,9 +214,13 @@ def search(request, sid=None):
                     engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
                     sents = engine.search(query)
                     for s in sents:
-                        s.collection = bib.name
+                        s.collection = bib
                     sentences += sents
                 c.update({'sentences': sentences})
+        print("Found results")
+        if sentences:
+            for s in sentences:
+                print(s, [r.ID for r in s])
     return render(request, "visko2/corpus/search.html", c)
 
 
@@ -234,8 +259,8 @@ def create_doc(request, collection_name, corpus_name):
     bib = get_bib(collection_name)
     try:
         # create SQLite doc
-        corpus = bib.sqldao.getCorpus(corpus_name)
-        bib.sqldao.saveDocument(Document(doc_name, corpusID=corpus.ID, title=doc_title))
+        corpus = bib.sqldao.get_corpus(corpus_name)
+        bib.sqldao.save_doc(Document(doc_name, corpusID=corpus.ID, title=doc_title))
         # create XML doc
         cdao = bib.textdao.getCorpusDAO(corpus_name)
         cdao.create_doc(doc_name)
@@ -265,26 +290,23 @@ def create_sent(request, collection_name, corpus_name, doc_id):
         if input_parser == '':
             # Just create a sentence with no parse
             s = Sentence(text=sentence_text)
-            s.documentID = doc.ID
+            s.docID = doc.ID
             bib.sqldao.save_sent(s)
         elif input_parser in PROCESSORS:
-            isent = ghub.parse(sentence_text, input_parser, pc=input_results, tagger=input_tagger)
-            xsent = isent.tag_xml().to_visko_xml()
-            vsent = getSentenceFromXML(xsent)
-            # save to doc
-            vsent.documentID = doc.ID
+            sent = ghub.parse(sentence_text, input_parser, pc=input_results, tagger=input_tagger)
+            sent.docID = doc.ID
             try:
-                logger.debug("Visko sent: {} | length: {}".format(vsent, len(vsent)))
-                bib.sqldao.save_sent(vsent)
-                # save XML
-                docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
-                docdao.save_sentence(xsent, vsent.ID)
+                logger.debug("Result: {} | length: {}".format(sent, len(sent)))
+                bib.sqldao.save_sent(sent)
+                # [TODO] Save XML
+                # docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
+                # docdao.save_sentence(xsent, vsent.ID)
                 # if everything went right, save config
                 doc.grammar = input_parser
                 doc.tagger = input_tagger
                 doc.parse_count = input_results
-                bib.sqldao.saveDocument(doc)
-                return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=vsent.ID)
+                bib.sqldao.save_doc(doc)
+                return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent.ID)
             except Exception as e:
                 logger.error("Cannot save sentence. Error = {}".format(e))
         else:
@@ -314,11 +336,11 @@ def list_collection(request):
 @csrf_protect
 def list_corpus(request, collection_name):
     dao = get_bib(collection_name).sqldao
-    corpora = dao.getCorpora()
+    corpora = dao.corpus.select()
     if corpora:
         for corpus in corpora:
             # fetch docs
-                corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
+                corpus.documents = dao.get_docs(corpus.ID)
                 for doc in corpus.documents:
                     doc.corpus = corpus
     c = get_context({'title': 'Corpus',
@@ -330,8 +352,8 @@ def list_corpus(request, collection_name):
 @csrf_protect
 def list_doc(request, collection_name, corpus_name):
     dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)
-    corpus.documents = dao.getDocumentOfCorpus(corpus.ID)
+    corpus = dao.get_corpus(corpus_name)
+    corpus.documents = dao.get_docs(corpus.ID)
     for doc in corpus.documents:
         doc.corpus = corpus
     c = get_context({'title': 'Corpus ' + corpus_name,
@@ -343,15 +365,16 @@ def list_doc(request, collection_name, corpus_name):
 @csrf_protect
 def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_results=5, input_parser='ERG'):
     dao = get_bib(collection_name).sqldao
-    corpus = dao.getCorpus(corpus_name)
+    corpus = dao.get_corpus(corpus_name)
     doc = dao.doc.by_id(doc_id)
-    sentences = dao.getSentences(doc_id, flag=flag)
+    sentences = dao.get_sents(doc_id, flag=flag)
+    title = 'Document: {t} | Sentences: {sc}'.format(t=doc.title if doc.title else doc.name, sc=len(sentences) if sentences else 0)
     c = get_context({'collection_name': collection_name,
                      'corpus': corpus,
                      'doc': doc,
                      'flag': flag,
                      'sentences': sentences},
-                    title='Document: ' + doc.title if doc.title else doc.name)
+                    title=title)
     c.update(ISF_DEFAULT)
     print(doc)
     if doc.grammar and doc.grammar in PROCESSORS:
@@ -366,9 +389,9 @@ def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_re
 def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None):
     dao = get_bib(collection_name).sqldao
     with dao.ctx() as ctx:
-        corpus = dao.getCorpus(corpus_name)
+        corpus = dao.get_corpus(corpus_name)
         doc = dao.doc.by_id(doc_id)
-        sent = dao.getSentence(sent_id)
+        sent = dao.get_sent(sent_id)
         next_sid = dao.next_sentid(sent.ID, flag, ctx=ctx)
         prev_sid = dao.prev_sentid(sent.ID, flag, ctx=ctx)
     # sent.ID = sent_id
@@ -404,18 +427,19 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None
 @csrf_protect
 def view_parse(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
-    corpus = dao.getCorpus(cor)
+    corpus = dao.get_corpus(cor)
     doc = dao.doc.by_id(did)
-    sent = dao.getSentence(sid, readingIDs=(pid,))
+    sent = dao.get_sent(sid, readingIDs=(pid,))
     c = get_context({'title': 'Sentence: ' + sent.text,
                      'col': col,
                      'corpus': corpus,
                      'doc': doc,
                      'sid': sid,
+                     'sent_ident': sent.ident,
                      'pid': pid})
     # convert Visko Sentence into ISF to display
-    isfsent = sent.to_isf()
-    c.update({'sent': isfsent, 'parse': isfsent[0], 'vdmrs': sent[0].dmrs[0]})
+    # [TODO] Fix this
+    c.update({'sent': sent, 'parse': sent[0].dmrs()})
     return render(request, "visko2/corpus/parse.html", c)
 
 
@@ -427,10 +451,11 @@ def view_parse(request, col, cor, did, sid, pid):
 def rest_fetch(request, col, cor, did, sid, pid=None):
     dao = get_bib(col).sqldao
     if pid:
-        sent = dao.getSentence(sid, readingIDs=(pid,)).to_isf()
+        sent = dao.get_sent(sid, readingIDs=(pid,))
     else:
-        sent = dao.getSentence(sid).to_isf()
-    return sent2json(sent)
+        sent = dao.get_sent(sid)
+    j = sent2json(sent)
+    return j
 
 
 @csrf_protect
@@ -440,7 +465,7 @@ def rest_note_sentence(request, col, cor, did, sid):
     value = request.POST.get('value', '')  # value
     pk = request.POST.get('pk', '')  # sent_id
     dao = get_bib(col).sqldao
-    sent = dao.getSentence(sid)
+    sent = dao.get_sent(sid)
     if name != 'sent_comment' or not pk or int(pk) != sent.ID:
         logger.warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
         raise Exception("Invalid sentence information was provided")
@@ -451,16 +476,58 @@ def rest_note_sentence(request, col, cor, did, sid):
 
 @csrf_protect
 @jsonp
-def rest_dmrs_parse(request, col, cor, did, sid, pid):
+def rest_flag_sentence(request, col, cor, did, sid):
+    name = request.POST.get('name', '')  # should be sent_flag
+    value = request.POST.get('value', '')  # value
+    pk = request.POST.get('pk', '')  # sent_id
     dao = get_bib(col).sqldao
-    sent = dao.getSentence(sid, readingIDs=(pid,))
+    sent = dao.get_sent(sid)
+    if name != 'sent_flag' or not pk or int(pk) != sent.ID:
+        logger.warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
+        raise Exception("Invalid sentence information was provided")
+    else:
+        dao.flag_sent(sent.ID, value)
+        return {}
+
+
+@jsonp
+def rest_data_flag_all(request):
+    return SENT_FLAGS
+
+
+@csrf_protect
+@jsonp
+def rest_dmrs_parse(request, col=None, cor=None, did=None, sid=None, pid=None):
     dmrs_raw = request.POST.get('dmrs', '')
-    dmrs_xml = dmrs_str_to_xml(dmrs_raw)
-    dmrs = getDMRSFromXML(dmrs_xml)
+    surface = request.POST.get('surface', '')
+    transform = request.POST.get('transform', '')
+    # create a new Sentence object or reuse the old one?
+    if col and sid and pid:
+        dao = get_bib(col).sqldao
+        sent = dao.sentence.by_id(sid)
+    else:
+        sent = Sentence(text=surface)
+    # to parse from raw text or from DMRS string?
+    reading = None
+    if not dmrs_raw and surface:
+        # generate dmrs from surface
+        result = ghub.ERG.parse(surface, parse_count=1)
+        if len(result):
+            reading = result[0]
+        else:
+            raise Exception("Cannot parse surface string")
+    if reading is not None:
+        # use reading object
+        sent.readings.append(reading)
+    else:
+        sent.add(dmrs_str=dmrs_raw)
+    if pid:
+        sent[0].ID = pid
     sent.mode = Reading.ACTIVE
-    sent.readings[0].dmrs = [dmrs]
-    sent.readings[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-    return sent2json(sent.to_isf())
+    if transform:
+        t = Transformer()
+        t.apply(sent)
+    return sent2json(sent)
 
 
 @csrf_protect
@@ -469,34 +536,28 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
     if action not in ('insert', 'replace'):
         raise Exception("Invalid action provided")
     dao = get_bib(col).sqldao
-    sent = dao.getSentence(sid, readingIDs=(pid,))
+    sent = dao.get_sent(sid, readingIDs=(pid,))
 
     # Parse given DMRS
     dmrs_raw = request.POST.get('dmrs', '')
-    dmrs_xml = dmrs_str_to_xml(dmrs_raw)
-    dmrs = getDMRSFromXML(dmrs_xml)
-    sent.mode = Reading.ACTIVE
-    sent.readings[0].dmrs = [dmrs]
-    sent.readings[0].raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-    try:
-        sent2json(sent.to_isf())
-    except Exception as e:
-        logger.exception("DMRS string is not well-formed")
-        raise e
 
     if action == 'replace':
         # this will replace old (existing) DMRS
-        dao.deleteReading(pid)
+        dao.delete_reading(pid)
         # assign a new ident to this new parse
-    sentinfo = dao.getSentence(sent.ID, skip_details=True, get_raw=False)
-    new_parse = Reading(rid='{}-manual'.format(len(sentinfo)), mode=Reading.ACTIVE)
-    new_parse.sentenceID = sent.ID
-    new_parse.dmrs.append(dmrs)
-    new_parse.raws = [ParseRaw(xml_to_str(dmrs_xml), rtype=ParseRaw.XML)]
-    dao.save_reading(new_parse)
-    if new_parse.ID:
+    sentinfo = dao.get_sent(sent.ID, skip_details=True)
+    try:
+        reading = sent.add(dmrs_str=dmrs_raw)
+        reading.rid = '{}-manual'.format(len(sentinfo))
+        reading.mode = Reading.ACTIVE
+        reading.sentID = sent.ID
+    except Exception as e:
+        logger.exception("DMRS string is not well-formed")
+        raise e
+    dao.save_reading(reading)
+    if reading.ID:
         # complete
-        return {"success": True, "url": reverse('visko2:view_parse', args=[col, cor, did, sid, new_parse.ID])}
+        return {"success": True, "url": reverse('visko2:view_parse', args=[col, cor, did, sid, reading.ID])}
     else:
         raise Exception("Error occurred while creating reading")
 
@@ -506,7 +567,7 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
 def rest_dmrs_delete(request, col, cor, did, sid, pid):
     dao = get_bib(col).sqldao
     try:
-        dao.deleteReading(pid)
+        dao.delete_reading(pid)
         return {"success": True, "url": reverse('visko2:list_parse', args=[col, cor, did, sid])}
     except Exception as e:
         logger.exception("Cannot delete parse ID={}".format(pid))

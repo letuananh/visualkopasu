@@ -51,6 +51,15 @@ class SQLiteQuery:
         self.query += " LIMIT ?"
         self.params += [limit]
 
+    def select(self, ctx):
+        return ctx.select(self.query, self.params)
+
+    def select_single(self, ctx):
+        return ctx.select_single(self.query, self.params)
+
+    def select_scalar(self, ctx):
+        return ctx.select_scalar(self.query, self.params)
+
 
 class QueryLink:
     def __init__(self, post=None, rargname=None, from_node=None, to_node=None, text=''):
@@ -327,35 +336,35 @@ class LiteSearchEngine:
                 return -1
             q.query = "SELECT COUNT(*) FROM (%s LIMIT ?)" % q.query
             q.params = q.params + [self.limit]
-            return self.dao.query(q)[0][0]
+            q.select(self.dao.ctx())
         return -1
 
     def get_dmrs(self, dmrs_filter_query):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
-                LEFT JOIN sentence ON reading.sentenceID = sentence.ID
-                LEFT JOIN document ON sentence.documentID = document.ID
+                LEFT JOIN sentence ON reading.sentID = sentence.ID
+                LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE dmrs.ID IN (%s)
             LIMIT ?''' % dmrs_filter_query.query,
                             params=dmrs_filter_query.params + [self.limit])
         logger.debug(query)
-        rows = self.dao.query(query)
+        rows = query.select(self.dao.ctx())
         return rows
 
     def search_by_ident(self, ident):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentenceID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.documentID, corpus.name as corpus
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
-                LEFT JOIN sentence ON reading.sentenceID = sentence.ID
-                LEFT JOIN document ON sentence.documentID = document.ID
+                LEFT JOIN sentence ON reading.sentID = sentence.ID
+                LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentence.ident = ?
             LIMIT ?''',
                             params=[ident, self.limit])
         logger.debug(query)
-        rows = self.dao.query(query)
+        rows = query.select(self.dao.ctx())
         return rows
 
     def search(self, query_text):
@@ -387,16 +396,16 @@ class LiteSearchEngine:
                 pass
 
         # optimize node query order
-        for node in node_queries:
-            node.count = self.count_node([node])
-            if node.count == -1:
-                logger.debug("remove %s" % (node,))
-                node_queries.remove(node)
-            # AND only optimization => any 0 will lead to nothing!
-            if node.count == 0:
-                logger.debug("empty %s" % (node,))
-                return []
-        node_queries.sort()
+        # for node in node_queries:
+        #     node.count = self.count_node([node])
+        #     if node.count == -1:
+        #         logger.debug("remove %s" % (node,))
+        #         node_queries.remove(node)
+        #     # AND only optimization => any 0 will lead to nothing!
+        #     if node.count == 0:
+        #         logger.debug("empty %s" % (node,))
+        #         return []
+        # node_queries.sort()
         # final query
         query = None
         for clause in node_queries + link_queries:
@@ -406,7 +415,6 @@ class LiteSearchEngine:
                 next_query = clause.to_query()
                 query.query += " INTERSECT " + next_query.query
                 query.params += next_query.params
-        logger.info("Final query: {}".format(query))
         query.limit(self.limit)
         rows = self.get_dmrs(query)
         # Build search results

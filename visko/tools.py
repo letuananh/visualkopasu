@@ -85,7 +85,7 @@ def export_sqlite(args):
         print("Document does not exist ({}/{}/{} was provided)".format(args.biblioteca, args.corpus, args.doc))
     else:
         # found doc
-        sents = dao.getSentences(doc.ID)
+        sents = dao.get_sents(doc.ID)
         doc_node = etree.Element("document")
         doc_node.set("id", str(doc.ID))
         doc_node.set("name", doc.name)
@@ -93,7 +93,7 @@ def export_sqlite(args):
             doc_node.set("title", doc.title)
         print("Reading sentences from SQLite")
         for sentinfo in sents:
-            sent = dao.getSentence(sentinfo.ID)
+            sent = dao.get_sent(sentinfo.ID)
             sent_node = sent.to_isf().to_visko_xml()
             doc_node.append(sent_node)
         print("Saving sentences to {}".format(args.filename))
@@ -105,9 +105,10 @@ def export_sqlite(args):
 def store_report(args):
     bib = Biblioteca(args.biblioteca, root=args.root)
     dao = bib.sqldao
-    corpus = dao.getCorpus(args.corpus)
+    corpus = dao.get_corpus(args.corpus)
     doc = dao.get_doc(args.doc)
     report_loc = bib.textdao.getCorpusDAO(args.corpus).getDocumentDAO(args.doc).path + ".report.xml"
+    warning_list = []
     if not os.path.exists(report_loc):
         print("There is no report to import.")
         return False
@@ -117,30 +118,37 @@ def store_report(args):
     else:
         with dao.ctx() as ctx:
             # read doc sents
-            sents = dao.getSentences(doc.ID, ctx=ctx)
+            sents = dao.get_sents(doc.ID, ctx=ctx)
             sent_map = {s.ident: s for s in sents}
             # read comments
             tree = etree.iterparse(report_loc)
             for event, element in tree:
-                if event == 'end' and element.tag == 'sent':
+                if event == 'end' and element.tag == 'sentence':
                     id = element.get('ID')
                     ident = element.get('ident')
-                    # flag = element.get('flag')
-                    # text = element.find('text').text
-                    comment = element.find('comment').text
-                    # import comment here
-                    # Only import comments to sentences with empty comment
-                    if comment and ident in sent_map and not sent_map[ident].comment:
+                    if ident in sent_map:
                         sent = sent_map[ident]
-                        print("comment to #{} ({}): {}".format(id, ident, comment))
-                        dao.note_sentence(sent.ID, comment.strip(), ctx=ctx)
+                        # Only import comments to sentences with empty comment
+                        comment = element.find('comment').text
+                        if comment and ident in sent_map and not sent_map[ident].comment:
+                            print("comment to #{} ({}): {}".format(id, ident, comment))
+                            dao.note_sentence(sent.ID, comment.strip(), ctx=ctx)
+                        # import flag as well
+                        flag = element.get('flag')
+                        if flag:
+                            if not sent.flag:
+                                warning_list.append((sent.ident, sent.flag, flag))
+                            print("Flag #{} with {}".format(sent.ID, flag))
+                            dao.flag_sent(sent.ID, int(flag), ctx=ctx)
                     element.clear()
+    for w in warning_list:
+        print("WARNING: updating flag for #{} from {} to {}".format(*w))
 
 
 def gen_report(args):
     bib = Biblioteca(args.biblioteca, root=args.root)
     dao = bib.sqldao
-    corpus = dao.getCorpus(args.corpus)
+    corpus = dao.get_corpus(args.corpus)
     doc = dao.get_doc(args.doc)
     report_loc = bib.textdao.getCorpusDAO(args.corpus).getDocumentDAO(args.doc).path + ".report.xml"
     if os.path.exists(report_loc) and not confirm("Report file exists. Do you want to continue (Y/N)? "):
@@ -150,7 +158,7 @@ def gen_report(args):
         print("Document does not exist ({}/{}/{} was provided)".format(args.biblioteca, args.corpus, args.doc))
     else:
         # found doc
-        sents = dao.getSentences(doc.ID)
+        sents = dao.get_sents(doc.ID)
         doc_node = etree.Element("document")
         doc_node.set("id", str(doc.ID))
         doc_node.set("collection", args.biblioteca)
@@ -162,7 +170,7 @@ def gen_report(args):
         for sent in sents:
             if args.concise and not (sent.comment or sent.flag):
                 continue
-            sent_node = etree.SubElement(doc_node, 'sent')
+            sent_node = etree.SubElement(doc_node, 'sentence')
             sent_node.set('ID', str(sent.ID))
             sent_node.set('ident', str(sent.ident))
             if sent.flag:
@@ -170,7 +178,7 @@ def gen_report(args):
             text_node = etree.SubElement(sent_node, 'text')
             text_node.text = sent.text
             comment_node = etree.SubElement(sent_node, 'comment')
-            cmt = '\n\t\t{}\n'.format(sent.comment.replace('\n', '\n\t\t')) if sent.comment else ''
+            cmt = '\n{}\n'.format(sent.comment) if sent.comment else ''
             comment_node.text = etree.CDATA(cmt)
         print("Saving sentences to {}".format(report_loc))
         with open(report_loc, 'wb') as outfile:

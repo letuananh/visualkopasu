@@ -3,6 +3,34 @@ Restisf = function(server) {
 }
 
 Restisf.prototype = {
+    generate: function(mrs, grammar, success, fail) {
+        grammar = (grammar == undefined) ? 'ERG' : grammar;
+        $.ajax({
+            url: this._server + 'generate',
+            type: "post",
+            data: {
+                'mrs': mrs,
+	        'grammar': grammar
+            },
+            success: success,
+            fail: function(jqxhr){
+                if (console != undefined && console.writeline != undefined) {
+                    console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
+                }
+                if (typeof fail === 'function'){
+                    fail();
+                }
+            },
+            error: function(jqxhr){
+                if (console != undefined && console.writeline != undefined) {
+                    console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
+                }
+                if (typeof fail === 'function'){
+                    fail();
+                }
+            }
+        });
+    },
     /**
      * Parse a sentence
      **/

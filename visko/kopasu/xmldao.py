@@ -20,21 +20,20 @@ import os.path
 import shutil
 import gzip
 import codecs
+import logging
+import json
 import lxml
 from lxml import etree
-import json
-from chirptext.anhxa import update_data
+
 from chirptext.texttaglib import TaggedSentence
 from chirptext.leutile import FileHelper
-from coolisf.model import Sentence as ISFSentence
+from coolisf.util import is_valid_name
+from coolisf.model import Sentence, Reading
 
-from visko.util import getLogger
-from .util import getSubFolders
-from .util import getFiles
-from .util import is_valid_name
-from .models import Sentence, Reading, DMRS, ParseRaw, Node, SortInfo, Link, Sense
+from visko.util import getSubFolders, getFiles
 
-logger = getLogger('visko.dao')
+
+logger = logging.getLogger(__name__)
 
 
 class XMLBiblioteche:
@@ -96,21 +95,21 @@ class XMLDocumentDAO:
         self.name = name
         self.corpus = corpus
 
-    def getSentences(self):
+    def get_sents(self):
         all_files = [f.split('.')[0] for f in getFiles(self.path)]
         all_files.sort()
         return all_files
 
     def copy_sentence(self, sent_path, sentid=None):
         if sentid is not None and (not is_valid_name(sentid)):
-            raise Exception("Invalid sentenceID (provided: {}".format(sentid))
+            raise Exception("Invalid sentence ID (provided: {}".format(sentid))
         fname = '{}.xml.gz'.format(sentid) if sentid else os.path.basename(sent_path)
         target = os.path.join(self.path, fname)
         shutil.copy2(sent_path, target)
 
     def save_sentence(self, xmlcontent, sentid, pretty_print=True):
         if not is_valid_name(sentid):
-            raise Exception("Invalid sentenceID (provided: {})".format(sentid))
+            raise Exception("Invalid sentence ID (provided: {})".format(sentid))
         sent_path = os.path.join(self.path, str(sentid) + '.xml.gz')
         print("Saving to {}".format(sent_path))
         with gzip.open(sent_path, 'wb') as output_file:
@@ -120,20 +119,20 @@ class XMLDocumentDAO:
                 xmlcontent = xmlcontent.encode('utf-8')
             output_file.write(xmlcontent)
 
-    def delete_sent(self, sentenceID):
-        file_path = self.getPath(sentenceID)
+    def delete_sent(self, sentid):
+        file_path = self.getPath(sentid)
         if not file_path:
-            raise Exception("Sentence {s} does not exist (path={p})".format(s=sentenceID, p=file_path))
+            raise Exception("Sentence {s} does not exist (path={p})".format(s=sentid, p=file_path))
         else:
             os.unlink(file_path)
 
-    def getPath(self, sentenceID=None):
-        if not sentenceID:
-            raise Exception("sentenceID cannot be None")
+    def getPath(self, sentid):
+        if not sentid:
+            raise Exception("sentence ID cannot be None")
         else:
-            file_name = os.path.join(self.path, str(sentenceID) + '.xml.gz')
+            file_name = os.path.join(self.path, str(sentid) + '.xml.gz')
             file_name2 = os.path.join(self.path,
-                                      "%s-%s.xml.gz" % (self.name, str(sentenceID)))
+                                      "%s-%s.xml.gz" % (self.name, str(sentid)))
             logger.debug(("Filename1: %s" % file_name))
             logger.debug(("Filename2: %s" % file_name2))
 
@@ -143,16 +142,16 @@ class XMLDocumentDAO:
                 return file_name2
         return None
 
-    def getSentenceRaw(self, sentenceID):
+    def getSentenceRaw(self, sentid):
         # Parse the file
-        full_path = self.getPath(sentenceID)
+        full_path = self.getPath(sentid)
         logger.debug(full_path)
         with gzip.open(full_path, 'r') as gzfile:
             return gzfile.read()
 
-    def getSentence(self, sentenceID):
+    def get_sent(self, sentid):
         # Read raw text from file
-        full_path = self.getPath(sentenceID)
+        full_path = self.getPath(sentid)
         # Parse the file
         return getSentenceFromFile(full_path)
 
@@ -205,7 +204,7 @@ class RawXML(object):
         return "{} ({} parse(s))".format(self.text, len(self))
 
     def to_isf(self):
-        sent = ISFSentence(self.text)
+        sent = Sentence(self.text)
         for p in self.parses:
             sent.add(mrs_str=p.mrs.text)
         return sent
@@ -261,7 +260,7 @@ def getSentenceFromRawXML(raw, filename=None):
     # Build Sentence object
     sid = raw.xml.attrib['id']
     text = raw.xml.find('text').text
-    sentence = Sentence(sid, text)
+    sentence = Sentence(ident=sid, text=text)
     if filename:
         sentence.filename = filename
     # read comments if available
@@ -272,125 +271,19 @@ def getSentenceFromRawXML(raw, filename=None):
     shallow_tag = raw.xml.find('shallow')
     if shallow_tag is not None and shallow_tag.text:
         shallow = TaggedSentence.from_json(json.loads(shallow_tag.text))
-        sentence.import_tags(shallow)
+        sentence.shallow = shallow  # import tags
         for c in shallow.concepts:
             if c.flag == 'E':
                 sentence.flag = Sentence.ERROR
     # import parses
     for idx, parse in enumerate(raw):
-        reading = Reading()
+        reading = sentence.add()
         reading.rid = parse.node.attrib['id']
         reading.mode = parse.node.attrib['mode']
         if parse.mrs is not None:
             # add raw MRS
-            reading.raws.append(ParseRaw(parse.mrs.text, rtype=ParseRaw.MRS))
+            reading.mrs(parse.mrs.text)
         if parse.dmrs is not None:
-            reading.raws.append(ParseRaw(parse.dmrs_str(), rtype=ParseRaw.XML))
-
-        sentence.readings.append(reading)
+            reading.dmrs(parse.dmrs_str())
         # XXX: parse all synthetic trees
-
-        # parse all DMRS
-        dmrs = getDMRSFromXML(parse.dmrs)
-        reading.dmrs.append(dmrs)
     return sentence
-
-
-def getDMRSFromXMLString(xmlcontent):
-    '''
-        Get DMRS object from XML string
-    '''
-    root = etree.XML(xmlcontent)
-    if root.tag == 'reading':
-        root = root.findall('dmrs')[0]
-    return getDMRSFromXML(root)
-
-
-def getDMRSFromXML(dmrs_tag):
-    ''' Get DMRS from XML node
-    '''
-    dmrs = DMRS()
-    dmrs.ident = dmrs_tag.attrib['ident'] if 'ident' in dmrs_tag.attrib else ''
-    dmrs.cfrom = dmrs_tag.attrib['cfrom'] if 'cfrom' in dmrs_tag.attrib else ''
-    dmrs.cto = dmrs_tag.attrib['cto'] if 'cto' in dmrs_tag.attrib else ''
-    dmrs.surface = dmrs_tag.attrib['surface'] if 'surface' in dmrs_tag.attrib else ''
-
-    # parse all nodes inside
-    for node_tag in dmrs_tag.findall('node'):
-        temp_node = Node(node_tag.attrib['nodeid'], node_tag.attrib['cfrom'], node_tag.attrib['cto'])
-        update_data(node_tag.attrib, temp_node, *(x for x in ('surface', 'base', 'carg') if x in node_tag.attrib))
-        # temp_node.carg = node_tag.attrib['carg'] if node_tag.attrib.has_key('carg') else ''
-
-        # Parse sense info
-        sensegold_tag = node_tag.find('sensegold')
-        if sensegold_tag is not None:
-            # if we have sensegold, use it instead
-            sense_info = Sense()
-            sense_info.lemma = sensegold_tag.attrib['lemma']
-            sense_info.synsetid = sensegold_tag.attrib['synsetid']
-            sense_info.pos = sense_info.synsetid[-1]
-            sense_info.score = '999'
-            temp_node.sense = sense_info
-            logger.debug("Using gold => %s" % (sense_info.synsetid))
-            pass
-        else:
-            sense_tag = node_tag.find('sense')
-            if sense_tag is not None:
-                sense_info = Sense()
-                update_data(sense_tag.attrib, sense_info)
-                temp_node.sense = sense_info
-
-        # TODO: parse sort info
-        sortinfo_tag = node_tag.find("sortinfo")
-        if sortinfo_tag is not None:
-            sortinfo = SortInfo()
-            update_data(sortinfo_tag.attrib, sortinfo)
-            temp_node.sortinfo = sortinfo
-        # FIXME: parse gpred
-        gpred_tag = node_tag.find("gpred")
-        if gpred_tag is not None:
-            temp_node.gpred = gpred_tag.text
-        # TODO: parse realpred
-        realpred_tag = node_tag.find("realpred")
-        if realpred_tag is not None:
-            if 'lemma' in realpred_tag.attrib:
-                temp_node.rplemma = realpred_tag.attrib['lemma']
-            if 'pos' in realpred_tag.attrib:
-                temp_node.rppos = realpred_tag.attrib['pos']
-            if 'sense' in realpred_tag.attrib:
-                temp_node.rpsense = realpred_tag.attrib['sense']
-        # Completed parsing, add the node_tag to DMRS object
-        dmrs.nodes.append(temp_node)
-        # end for nodes
-    # create a map of nodes (by id)
-    node_map = dict(list(zip([n.nodeid for n in dmrs.nodes], dmrs.nodes)))
-
-    # parse all links inside
-    for link_tag in dmrs_tag.findall('link'):
-        fromNodeID = link_tag.attrib['from']
-        toNodeID = link_tag.attrib['to']
-        if fromNodeID == '0':
-            # we need to create a dummy node with ID = 0
-            node_zero = Node('0')
-            node_zero.sortinfo = SortInfo()
-            node_zero.gpred = 'unknown_root'
-            node_map['0'] = node_zero
-            dmrs.nodes.append(node_zero)
-        if fromNodeID not in node_map or toNodeID not in node_map:
-            logger.error("ERROR: Invalid nodeID [%s -> %s] in link_tag: %s" % (fromNodeID, toNodeID, link_tag))
-        else:
-            fromNode = node_map[fromNodeID]
-            toNode = node_map[toNodeID]
-            temp_link = Link(fromNode, toNode)
-
-            # TODO: parse post
-            post_tag = link_tag.find("post")
-            if post_tag is not None:
-                temp_link.post = post_tag.text
-            rargname_tag = link_tag.find("rargname")
-            if rargname_tag is not None:
-                temp_link.rargname = rargname_tag.text
-            # end for link_tag
-            dmrs.links.append(temp_link)
-    # finished, add dmrs object to reading
-    return dmrs

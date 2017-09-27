@@ -4,16 +4,6 @@
 
 {% block content %}
 
-<ol class="breadcrumb">
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid %}">Sent #{{ sid }} - (Ident: #{{sent_ident}})</a></li>
-  <li class="breadcrumb-item">Parse #{{parse.ident}}</li>
-</ol>
-
-{% if sent %}
 <!-- <h3>Sentence #{{sid}} | Parse #{{parse.ident}}</h3> -->
 <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
 <div id="sentences"></div>
@@ -42,15 +32,15 @@
     <!-- <h3>Edit DMRS</h3> -->
     <form>
       {% csrf_token %}
+      Surface <input type="text" name="surface" id="surface" class="form-control" value="Sherlock Holmes likes the guard dogs."></input>
+      Transform <input type="checkbox" name="transform" id="transform" class="form-control" checked="checked"></input>
+      DMRS
       <div class="form-group">
-        <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{parse.tostring}}</textarea>
+        <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{vdmrs}}</textarea>
       </div>
       <button type="button" id="btnReset" name="btnReset" class="btn btn-lg btn-warning">Reset</button>
       <button type="button" id="btnParse" name="btnParse" class="btn btn-lg btn-primary">Parse</button>
       <button type="button" id="btnGen" name="btnGen" class="btn btn-lg btn-primary">Generate</button>
-      <button type="button" id="btnSave" name="btnSave" value="insert" class="btn btn-lg btn-default">Save As New DMRS</button>
-      <button type="button" id="btnOverwrite" name="btnOverwrite" value="save" class="btn btn-lg btn-danger">Overwrite</button>
-      <button type="button" id="btnDelete" name="btnDelete" class="btn btn-lg btn-danger">Delete</button>
     </form>
     <!-- End Edit DMRS -->
   </div>
@@ -84,7 +74,6 @@
     <!-- End console UI -->
   </div>
 </div>
-{% endif %}
 
 <!-- Error dialog -->
 <div class="modal fade bs-example-modal-sm" id="errorDialog" tabindex="-1" role="dialog" aria-labelledby="errorDialogModal">
@@ -104,28 +93,6 @@
   </div>
 </div>
 
-<!-- Deletion confirmation dialog -->
-<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
-      </div>
-      
-      <div class="modal-body">
-        <p>You are about to delete this parse, this procedure is irreversible.</p>
-        <p>Do you want to proceed?</p>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <a class="btn btn-danger btn-ok" id="btnActualDelete">Delete</a>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 
@@ -175,108 +142,11 @@
 
 <!-- Visko REST -->
 <script>
- var parse_data_url = "{% url 'visko2:rest_fetch_dmrs' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
- function fetch_visko() {
-   console.writeline("Fetching from: " + parse_data_url);
-   $.ajax({ url: parse_data_url,
-            dataType: 'jsonp',
-            data: { 'raw': true, 'xml': true, 'json': true },
-            success: function(json){
-              clear_parses();
-              response = json;
-              visualise();
-            },
-            fail: function(jqxhr){
-              if (console != undefined && console.writeline != undefined) {
-                console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
-              }
-            },
-            error: function(jqxhr){
-              if (console != undefined && console.writeline != undefined) {
-                console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
-              }
-            }
-   }); // end .ajax()
- }
-
- function store_dmrs(mode) {
-   var dmrs_str = $("#dmrs_raw").val();
-   var req_url;
-   if (mode == 'insert') {
-     req_url = "{% url 'visko2:rest_dmrs_save' action='insert' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
-   }
-   else {
-     req_url = "{% url 'visko2:rest_dmrs_save' action='replace' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
-   }
-   console.writeline("Requesting URL: " + req_url);
-   $.ajaxSetup({
-     headers: { 'X-CSRFToken': "{{ csrf_token }}" }
-   });
-   $.ajax({url: req_url,
-           dataType: 'jsonp',
-           method: 'post',
-           data: {
-             'dmrs': dmrs_str },
-           success: function(json) {
-             if (json.success && json.url.length > 0) {
-               // show_error("I'm going to " + json.url);
-               window.location.href = json.url;
-             }
-             else {
-               show_error("Cannot store DMRS");
-             }
-           },
-           fail: function(jqxhr){
-             if (console != undefined && console.writeline != undefined) {
-               console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
-               show_error("Cannot parse given DMRS");
-             }
-           },
-           error: function(jqxhr){
-             if (console != undefined && console.writeline != undefined) {
-               console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
-               show_error("Cannot parse given DMRS");
-             }
-           }
-   });
- }
-
- function delete_dmrs() {
-   var req_url = "{% url 'visko2:rest_dmrs_delete' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
-
-   console.writeline("Requesting URL: " + req_url);
-   $.ajaxSetup({
-     headers: { 'X-CSRFToken': "{{ csrf_token }}" }
-   });
-   $.ajax({url: req_url,
-           dataType: 'jsonp',
-           method: 'post',
-           success: function(json) {
-             if (json.success && json.url.length > 0) {
-               window.location.href = json.url;
-             }
-             else {
-               show_error("Cannot delete the selected DMRS");
-             }
-           },
-           fail: function(jqxhr){
-             if (console != undefined && console.writeline != undefined) {
-               console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
-               show_error("Cannot parse given DMRS");
-             }
-           },
-           error: function(jqxhr){
-             if (console != undefined && console.writeline != undefined) {
-               console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
-               show_error("Cannot parse given DMRS");
-             }
-           }
-   });
- }
- 
  function parse_dmrs() {
    var dmrs_str = $("#dmrs_raw").val();
-   var req_url = "{% url 'visko2:rest_dmrs_parse' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
+   var surface = $("#surface").val();
+   var transform = $("#transform").is(":checked");
+   var req_url = "{% url 'visko2:rest_dmrs_parse' %}";
    console.writeline("Requesting URL: " + req_url);
    $.ajaxSetup({
      headers: { 'X-CSRFToken': "{{ csrf_token }}" }
@@ -285,11 +155,12 @@
            dataType: 'jsonp',
            method: 'post',
            data: {
-             'dmrs': dmrs_str },
+             'dmrs': dmrs_str, 'surface': surface, 'transform': transform ? transform : undefined },
            success: function(json) {
              clear_parses();
+             console.writeline("There is response");
              response = json;
-             visualise();
+             visualise(response);
            },
            fail: function(jqxhr){
              if (console != undefined && console.writeline != undefined) {
@@ -342,6 +213,7 @@
    $('#dmrses').empty();
    $('#dvizes').empty();
    $('#raws').empty();
+   $('#xmlcontent').empty();
    $('#jsons').empty();
    $('#latexes').empty();
    $('#sentences').empty();
@@ -359,59 +231,6 @@
  }
 
  function header_toolbar(parse, parseidx, container) {
- }
- 
- // Render active visualizer
- function visualise(){       
-   if (response == undefined) {
-     return;
-   }
-   
-   var parses = $(response['parses']);
-   // if using delviz
-   if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       render_delviz(parse, pid, header_toolbar);
-     });
-   }
-   // if using visko
-   else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       render_visko(parse, pid, header_toolbar);
-     });
-   }
-   // XML
-   else if ($('#xmlcontent').is(':empty') && active_tab() == '#xml') {
-     display_xml(response.xml);
-   }
-   // Raws
-   else if ($('#raws').is(':empty') && active_tab() == '#raw') {
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       display_raw(parse, pid);
-     });
-     highlight('#raws');
-   }       
-   // JSONs
-   else if ($('#jsons').is(':empty') && active_tab() == '#json') {
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       display_json(parse, pid);
-     });
-     highlight('#jsons');
-   }
-   // LaTeX
-   else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
-     display_latex(response.latex);
-     highlight('#latex');
-   }
-   // Visualize IMI
-   if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
-     Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
-   }
-   // end if
  }
  
  /** Show debug info **/
@@ -441,28 +260,20 @@
    // Reset DMRS textarea
    $('#btnReset').click(function(){     
      clear_parses();
-     fetch_visko();
      $('#dmrs_raw').val($('#dmrs_raw').prop('defaultValue'));
    });
    $('#btnParse').click(parse_dmrs);
    $('#btnGen').click(generate_text);
-   $('#btnSave').click(function(){ store_dmrs('insert'); });
-   $('#btnOverwrite').click(function(){ store_dmrs('replace'); });
-   $('#btnDelete').click(function(){
-     $('#confirm-delete').modal('show');
-   });
-   $('#btnActualDelete').click(delete_dmrs);
 
    // Visualise DMRS
    $("#btnDebug").click(debug);
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-     visualise();
+     visualise(response);
    });
  }
  
  $(document).ready(function(){       
    initialise();
-   fetch_visko();
  });
 </script>
 {% endblock %}

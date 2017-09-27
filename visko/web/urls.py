@@ -6,6 +6,7 @@ urlpatterns = [
     url(r'^home/?$', views.home, name='home'),
     url(r'^delphin-viz/?$', views.delviz, name='delviz'),
     url(r'^isf/?$', views.isf, name='isf'),
+    url(r'^isf/editor/?$', views.isf_editor, name='isf_editor'),
     url(r'^yawol/?$', views.yawol, name='yawol'),
 
     # development features
@@ -31,10 +32,13 @@ urlpatterns = [
     url(r'^corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/?$', views.view_parse, name='view_parse'),
 
     # REST APIs
+    url(r'^rest/data/flag/all/?$', views.rest_data_flag_all, name='rest_data_flag_all'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/?$', views.rest_fetch, name='rest_fetch_sent'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/comment/save/?$', views.rest_note_sentence, name='rest_note_sentence'),
+    url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/flag/save/?$', views.rest_flag_sentence, name='rest_flag_sentence'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/?$', views.rest_fetch, name='rest_fetch_dmrs'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/parse/?$', views.rest_dmrs_parse, name='rest_dmrs_parse'),
+    url(r'^rest/dmrs/parse/?$', views.rest_dmrs_parse, name='rest_dmrs_parse'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/delete/?$', views.rest_dmrs_delete, name='rest_dmrs_delete'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/(?P<pid>\d+)/(?P<action>insert|replace)/?$', views.rest_dmrs_save, name='rest_dmrs_save'),
 ]

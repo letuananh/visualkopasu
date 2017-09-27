@@ -35,6 +35,7 @@
   <div class="dmrs_sentence_text">Parse count: <span id="parse_count">0</span></div>
   <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
 
+  <div id="message_box"></div>
   <!-- Synset Information -->
   <div id="synsets"></div>
   <div id="sentences"></div>
@@ -139,10 +140,12 @@
  
  function clear_parses() {
    $('#dmrses').empty();
-   $('#jsons').empty();
    $('#dvizes').empty();
+   $('#raws').empty();
+   $('#jsons').empty();
    $('#latexes').empty();
    $('#sentences').empty();
+   $('#message_box').empty();
    response = undefined;
  }
  
@@ -151,57 +154,60 @@
      hljs.highlightBlock(block);
    });
  }
- 
- // Render active visualizer
- function visualise(){       
-   if (response == undefined) {
-     return;
-   }
-   var parses = $(response['parses']);
-   // if using delviz
-   if ($('#dvizes').is(':empty') && active_tab() == '#delviz'){
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       render_delviz(parse, pid);
+
+ var sent_url = '#';
+
+ function custom_visko_header(parse, parseidx, container, id_prefix) {
+   if (parseidx == undefined) { parseidx = 1; }
+   if (id_prefix == undefined) { id_prefix = 'parse_'; }
+   var pid = (parse.pid != undefined) ? parse.pid : parseidx;
+   if (typeof container == 'string') { container = $("#" + container); }
+   var toolbar =  $('<div class="input-group input-group-sm col-sm-6" style="padding: 2px;"></div>');
+   toolbar.attr('id', id_prefix + pid);
+   // Attach toolbar to container
+   container.append(toolbar);
+
+   // Parse label
+   var lblParse = $('<span class="input-group-addon"></span>');
+   lblParse.attr('id', id_prefix + pid + '_lbl');
+   var lnk = $('<a></a>');
+   lnk.attr('href', '#').text('Parse #' + parseidx);
+   lblParse.append(lnk);
+   toolbar.append(lblParse);
+   
+   var btn_group = $('<div class="btn-group" role="group" aria-label="..."></div>');
+   toolbar.append(btn_group);
+   // Generate button
+   var btnGenerate = $('<button class="btn btn-default" title="Generate">Generate <span class="glyphicon glyphicon-info-sign" aria-hidden="True"></span></button>');
+   btnGenerate.data('pid', pid);
+   btnGenerate.attr('id', id_prefix + pid + '_gen');
+   btnGenerate.click(function(){
+     var pid = $(this).data('pid');
+     var idx = pid - 1;
+     var mrs = response.parses[idx].mrs_raw;
+     var grm = $('#input_parser').val();
+     var gurl = restisf_root + "/generate/";
+     console.writeline("Generate url: " + gurl);
+     console.writeline("Parse#" + pid + "'s MRS: " + mrs);
+     $.ajaxSetup({
+       headers: { 'X-CSRFToken': "{{ csrf_token }}" }
      });
-   }
-   // if using visko
-   else if ($('#dmrses').is(':empty') && active_tab() == '#visko'){
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       render_visko(parse, pid);
+     get_isf().generate(mrs, grm, function(json){
+       if(json && json.length){
+         console.writeline("Generating from parse #" + pid);
+         console.writeline(json);
+         show_alert(_.join(json, '<br/>'), undefined, "success");
+       }
+       else {
+         console.writeline("Error");
+         show_alert("Parse #" + pid + " cannot be generated.");
+       }
      });
-   }
-   // XML
-   else if ($('#xmlcontent').is(':empty') && active_tab() == '#xml') {
-     display_xml(response.xml);
-   }
-   // Raws
-   else if ($('#raws').is(':empty') && active_tab() == '#raw') {
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       display_raw(parse, pid);
-     });
-     highlight('#raws');
-   }       
-   // JSONs
-   else if ($('#jsons').is(':empty') && active_tab() == '#json') {
-     parses.each(function(idx, parse){
-       pid = idx + 1;
-       display_json(parse, pid);
-     });
-     highlight('#jsons');
-   }
-   // LaTeX
-   else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
-     display_latex(response.latex);
-     highlight('#latex');
-   }
-   // Visualize IMI
-   if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
-     Visko.Tagged.show(response.shallow).show_concepts();
-   }
-   // end if
+     // end generating
+   });
+   btn_group.append(btnGenerate);
+
+   return toolbar;
  }
  
  /** Parse a sentence using REST API **/
@@ -232,7 +238,7 @@
    // console.writeline("Raw response: " + JSON.stringify(response));
    console.writeline(json.parses.length + " parse(s) has been received.");
    $('#parse_count').text(json.parses.length);
-   visualise();
+   visualise(response, custom_visko_header);
  }
  
  function active_tab() {
@@ -265,7 +271,7 @@
      }
    });
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-     visualise();
+     visualise(response, custom_visko_header);
    });
  }
 

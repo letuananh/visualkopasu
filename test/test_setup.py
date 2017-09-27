@@ -51,25 +51,8 @@ from visko.kopasu import Biblioteca
 from visko.merchant.redwood import parse_document
 from visko.tools import get_raw_doc_folder
 from visko.tools import convert_document
-from test.test_dmrs_dao import validate_sentence
-from visko.kopasu.util import is_valid_name
 
 ########################################################################
-
-
-class TestName(unittest.TestCase):
-
-    def test_valid_name(self):
-        self.assertTrue(is_valid_name('test'))
-        self.assertTrue(is_valid_name('test123'))
-        self.assertTrue(is_valid_name('1'))
-        self.assertTrue(is_valid_name('1234'))
-        self.assertTrue(is_valid_name('12_34'))
-        self.assertTrue(is_valid_name('ABC12_34'))
-        # invalid names
-        self.assertFalse(is_valid_name(''))
-        self.assertFalse(is_valid_name(None))
-        self.assertFalse(is_valid_name('a.b'))
 
 
 class TestConsoleSetup(unittest.TestCase):
@@ -103,9 +86,8 @@ class TestConsoleSetup(unittest.TestCase):
         convert_document(collection_name, corpus_name, doc_name)
 
         print("DB: %s" % (testbib.sqldao.db_path,))
-        sentsql = testbib.sqldao.getSentence(1)
+        sentsql = testbib.sqldao.get_sent(1)
         print("sentsql = %s" % (sentsql,))
-        validate_sentence(self, sentsql)
 
 
 ########################################################################

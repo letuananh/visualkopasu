@@ -33,7 +33,9 @@ References:
 
 ########################################################################
 
+import os
 import logging
+from lxml import etree
 
 ########################################################################
 
@@ -48,8 +50,17 @@ __status__ = "Prototype"
 
 ########################################################################
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-def getLogger(name, level=logging.INFO):
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    return logger
+
+def getSubFolders(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isdir(os.path.join(a_folder, child))]
+
+
+def getFiles(a_folder):
+    return [child for child in os.listdir(a_folder) if os.path.isfile(os.path.join(a_folder, child))]
+
+
+def xml_to_str(xml_node, pretty_print=True):
+    return etree.tostring(xml_node, pretty_print=True, encoding='utf-8').decode('utf-8')

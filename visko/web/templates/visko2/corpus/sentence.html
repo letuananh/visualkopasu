@@ -60,10 +60,17 @@
     <div style="overflow-y: auto; height: 600px;">
       <!-- DMRSes container -->
       <div id="dmrses"></div>
+      <!-- Notes -->
       <div style="margin-top: 5px;">
         <span class="label label-default">Sentence's note</span>
         <a id="sent_comment" data-url="{% url 'visko2:rest_note_sentence' col=col cor=corpus.name did=doc.ID sid=sid %}" data-pk="{{sid}}" data-type="textarea" data-rows="5" data-placeholder="Please share your thoughts..." data-title="Enter comments" class="editable editable-pre-wrapped editable-click" data-emptytext=":: Click to comment ::" href="#">{% if sent.comment %}{{sent.comment}}{% endif %}</a>
-      </div>
+            </div>
+      <!-- Flag -->
+      <div style="margin-top: 5px;">
+        <span class="label label-default">Flag</span>
+        <a id="sent_flag" data-url="{% url 'visko2:rest_flag_sentence' col=col cor=corpus.name did=doc.ID sid=sid %}" data-source="{% url 'visko2:rest_data_flag_all' %}" data-sourceCache="true" data-pk="{{sid}}" data-type="select" data-emptytext=":: No flag ::" href="#" {% if sent.flag %}data-value="{{sent.flag}}"{% endif %}></a>
+            </div>
+      
     </div>
   </div>
   <div id="delviz" class="tab-pane">
@@ -254,6 +261,8 @@ There is no parse for this sentence.
    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
      visualise();
    });
+
+   $.fn.editable.defaults.mode = 'inline';
    // Show comment
    $("#sent_comment").editable({
      ajaxOptions: {
@@ -263,6 +272,16 @@ There is no parse for this sentence.
        return "Failed to save comment for this sentence";
      }
    });
+   // Show flag
+   $("#sent_flag").editable({
+     ajaxOptions: {
+       headers: { 'X-CSRFToken': "{{ csrf_token }}" }
+     },
+     error: function(){
+       return "Failed to save flag for this sentence";
+     }
+   });
+   // end
  }
  
  $(document).ready(function(){       

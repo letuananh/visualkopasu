@@ -18,13 +18,16 @@ Data access layer for VisualKopasu project.
 
 ########################################################################
 
+import logging
+
 from chirptext.leutile import FileHelper
+from coolisf.util import is_valid_name
 
 from visko.config import ViskoConfig as vkconfig
-from visko.util import getLogger
-from .dao import SQLiteCorpusCollection
+from visko.util import getFiles
+from .dao import CorpusCollectionSQLite
 from .xmldao import XMLBiblioteche
-from .util import getFiles, is_valid_name
+
 
 ########################################################################
 
@@ -39,7 +42,7 @@ __status__ = "Prototype"
 
 ########################################################################
 
-logger = getLogger('visko.dao')
+logger = logging.getLogger(__name__)
 
 
 class Biblioteche:
@@ -72,7 +75,7 @@ class Biblioteca:
         self.name = name
         self.root = root
         self.textdao = XMLBiblioteche(root).getCorpusCollection(name)
-        self.sqldao = SQLiteCorpusCollection(root).getCorpusDAO(name)
+        self.sqldao = CorpusCollectionSQLite(root).getCorpusDAO(name)
         self.corpora = []
 
     def create_corpus(self, corpus_name):
@@ -82,6 +85,6 @@ class Biblioteca:
     def get_sql_corpora(self):
         self.corpora = self.sqldao.getCorpora()
         for corpus in self.corpora:
-            corpus.documents = self.sqldao.getDocumentOfCorpus(corpus.ID)
+            corpus.documents = self.sqldao.get_docs(corpus.ID)
             for doc in corpus.documents:
                 doc.corpus = corpus
