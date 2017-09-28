@@ -42,15 +42,9 @@ __status__ = "Prototype"
 
 ########################################################################
 
-# import sys
-import os
 import unittest
 
 from visko.kopasu import Biblioteca
-
-from visko.merchant.redwood import parse_document
-from visko.tools import get_raw_doc_folder
-from visko.tools import convert_document
 
 ########################################################################
 
@@ -58,36 +52,18 @@ from visko.tools import convert_document
 class TestConsoleSetup(unittest.TestCase):
 
     def test_setup(self):
-        collection_name = 'test'
-        testbib = Biblioteca(collection_name)
-        corpus_name = 'minicb'
-        doc_name = 'cb100'
-
-        # Test convert FCB format into VK standard XML format
-        print("Make sure that test collection is there")
-        raw_folder = get_raw_doc_folder(collection_name, corpus_name, doc_name)
-        self.assertTrue(os.path.isdir(raw_folder))
-
-        # Make sure that the test SQLite collection does not exist before this test
-        if os.path.isfile(testbib.sqldao.db_path):
-            os.unlink(testbib.sqldao.db_path)
-
-        # clean file before convert
-        print("Make sure that we deleted sentence 1010 before test parsing")
-        cb100dao = testbib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
-        sent1010_path = cb100dao.getPath(1010)
-        print("sent1010_path = %s" % (sent1010_path,))
-        if sent1010_path and os.path.isfile(sent1010_path):
-            os.unlink(sent1010_path)
-
-        parse_document(raw_folder, testbib.textdao.path, corpus_name, doc_name)
-
-        print("Test generated XML file")
-        convert_document(collection_name, corpus_name, doc_name)
-
-        print("DB: %s" % (testbib.sqldao.db_path,))
-        sentsql = testbib.sqldao.get_sent(1)
-        print("sentsql = %s" % (sentsql,))
+        collection_name = 'gold'
+        corpus_name = 'erg'
+        doc_name = 'cb'
+        bib = Biblioteca(collection_name)
+        cbdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc_name)
+        # make sure that archive exists
+        self.assertTrue(cbdao.is_archived())
+        doc = cbdao.read_archive()
+        self.assertIsNotNone(doc)
+        self.assertEqual(len(doc), 769)
+        # test iter_archive
+        self.assertEqual(len(list(cbdao.iter_archive())), len(doc))
 
 
 ########################################################################

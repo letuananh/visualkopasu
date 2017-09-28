@@ -70,7 +70,7 @@ class QueryLink:
         self.text = text
 
     def __str__(self):
-        return "--post=%s / rargname=%s)--" % (self.post, self.rargname)
+        return "--(post=%s/rargname=%s)--" % (self.post, self.rargname)
 
     def to_query(self, dmrs_filter_query=None):
         query = None
@@ -261,8 +261,6 @@ class DMRSQueryParser:
                         if len(parts) == 0:
                             logger.debug("Boolean keyword at the end of the query")
                             return None
-                    #logger.debug("Invalid clause (missing bracket ?)")
-                    #return None
         # we shouldn't have any clause left in the queue
         if clause is not None:
             logger.debug("Incompleted query")
@@ -468,7 +466,7 @@ class SearchCluster():
         results = []
         for engine in self.engines:
             threads.append(SearchThread(engine, query))
-        # Start search threads        
+        # Start search threads
         while len(threads) > 0:
             running_threads = []
             if self.concurrent_threads == 0:  # all

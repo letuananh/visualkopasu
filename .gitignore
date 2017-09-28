@@ -1,5 +1,6 @@
 data/biblioteche/*.db
 data/*.db
+data/*.dat
 test.db*
 minicb.db*
 redwoods.db*

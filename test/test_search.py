@@ -30,6 +30,7 @@ __status__ = "Prototype"
 import unittest
 import logging
 from visko.kopasu import Biblioteca
+from visko.merchant import xml2db
 from visko.kopasu.dmrs_search import DMRSQueryParser, LiteSearchEngine
 
 
@@ -40,12 +41,18 @@ SEARCH_LIMIT = 10000
 
 class TestDMRSSearch(unittest.TestCase):
 
-    bib = Biblioteca('test')
+    col = "gold"
+    cor = "erg"
+    doc = "cb"
+    bib = Biblioteca(col)
     engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
 
     @classmethod
     def setUpClass(cls):
-        print(cls.engine.dao.db_path)
+        # Import sentences if needed
+        sent_count = cls.engine.dao.ctx().select_scalar('SELECT COUNT(*) FROM sentence')
+        if sent_count == 0:
+            xml2db(cls.col, cls.cor, cls.doc)
 
     def test_lower_case(self):
         sents = self.engine.search('linus')

@@ -102,17 +102,27 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
         else:
             print("Importing into document `%s` (id=%s)" % (doc.name, doc.ID))
 
-    sentids = textDAO.get_sents()
     with sqliteDAO.ctx() as ctx:
-        for sentid in sentids:
-            # read sentence from XML
-            timer.start("-> Importing sentence %s from XML ..." % sentid)
-            sentence = textDAO.get_sent(sentid)
-            sentence.docID = doc.ID
+        # if archive is available, import from there
+        if textDAO.is_archived():
+            timer.start("Reading doc archive")
             timer.end()
-            # write sentence to DB
-            timer.start()
-            sqliteDAO.save_sent(sentence, ctx=ctx)
-            timer.end("Sentence {} was saved to SQLite DB (sentID={})...".format(sentid, sentence.ID))
+            for sent in textDAO.iter_archive():
+                sent.docID = doc.ID
+                timer.start("Importing sentence {} to SQLite DB".format(sent))
+                sqliteDAO.save_sent(sent, ctx=ctx)
+                timer.end()
+        elif len(textDAO.get_sents()):
+            sentids = textDAO.get_sents()
+            for sentid in sentids:
+                # read sentence from XML
+                timer.start("-> Importing sentence %s from XML ..." % sentid)
+                sentence = textDAO.get_sent(sentid)
+                sentence.docID = doc.ID
+                timer.end()
+                # write sentence to DB
+                timer.start()
+                sqliteDAO.save_sent(sentence, ctx=ctx)
+                timer.end("Sentence {} was saved to SQLite DB (sentID={})...".format(sentid, sentence.ID))
         logger.info("Document has been imported.")
     logger.info("DONE! Please see log file for more details")
