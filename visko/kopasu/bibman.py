@@ -76,15 +76,33 @@ class Biblioteca:
         self.root = root
         self.textdao = XMLBiblioteche(root).getCorpusCollection(name)
         self.sqldao = CorpusCollectionSQLite(root).getCorpusDAO(name)
-        self.corpora = []
+        self.corpuses = []
 
     def create_corpus(self, corpus_name):
         self.sqldao.create_corpus(corpus_name)
         self.textdao.create_corpus(corpus_name)
 
-    def get_sql_corpora(self):
-        self.corpora = self.sqldao.getCorpora()
-        for corpus in self.corpora:
-            corpus.documents = self.sqldao.get_docs(corpus.ID)
-            for doc in corpus.documents:
-                doc.corpus = corpus
+    def get_corpuses(self):
+        with self.sqldao.ctx() as ctx:
+            self.corpuses = ctx.corpus.select()
+            for corpus in self.corpuses:
+                corpus.documents = self.sqldao.get_docs(corpus.ID, ctx=ctx)
+                for doc in corpus.documents:
+                    doc.corpus = corpus
+                    q = "SELECT COUNT(*) FROM sentence WHERE docID = ?"
+                    p = (doc.ID,)
+                    doc.sent_count = ctx.select_scalar(q, p)
+        return self.corpuses
+
+    def get_corpus_info(self, corpus, ctx=None):
+        if ctx is None:
+            with self.sqldao.ctx() as ctx:
+                return self.get_corpus_info(corpus, ctx=ctx)
+        # context is ensured
+        corpus.documents = self.sqldao.get_docs(corpus.ID, ctx=ctx)
+        for doc in corpus.documents:
+            doc.corpus = corpus
+            q = "SELECT COUNT(*) FROM sentence WHERE docID = ?"
+            p = (doc.ID,)
+            doc.sent_count = ctx.select_scalar(q, p)
+        return corpus

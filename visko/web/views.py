@@ -46,7 +46,7 @@ from coolisf.model import Document, Reading, Sentence
 
 from djangoisf.views import jsonp, TAGGERS
 from visko.kopasu import Biblioteche, Biblioteca
-
+from visko.util import Paginator
 from visko.kopasu.dmrs_search import LiteSearchEngine
 
 
@@ -59,6 +59,7 @@ SEARCH_LIMIT = 10000
 # TODO: Make this more flexible
 # Maximum parse count
 RESULTS = (1, 5, 10, 20, 30, 40, 50, 100, 500)
+PAGESIZE = 1000
 ghub = GrammarHub()
 PROCESSORS = ghub.available
 PROCESSORS.update({'': 'None'})
@@ -76,20 +77,8 @@ SENT_FLAG_MAP = {i['value']: i['text'] for i in SENT_FLAGS}
 def getAllCollections():
     collections = Biblioteche.get_all()
     for collection in collections:
-        corpora = None
         if os.path.isfile(collection.sqldao.db_path):
-            # there is a collection with this name
-            corpora = collection.sqldao.corpus.select()
-            collection.corpora = corpora if corpora is not None else []
-            logger.debug("corpora of {}: {} | {}".format(collection.name, corpora, collection.corpora))
-            # get all available corpus inside
-            for corpus in collection.corpora:
-                corpus.path = collection.textdao.getCorpusDAO(corpus.name).path
-                corpus.documents = collection.sqldao.get_docs(corpus.ID)
-                for doc in corpus.documents:
-                    doc.corpus = corpus
-    for col in collections:
-        logger.debug("{n} - {c}".format(n=col.name, c=col.corpora))
+            collection.get_corpuses()
     return collections
 
 
@@ -147,8 +136,12 @@ def delviz(request):
     return render(request, "visko2/delviz/index.html", c)
 
 
-def isf(request):
+def isf(request, col=None, sid=None):
     c = get_context(ISF_DEFAULT, title="CoolISF REST Client")
+    if request.method == 'GET' and col and sid:
+        dao = get_bib(col).sqldao
+        sent = dao.get_sent(sid)
+        c.update({'input_sentence': sent.text})
     if request.method == 'POST':
         input_sentence = request.POST.get('input_sentence')
         input_parser = request.POST.get('input_parser')
@@ -193,20 +186,20 @@ def search(request, sid=None):
         c.update({'sentences': []})
     elif request.method == 'POST':
         query = request.POST.get('query', '')
-        col = request.POST.get('col', '')
-        c.update({'query': query, 'col': col})
-        logger.info('Col: {c} - Query: {q}'.format(c=col, q=query))
+        col_name = request.POST.get('col', '')
+        c.update({'query': query, 'col': col_name})
+        logger.info('Col: {c} - Query: {q}'.format(c=col_name, q=query))
         if query:
-            if col:
+            if col_name:
                 # search in specified collection
-                bib = Biblioteca(col)
+                bib = Biblioteca(col_name)
                 engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
                 # TODO: reuse engine objects
                 sentences = engine.search(query)
                 for s in sentences:
-                    s.collection = col
+                    s.collection = bib
                 c.update({'sentences': sentences})
-                logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col, q=query, r=sentences))
+                logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col_name, q=query, r=sentences))
             else:
                 # search in all collection
                 sentences = []
@@ -335,27 +328,22 @@ def list_collection(request):
 
 @csrf_protect
 def list_corpus(request, collection_name):
-    dao = get_bib(collection_name).sqldao
-    corpora = dao.corpus.select()
-    if corpora:
-        for corpus in corpora:
-            # fetch docs
-                corpus.documents = dao.get_docs(corpus.ID)
-                for doc in corpus.documents:
-                    doc.corpus = corpus
+    bib = get_bib(collection_name)
+    bib.get_corpuses()
+    print("BIB", bib)
+    for cor in bib.corpuses:
+        print(cor.documents)
     c = get_context({'title': 'Corpus',
                               'collection_name': collection_name,
-                              'corpora': corpora})
+                              'corpuses': bib.corpuses})
     return render(request, "visko2/corpus/collection.html", c)
 
 
 @csrf_protect
 def list_doc(request, collection_name, corpus_name):
-    dao = get_bib(collection_name).sqldao
-    corpus = dao.get_corpus(corpus_name)
-    corpus.documents = dao.get_docs(corpus.ID)
-    for doc in corpus.documents:
-        doc.corpus = corpus
+    bib = get_bib(collection_name)
+    corpus = bib.sqldao.get_corpus(corpus_name)
+    bib.get_corpus_info(corpus)  # get documents, sentence count, etc.
     c = get_context({'title': 'Corpus ' + corpus_name,
                      'collection_name': collection_name,
                      'corpus': corpus})
@@ -364,16 +352,29 @@ def list_doc(request, collection_name, corpus_name):
 
 @csrf_protect
 def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_results=5, input_parser='ERG'):
+    page = int(request.GET.get('page', 0))
+    pane = int(request.GET.get('pane', 8))
     dao = get_bib(collection_name).sqldao
-    corpus = dao.get_corpus(corpus_name)
-    doc = dao.doc.by_id(doc_id)
-    sentences = dao.get_sents(doc_id, flag=flag)
-    title = 'Document: {t} | Sentences: {sc}'.format(t=doc.title if doc.title else doc.name, sc=len(sentences) if sentences else 0)
-    c = get_context({'collection_name': collection_name,
-                     'corpus': corpus,
+    with dao.ctx() as ctx:
+        doc_name = ctx.document.by_id(doc_id).name
+        doc = dao.get_doc(doc_name, ctx=ctx)
+        if corpus_name != doc.corpus.name:
+            raise Exception("Invalid document name")
+        pager = Paginator(pagesize=PAGESIZE, windowpane=pane)
+        total = pager.total(doc.sent_count)
+        if page > total:
+            page = total
+        pagination = pager.paginate(page, total)
+        sc = min(doc.sent_count - page * pager.pagesize, pager.pagesize)  # sentence count
+        sentences = dao.get_sents(doc.ID, flag=flag, page=page, pagesize=pager.pagesize, ctx=ctx)
+        print("sentences: ", len(sentences))
+    title = 'Document: {t} | Sentences: {total} (This page: {sc})'.format(t=doc.title if doc.title else doc.name, total=doc.sent_count, sc=sc)
+    c = get_context({'col': collection_name,
+                     'corpus': doc.corpus,
                      'doc': doc,
                      'flag': flag,
-                     'sentences': sentences},
+                     'sentences': sentences,
+                     'pagination': pagination if total > 1 else None},
                     title=title)
     c.update(ISF_DEFAULT)
     print(doc)

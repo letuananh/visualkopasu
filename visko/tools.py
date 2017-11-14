@@ -25,7 +25,7 @@ import os
 import argparse
 from lxml import etree
 
-from chirptext import confirm
+from chirptext import confirm, header
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
@@ -186,6 +186,57 @@ def gen_report(args):
         print("Done")
 
 
+def archive_doc(bib, corpus, doc_name, ctx=None):
+    doc = bib.sqldao.get_doc(doc_name, ctx=ctx)
+    if doc is None:
+        print("WARNING: Document {}/{}/{} does not exist".format(bib.name, corpus.name, doc_name))
+        return False
+    print("Backing up doc {}/{}/{}".format(bib.name, corpus.name, doc.name))
+    docDAO = bib.textdao.getCorpusDAO(corpus.name).getDocumentDAO(doc.name)
+    if docDAO.is_archived():
+        if not confirm("Archive for {}/{}/{} exists. Do you want to proceed (y/n)? ".format(bib.name, corpus.name, doc.name)):
+            print("Document {}/{}/{} is skipped.".format(args.biblioteca, corpus.name, doc.name))
+            return False
+    for s in bib.sqldao.get_sents(docID=doc.ID):
+        sent = bib.sqldao.get_sent(sentID=s.ID, ctx=ctx)
+        doc.add(sent)
+    print("Archiving ...")
+    docDAO = bib.textdao.getCorpusDAO(corpus.name).getDocumentDAO(doc.name)
+    docDAO.archive(doc)
+    print("Done")
+
+
+def archive_corpus(bib, corpus, ctx):
+    header("Archiving corpus {}".format(corpus.name))
+    docs = bib.sqldao.get_docs(corpus.ID, ctx=ctx)
+    for doc in docs:
+        archive_doc(bib, corpus, doc.name, ctx=ctx)
+
+
+def archive_collection(bib, ctx):
+    header("Archiving collection {}".format(bib.name), level="h0")
+    corpuses = ctx.corpus.select()
+    for corpus in corpuses:
+        archive_corpus(bib, corpus, ctx)
+
+
+def archive_data(args):
+    bib = Biblioteca(args.biblioteca, root=args.root)
+    print("Archive info: collection={} | corpus={} | doc={}".format(args.biblioteca, args.corpus, args.doc))
+    with bib.sqldao.ctx() as ctx:
+        if args.corpus:
+            corpus = bib.sqldao.get_corpus(args.corpus, ctx=ctx)
+            if corpus is None:
+                print("WARNING: Corpus '{}' does not exist".format(args.corpus))
+            if args.doc:
+                archive_doc(bib, corpus, args.doc, ctx=ctx)
+            else:
+                print("Backup corpus: {}".format(corpus))
+        else:
+            print("Backup collection: {}".format(args.biblioteca))
+            archive_collection(bib, ctx)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
@@ -201,6 +252,14 @@ if __name__ == '__main__':
     import_task.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
     import_task.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
     import_task.set_defaults(func=import_xml)
+
+    # archive document
+    archive_task = tasks.add_parser("archive", help="Archive data")
+    archive_task.add_argument('biblioteca', help='Biblioteca name')
+    archive_task.add_argument('corpus', help='Corpus name', nargs="?", default=None)
+    archive_task.add_argument('doc', help='Document name', nargs="?", default=None)
+    archive_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
+    archive_task.set_defaults(func=archive_data)
 
     # export SQLite => XML
     export_task = tasks.add_parser("export", help="Export SQLite to XML")

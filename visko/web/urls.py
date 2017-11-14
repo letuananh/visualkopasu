@@ -6,6 +6,7 @@ urlpatterns = [
     url(r'^home/?$', views.home, name='home'),
     url(r'^delphin-viz/?$', views.delviz, name='delviz'),
     url(r'^isf/?$', views.isf, name='isf'),
+    url(r'^isf/parse/(?P<col>\w+)/(?P<sid>\w+)/?$', views.isf, name='isf'),
     url(r'^isf/editor/?$', views.isf_editor, name='isf_editor'),
     url(r'^yawol/?$', views.yawol, name='yawol'),
 

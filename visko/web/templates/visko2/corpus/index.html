@@ -12,7 +12,7 @@
     <h3 class="panel-title"><a href="{% url 'visko2:list_corpus' collection_name=collection.name %}">{{ collection.name }}</a></h3>
   </div>
   <div class="panel-body">
-    {% for corpus in collection.corpora %}
+    {% for corpus in collection.corpuses %}
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title"><a href="{% url 'visko2:list_doc' collection_name=collection.name corpus_name=corpus.name %}">{{ corpus.name }}</a></h3>
@@ -21,7 +21,8 @@
         <div class="list-group">
           {% for doc in corpus.documents %}
           <a href="{% url 'visko2:list_sent' collection_name=collection.name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
-            {% if doc.title%}{{ doc.title }} ({{doc.name}}){%else%}{{doc.name}}{%endif %}
+            {% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}
+            {% if doc.sent_count %}({{doc.sent_count}}){% endif %}
           </a>
           {% endfor %}
         </div>

@@ -39,7 +39,12 @@
 </ol>
 
 {% if sent != None %}
-<div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
+<div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span>
+  <a class="btn btn-default" href="{% url 'visko2:isf' col=col sid=sid %}">
+    <span class="glyphicon glyphicon-hand-right" aria-hidden="true"></span>
+    To ISF
+  </a>
+</div>
 <div id="sentences"></div>
 <div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;">
 </div>

@@ -47,6 +47,7 @@ __credits__ = []
 
 ########################################################################
 
+import os
 import logging
 from chirptext import Timer
 from coolisf.model import Document
@@ -65,7 +66,7 @@ logger.setLevel(logging.DEBUG)
 # FUNCTIONS
 # -------------------------------------------------------------------------------
 
-def xml2db(collection_name, corpus_name, doc_name, dbname=None):
+def xml2db(collection_name, corpus_name, doc_name, archive_file=None, dbname=None):
     '''
     Import an XML document into SQLite DB
     '''
@@ -77,37 +78,35 @@ def xml2db(collection_name, corpus_name, doc_name, dbname=None):
     timer = Timer()
 
     # Retrieve corpus information first
-    print("Retrieving corpus ...")
     corpus = sqliteDAO.get_corpus(corpus_name)
     if corpus is None:
-        print("Corpus doesn't exist. Attempting to create one")
         sqliteDAO.create_corpus(corpus_name=corpus_name)
         corpus = sqliteDAO.get_corpus(corpus_name)
         if corpus is None:
             print(corpus)
-            print("Tried to create corpus but failed ... Setup tool will terminate now.")
-            return
+            print("Tried to create corpus {} but failed ... Setup tool will terminate now.".format(corpus_name))
+            return False
     # Now make sure the document exists
     doc = sqliteDAO.get_doc(doc_name)
     if doc is not None:
-        print("Document exists. Document will NOT be saved to database.")
-        return False
+        sents = sqliteDAO.get_sents(doc.ID)
+        if len(sents):
+            print("Document exists. Document will NOT be saved to database.")
+            return False
     else:
-        print("Doc %s cannot be found. Attempting to create the document ..." % doc_name)
         sqliteDAO.save_doc(Document(doc_name, corpus.ID))
         doc = sqliteDAO.get_doc(doc_name)
         if doc is None:
             print("Tried to create document but failed. Script will be terminated now.")
             return False
-        else:
-            print("Importing into document `%s` (id=%s)" % (doc.name, doc.ID))
 
     with sqliteDAO.ctx() as ctx:
         # if archive is available, import from there
         if textDAO.is_archived():
-            timer.start("Reading doc archive")
-            timer.end()
+            fsize = os.path.getsize(textDAO.archive_path)
+            print("Importing from archive: {} (size={})".format(textDAO.archive_path, fsize))
             for sent in textDAO.iter_archive():
+                sent.ID = None
                 sent.docID = doc.ID
                 timer.start("Importing sentence {} to SQLite DB".format(sent))
                 sqliteDAO.save_sent(sent, ctx=ctx)

@@ -129,10 +129,12 @@ class DocumentDAOXML(object):
                 return Document.from_xml_str(archive_file.read())
         return None
 
-    def iter_archive(self):
+    def iter_archive(self, archive_path=None):
+        if archive_path is None:
+            archive_path = self.archive_path
         ''' Read sentence one at a time (recommended for large file) '''
-        if os.path.isfile(self.archive_path):
-            with gzip.open(self.archive_path, 'rb') as archive_file:
+        if os.path.isfile(archive_path):
+            with gzip.open(archive_path, 'rb') as archive_file:
                 for event, node in etree.iterparse(archive_file):
                     if event == 'end' and node.tag == 'sentence':
                         yield Sentence.from_xml_node(node)

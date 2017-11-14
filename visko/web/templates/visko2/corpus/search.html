@@ -42,7 +42,7 @@
       </td>
       <td>
         {% for parse in sentence %}
-        <a target="search_results" href="{% url 'visko2:view_parse' col=sentence.collection.name cor=sentence.corpus.name did=sentence.docID sid=sentence.ID pid=parse.ID %}">#{{ parse.ID }}</a>&nbsp;
+        <a target="search_results" href="{% url 'visko2:view_parse' col=sentence.collection.name cor=sentence.corpus.name did=sentence.docID sid=sentence.ID pid=parse.ID %}"><span class="{% if parse.mode == '1' %}parse_active{% elif parse.mode == '0' %}parse_inactive{% endif %}">#{{ parse.ID }}</span></a>&nbsp;
         {% endfor %}
       </td>
     </tr>

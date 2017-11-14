@@ -5,21 +5,22 @@
 
 <ol class="breadcrumb">
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_collection' %}">Collections</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=collection_name %}">{{ collection_name }}</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=collection_name corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_corpus' collection_name=col %}">{{ col }}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item active">{{ doc.name }}</li>
 </ol>
 
 <h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
+
 <div>
   {% if flag %}
-  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}">All</a>
+  <a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">All</a>
   {% else %}
   All
   {% endif %}
   |
   {% if flag != "2" %}
-  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID flag="2" %}">
+  <a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID flag="2" %}">
     Error Only
   </a>
   {% else %}
@@ -27,7 +28,7 @@
   {% endif %}
   |
   {% if flag != "3" %}
-  <a href="{% url 'visko2:list_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID flag="3" %}">
+  <a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID flag="3" %}">
     Warning Only
   </a>
   {% else %}
@@ -35,7 +36,52 @@
   {% endif %}
 </div>
 
-<form method="POST" action="{% url 'visko2:create_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID %}" style="padding-bottom: 20px;">
+{% if pagination %}
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+    {% if pagination.previous is not None %}
+    <li class="page-item">
+      <a class="page-link" href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}?page={{pagination.previous}}" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+        <span class="sr-only">Previous</span>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <a class="page-link" href="#" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+        <span class="sr-only">Previous</span>
+      </a>
+    </li>
+    {% endif %}
+    {% for page in pagination.left_pages %}
+    <li class="page-item"><a class="page-link" href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}?page={{page}}">{{page}}</a></li>
+    {% endfor %}
+    <li class="page-item active"><a class="page-link" href="#">{{pagination.index}}</a></li>
+    {% for page in pagination.right_pages %}
+    <li class="page-item"><a class="page-link" href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}?page={{page}}">{{page}}</a></li>
+    {% endfor %}
+    {% if pagination.next is not None %}
+    <li class="page-item">
+      <a class="page-link" href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}?page={{pagination.next}}" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+        <span class="sr-only">Next</span>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <a class="page-link" href="#" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+        <span class="sr-only">Next</span>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+
+<form method="POST" action="{% url 'visko2:create_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}" style="padding-bottom: 20px;">
   {% csrf_token %}
   <div class="input-group input-group-lg">
     <input class="form-control input-lg" name="input_sentence" id="input_sentence" placeholder="Some dogs bark." value="{{ input_sentence|default:'' }}" type="text">
@@ -82,9 +128,9 @@
       <td>{{ sentence.ident }}</td>
       <td>
         {% if flag %}
-        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID flag=flag %}">{{sentence.text}}</a>
+        <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID flag=flag %}">{{sentence.text}}</a>
         {% else %}
-        <a href="{% url 'visko2:list_parse' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a>
+        <a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}">{{sentence.text}}</a>
         {% endif %}
         <br/>
         {% if sentence.comment %}
@@ -93,7 +139,7 @@
       </td>
       <td>{{ sentence|length}}</td>
       <td>
-        <button class="btn btn-danger" data-txt="{{sentence.text}}" data-idx="{{sentence.ID}}" data-href="{% url 'visko2:delete_sent' collection_name=collection_name corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}" data-toggle="modal" data-target="#confirm-delete">Delete</button>
+        <button class="btn btn-danger" data-txt="{{sentence.text}}" data-idx="{{sentence.ID}}" data-href="{% url 'visko2:delete_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sentence.ID %}" data-toggle="modal" data-target="#confirm-delete">Delete</button>
       </td>
     </tr>
     {% endfor %}

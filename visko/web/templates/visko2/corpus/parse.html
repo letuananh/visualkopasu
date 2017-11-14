@@ -10,7 +10,7 @@
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_doc' collection_name=col corpus_name=corpus.name %}">{{ corpus.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_sent' collection_name=col corpus_name=corpus.name doc_id=doc.ID %}">{{ doc.name }}</a></li>
   <li class="breadcrumb-item"><a href="{% url 'visko2:list_parse' collection_name=col corpus_name=corpus.name doc_id=doc.ID sent_id=sid %}">Sent #{{ sid }} - (Ident: #{{sent_ident}})</a></li>
-  <li class="breadcrumb-item">Parse #{{parse.ident}}</li>
+  <li class="breadcrumb-item"><span class="{% if parse.reading.mode == '1' %}parse_active{% elif parse.reading.mode == '0' %}parse_inactive{% endif %}">Parse #{{parse.ident}}</span></li>
 </ol>
 
 {% if sent %}

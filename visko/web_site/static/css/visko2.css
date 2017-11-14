@@ -44,6 +44,18 @@ code {
 }
 
 /*
+ * Corpus items
+ */
+.parse_active {
+    background-color: lightgreen;
+}
+
+.parse_inactive {
+    background-color: salmon;
+}
+
+
+/*
  * DMRS visualisation
  */
 
