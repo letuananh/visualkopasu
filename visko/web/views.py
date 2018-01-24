@@ -52,8 +52,6 @@ from visko.kopasu.dmrs_search import LiteSearchEngine
 
 ########################################################################
 
-logger = logging.getLogger(__name__)  # level = INFO (default)
-logger.setLevel(logging.INFO)
 SEARCH_LIMIT = 10000
 
 # TODO: Make this more flexible
@@ -72,6 +70,10 @@ SENT_FLAGS = [{'value': str(Sentence.NONE), 'text': 'None'},
               {'value': str(Sentence.ERROR), 'text': 'Error'},
               {'value': str(Sentence.WARNING), 'text': 'Warning'}]
 SENT_FLAG_MAP = {i['value']: i['text'] for i in SENT_FLAGS}
+
+
+def getLogger():
+    return logging.getLogger(__name__)
 
 
 def getAllCollections():
@@ -182,38 +184,48 @@ def yawol(request):
 def search(request, sid=None):
     cols = getAllCollections()
     c = get_context({'collections': cols}, title='Search')
+    sentences = None
     if request.method == 'GET':
         c.update({'sentences': []})
     elif request.method == 'POST':
         query = request.POST.get('query', '')
         col_name = request.POST.get('col', '')
         c.update({'query': query, 'col': col_name})
-        logger.info('Col: {c} - Query: {q}'.format(c=col_name, q=query))
+        getLogger().info('Col: {c} - Query: {q}'.format(c=col_name, q=query))
         if query:
             if col_name:
                 # search in specified collection
                 bib = Biblioteca(col_name)
                 engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
                 # TODO: reuse engine objects
-                sentences = engine.search(query)
-                for s in sentences:
-                    s.collection = bib
-                c.update({'sentences': sentences})
-                logger.info('Col: {c} - Query: {q} - Results: {r}'.format(c=col_name, q=query, r=sentences))
-            else:
-                # search in all collection
-                sentences = []
-                for bib in cols:
-                    engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
-                    sents = engine.search(query)
-                    for s in sents:
+                try:
+                    sentences = engine.search(query)
+                    for s in sentences:
                         s.collection = bib
-                    sentences += sents
-                c.update({'sentences': sentences})
-        print("Found results")
+                    c.update({'sentences': sentences})
+                    getLogger().info('Col: {c} - Query: {q} - Results: {r}'.format(c=col_name, q=query, r=sentences))
+                except:
+                    getLogger().exception("Could not perform search with query: {}".format(query))
+                    messages.error(request, "Could not process query (provided: `{}')".format(query))
+            else:
+                try:
+                    # search in all collection
+                    sentences = []
+                    for bib in cols:
+                        engine = LiteSearchEngine(bib.sqldao, limit=SEARCH_LIMIT)
+                        sents = engine.search(query)
+                        for s in sents:
+                            s.collection = bib
+                        sentences += sents
+                    c.update({'sentences': sentences})
+                except:
+                    getLogger().exception("Could not perform search with query: {}".format(query))
+                    messages.error(request, "Could not process query (provided: `{}')".format(query))
         if sentences:
             for s in sentences:
                 print(s, [r.ID for r in s])
+        else:
+            messages.warning(request, "Found nothing for given query: `{}'".format(query))
     return render(request, "visko2/corpus/search.html", c)
 
 
@@ -227,7 +239,7 @@ def create_collection(request):
         Biblioteche.create(bib_name)
     except:
         msg = "Cannot create biblioteca with name = {}".format(bib_name)
-        logger.error(msg)
+        getLogger().error(msg)
         messages.error(request, msg)
     return redirect('visko2:list_collection')
 
@@ -240,7 +252,7 @@ def create_corpus(request, collection_name):
         return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
     except:
         msg = "Cannot create corpus with name = {}".format(corpus_name)
-        logger.error(msg)
+        getLogger().error(msg)
         messages.error(request, msg)
         return redirect('visko2:list_corpus', collection_name=collection_name)
 
@@ -260,7 +272,7 @@ def create_doc(request, collection_name, corpus_name):
         return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
     except Exception as e:
         msg = "Cannot create document with name = {}".format(doc_name)
-        logger.exception(e, msg)
+        getLogger().exception(e, msg)
         messages.error(request, msg)
         return redirect('visko2:list_doc', collection_name=collection_name, corpus_name=corpus_name)
 
@@ -289,7 +301,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
             sent = ghub.parse(sentence_text, input_parser, pc=input_results, tagger=input_tagger)
             sent.docID = doc.ID
             try:
-                logger.debug("Result: {} | length: {}".format(sent, len(sent)))
+                getLogger().debug("Result: {} | length: {}".format(sent, len(sent)))
                 bib.sqldao.save_sent(sent)
                 # [TODO] Save XML
                 # docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
@@ -301,7 +313,7 @@ def create_sent(request, collection_name, corpus_name, doc_id):
                 bib.sqldao.save_doc(doc)
                 return redirect('visko2:list_parse', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id, sent_id=sent.ID)
             except Exception as e:
-                logger.error("Cannot save sentence. Error = {}".format(e))
+                getLogger().error("Cannot save sentence. Error = {}".format(e))
         else:
             raise Http404("Invalid grammar has been selected")
     # default
@@ -316,7 +328,7 @@ def delete_sent(request, collection_name, corpus_name, doc_id, sent_id):
         docdao = bib.textdao.getCorpusDAO(corpus_name).getDocumentDAO(doc.name)
         docdao.delete_sent(sent_id)
     except Exception as e:
-        logger.error("Cannot delete sentence. Error: {}".format(e))
+        getLogger().error("Cannot delete sentence. Error: {}".format(e))
     return redirect('visko2:list_sent', collection_name=collection_name, corpus_name=corpus_name, doc_id=doc_id)
 
 
@@ -468,7 +480,7 @@ def rest_note_sentence(request, col, cor, did, sid):
     dao = get_bib(col).sqldao
     sent = dao.get_sent(sid)
     if name != 'sent_comment' or not pk or int(pk) != sent.ID:
-        logger.warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
+        getLogger().warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
         raise Exception("Invalid sentence information was provided")
     else:
         dao.note_sentence(sent.ID, value)
@@ -484,7 +496,7 @@ def rest_flag_sentence(request, col, cor, did, sid):
     dao = get_bib(col).sqldao
     sent = dao.get_sent(sid)
     if name != 'sent_flag' or not pk or int(pk) != sent.ID:
-        logger.warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
+        getLogger().warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
         raise Exception("Invalid sentence information was provided")
     else:
         dao.flag_sent(sent.ID, value)
@@ -553,7 +565,7 @@ def rest_dmrs_save(request, action, col, cor, did, sid, pid):
         reading.mode = Reading.ACTIVE
         reading.sentID = sent.ID
     except Exception as e:
-        logger.exception("DMRS string is not well-formed")
+        getLogger().exception("DMRS string is not well-formed")
         raise e
     dao.save_reading(reading)
     if reading.ID:
@@ -571,5 +583,5 @@ def rest_dmrs_delete(request, col, cor, did, sid, pid):
         dao.delete_reading(pid)
         return {"success": True, "url": reverse('visko2:list_parse', args=[col, cor, did, sid])}
     except Exception as e:
-        logger.exception("Cannot delete parse ID={}".format(pid))
+        getLogger().exception("Cannot delete parse ID={}".format(pid))
         raise e
