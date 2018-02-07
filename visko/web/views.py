@@ -38,7 +38,7 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse
 
-from chirptext.texttaglib import TagInfo
+from chirptext import texttaglib as ttl
 from coolisf import GrammarHub
 from coolisf.util import sent2json
 from coolisf.morph import Transformer
@@ -63,7 +63,7 @@ PROCESSORS = ghub.available
 PROCESSORS.update({'': 'None'})
 ISF_DEFAULT = {'input_results': 5, 'RESULTS': RESULTS,
                'PROCESSORS': PROCESSORS, 'input_parser': 'ERG',
-               'input_tagger': TagInfo.LELESK, 'TAGGERS': TAGGERS,
+               'input_tagger': ttl.Tag.LELESK, 'TAGGERS': TAGGERS,
                'input_sentence': "Abrahams' dogs barked."}
 SENT_FLAGS = [{'value': str(Sentence.NONE), 'text': 'None'},
               {'value': str(Sentence.GOLD), 'text': 'Gold'},

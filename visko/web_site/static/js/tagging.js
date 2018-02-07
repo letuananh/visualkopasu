@@ -63,7 +63,7 @@ Visko.Tagged.Sentence.prototype = {
         _.forEach(self._concepts, function(concept){
             conceptObj = new Visko.Tagged.Concept(concept);
             self._conceptObjs.push(conceptObj);
-            _.forEach(concept.words, function(widx){
+            _.forEach(concept.tokens, function(widx){
                 self._tokenObjs[widx].add_concept(conceptObj);
             }); // foreach word
         }); // foreach concept
@@ -165,7 +165,7 @@ Visko.Tagged.Token.prototype = {
     },
     to_span: function(mother) {
         // set label
-        this._span.text(this._token.label);
+        this._span.text(this._token.text);
         this._span.data("tokenid", this.tokenid);
         // analyse concepts
         if (this._concepts.length > 0) {
@@ -211,7 +211,7 @@ Visko.Tagged.Concept = function(concept){
 
 Visko.Tagged.Concept.prototype = {
     isMWE: function() {
-        return this._concept.words.length > 1;
+        return this._concept.tokens.length > 1;
     },
     flag: function(){
         if ('flag' in this._concept){
