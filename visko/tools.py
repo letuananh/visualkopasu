@@ -76,7 +76,7 @@ def import_xml(args):
 def export_sqlite(args):
     bib = Biblioteca(args.biblioteca, root=args.root)
     dao = bib.sqldao
-    corpus = dao.getCorpus(args.corpus)
+    corpus = dao.get_corpus(args.corpus)
     doc = dao.get_doc(args.doc)
     if os.path.exists(args.filename):
         print("Output path exists. Cannot export data")
@@ -94,9 +94,9 @@ def export_sqlite(args):
         print("Reading sentences from SQLite")
         for sentinfo in sents:
             sent = dao.get_sent(sentinfo.ID)
-            sent_node = sent.to_isf().to_visko_xml()
+            sent_node = sent.to_xml_node()  # to_isf().to_visko_xml()
             doc_node.append(sent_node)
-        print("Saving sentences to {}".format(args.filename))
+        print("Saving {} sentences to {}".format(len(sents), args.filename))
         with open(args.filename, 'wb') as outfile:
             outfile.write(etree.tostring(doc_node, pretty_print=True, encoding="utf-8"))
         print("Done")
