@@ -142,6 +142,8 @@
    $('#dmrses').empty();
    $('#dvizes').empty();
    $('#raws').empty();
+   $('#xmlcontent').empty();
+   $('#dmrs_sentence_text').text = '';
    $('#jsons').empty();
    $('#latexes').empty();
    $('#sentences').empty();
@@ -238,6 +240,8 @@
    // console.writeline("Raw response: " + JSON.stringify(response));
    console.writeline(json.parses.length + " parse(s) has been received.");
    $('#parse_count').text(json.parses.length);
+   // update sentence text
+   $('#sentence_text').text(json.sent);
    visualise(response, custom_visko_header);
  }
  

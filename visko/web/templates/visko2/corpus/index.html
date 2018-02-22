@@ -6,9 +6,17 @@
 <h2 class="sub-header">Available Collections</h2>
 
 {% if collections %}
+<!-- Quick navigator -->
+<ul>
+{% for collection in collections %}
+  <li><a href="#{{collection.name}}">{{collection.name}}</a></li>
+{% endfor %}
+</ul>
+
 {% for collection in collections %}
 <div class="panel panel-primary">
   <div class="panel-heading">
+    <a id="{{collection.name}}"></a>
     <h3 class="panel-title"><a href="{% url 'visko2:list_corpus' collection_name=collection.name %}">{{ collection.name }}</a></h3>
   </div>
   <div class="panel-body">
