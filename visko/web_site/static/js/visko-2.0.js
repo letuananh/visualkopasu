@@ -784,7 +784,7 @@ function visualise(response, visko_parse_header, dviz_parse_header){
             display_raw(parse, pid);
         });
         highlight('#raws');
-    }       
+    }
     // JSONs
     else if ($('#jsons').is(':empty') && active_tab() == '#json') {
         parses.each(function(idx, parse){
@@ -792,6 +792,15 @@ function visualise(response, visko_parse_header, dviz_parse_header){
             display_json(parse, pid);
         });
         highlight('#jsons');
+    }
+   // LaTeX
+    else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
+        display_latex(response.latex);
+        highlight('#latex');
+    }    
+    // Visualize TTL
+    if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
+        Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
     }
     // end if
 }

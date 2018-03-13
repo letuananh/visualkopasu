@@ -252,7 +252,7 @@ There is no parse for this sentence.
      display_latex(response.latex);
      highlight('#latex');
    }
-   // Visualize IMI
+   // Visualize TTL
    if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
      Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
    }
