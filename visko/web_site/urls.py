@@ -20,7 +20,7 @@ from visko.web import views as visko2_views
 urlpatterns = [
     url(r'^$', visko2_views.home, name='visko2_home'),
     url(r'^visko2/', include('visko.web.urls', namespace="visko2"),),
-    url(r'^yawol/', include('yawoldjango.urls', namespace="yawol"),),
+    url(r'^yawol/', include('yawlib.yawol.django.urls', namespace="yawol"),),
     url(r'^restisf/', include('djangoisf.urls', namespace="restisf")),
     url(r'^admin/', admin.site.urls),
 ]
