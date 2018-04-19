@@ -34,7 +34,7 @@ Visko.Tagged.Sentence = function(surface, tokens, concepts){
 Visko.Tagged.show = function(sent_json, container){
     tsent = new Visko.Tagged.Sentence(sent_json.text, sent_json.tokens, sent_json.concepts);
     if (container == undefined){
-        container = "#sentences";
+        container = "#ttl_sentences";
     }
     tsent.to_div($(container));
     return tsent;
@@ -124,6 +124,7 @@ Visko.Tagged.Token = function(token){
     this._tooltips = $("<div>");
     this._popover = $("<div>");
     this._concepts = [];
+    var self = this;
     if (this._token.lemma) {
         this.add_tooltip("Lemma: " + this._token.lemma);
     }
@@ -132,6 +133,15 @@ Visko.Tagged.Token = function(token){
     }
     if (this._token.comment) {
         this.add_tooltip("Note: " + this._token.comment);
+    }
+    if (this._token.tags) {
+        _.forEach(this._token.tags, function(tag){
+            var tag_label = ('label' in tag) ? tag['label'] : '';
+            var tag_type = ('type' in tag) ? tag['type'] : '';
+            var tag_text = (tag_type.length > 0) ? tag_type + ': ' + tag_label : tag_label;
+            self.add_tooltip(tag_text);
+            // console.writeline(JSON.stringify(tag) + ' ---> ' + tag_text);
+        });
     }
     this.mweid = undefined;
 }

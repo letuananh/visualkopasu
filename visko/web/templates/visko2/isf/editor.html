@@ -6,7 +6,7 @@
 
 <!-- <h3>Sentence #{{sid}} | Parse #{{parse.ident}}</h3> -->
 <div class="dmrs_sentence_text">&nbsp;<span id="sentence_text"></span></div>
-<div id="sentences"></div>
+<div id="ttl_sentences"></div>
 <div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;">
 </div>
 <div id="message_box"></div>
@@ -106,7 +106,7 @@
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
-<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/tagging.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/texttaglib.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 <link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
@@ -131,7 +131,7 @@
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
 <!-- IMI support -->
-<script src="{% static 'js/tagging.js' %}"></script>
+<script src="{% static 'js/texttaglib.js' %}"></script>
 <script>
  Visko.find_tag = function(tag) {
    find_synset(tag)();
@@ -216,7 +216,7 @@
    $('#xmlcontent').empty();
    $('#jsons').empty();
    $('#latexes').empty();
-   $('#sentences').empty();
+   $('#ttl_sentences').empty();
    response = undefined;
  }
  

@@ -38,7 +38,7 @@
   <div id="message_box"></div>
   <!-- Synset Information -->
   <div id="synsets"></div>
-  <div id="sentences"></div>
+  <div id="ttl_sentences"></div>
 
   <ul id="alltabs" class="nav nav-tabs">
     <li class="active"><a data-toggle="tab" href="#visko">DMRS</a></li>
@@ -101,7 +101,7 @@
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
-<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/tagging.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/texttaglib.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 <link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
@@ -126,7 +126,7 @@
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
 <!-- IMI support -->
-<script src="{% static 'js/tagging.js' %}"></script>
+<script src="{% static 'js/texttaglib.js' %}"></script>
 
 {% include 'visko2/delviz.html' %}
 
@@ -146,7 +146,7 @@
    $('#dmrs_sentence_text').text = '';
    $('#jsons').empty();
    $('#latexes').empty();
-   $('#sentences').empty();
+   $('#ttl_sentences').empty();
    $('#message_box').empty();
    response = undefined;
  }

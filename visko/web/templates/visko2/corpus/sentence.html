@@ -45,7 +45,7 @@
     To ISF
   </a>
 </div>
-<div id="sentences"></div>
+<div id="ttl_sentences"></div>
 <div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;">
 </div>
 <!-- Synset Information -->
@@ -109,7 +109,7 @@ There is no parse for this sentence.
  }
 </style>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/visko2.css' %}"/>
-<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/tagging.css' %}"/>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static 'css/texttaglib.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/demo.css' %}"/>
 <link rel="stylesheet" type="text/css" media="screen" href="{% static 'viz/delphin-viz.css' %}"/>
 <link rel="stylesheet" href="{% static 'highlight.js/styles/github.css' %}">
@@ -134,7 +134,7 @@ There is no parse for this sentence.
 <script src="{% static 'js/visko-2.0.js' %}"></script>
 <script src="{% static 'js/restisf.js' %}"></script>
 <!-- IMI support -->
-<script src="{% static 'js/tagging.js' %}"></script>
+<script src="{% static 'js/texttaglib.js' %}"></script>
 <script>
  Visko.find_tag = function(tag) {
    find_synset(tag)();
@@ -180,7 +180,7 @@ There is no parse for this sentence.
    $('#jsons').empty();
    $('#dvizes').empty();
    $('#latexes').empty();
-   $('#sentences').empty();
+   $('#ttl_sentences').empty();
    response = undefined;
  }
  
@@ -253,7 +253,7 @@ There is no parse for this sentence.
      highlight('#latex');
    }
    // Visualize TTL
-   if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
+   if ($("#ttl_sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
      Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
    }
    // end if
