@@ -173,7 +173,16 @@ VisualKopasu.DMRSTheme = function(){
     
     // Nodes & links
     this.DEFAULT_LINK_STYLE = {
-        'stroke' : 'black'
+        'stroke' : 'black',
+        'stroke-width': '1px'
+    };
+    this.ACTIVE_INLINK_STYLE = {
+        'stroke' : 'red',
+        'stroke-width': '3px'
+    };
+    this.ACTIVE_OUTLINK_STYLE = {
+        'stroke' : 'blue',
+        'stroke-width': '3px'
     };
     this.LINK_LABEL_BOX_STYLE = {
         "fill" : "#AAAAAA"
@@ -186,20 +195,60 @@ VisualKopasu.DMRSTheme = function(){
         //,'text-anchor': 'center'
         ,'font-size': '10px'
     };
+    // default node
+    this.NODE_BOX_STYLE = {
+        'stroke': 'black',
+        'fill': '#0066CC',
+        'stroke-width': '1px'
+    };
+    this.NODE_BOX_ACTIVE_STYLE = {
+        'stroke': 'yellow',
+        'fill': 'red',
+        'stroke-width': '3px'
+    };
+    this.NODE_TEXT_STYLE = {
+        'font-family': '"Courier New", Courier, "Nimbus Mono L", monospace;'
+        ,'text-anchor': 'center'
+        ,'font-size': '14px'
+        ,'fill' : 'white' //text's colour
+        ,'white-space':'pre'
+    };
+    this.NODE_TEXT_ACTIVE_STYLE = {
+        'font-family': '"Courier New", Courier, "Nimbus Mono L", monospace;'
+        ,'text-anchor': 'center'
+        ,'font-size': '14px'
+        ,'fill' : 'white' //text's colour
+        ,'white-space':'pre'
+    };
+    // gpred node
     this.GPRED_NODE_BOX_STYLE = {
+        "stroke": "black",
         //"fill" : "#4D94DB"
-        "fill" : "#CCE0F5"
+        "fill" : "#CCE0F5",
+        "stroke-width" : "1px"
     };
     this.GPRED_NODE_TEXT_STYLE = {
         "fill" : "#222222"
     };
+    this.GPRED_NODE_BOX_ACTIVE_STYLE = {
+        "stroke": "yellow",
+        "stroke-width" : "3px"
+    };
+    this.GPRED_NODE_TEXT_ACTIVE_STYLE = {
+        "fill" : "#222222"
+    };
+    // carg node
     this.CARG_NODE_BOX_STYLE = {
-        //"fill" : "#4D94DB"
-        //"fill" : "#CCE0F5"
-        "stroke-width" : 2
+        "stroke": "black",
+        "stroke-width" : "3px"
     };
     this.CARG_NODE_TEXT_STYLE = {
-        //"fill" : "#222222"
+    };
+    this.CARG_NODE_BOX_ACTIVE_STYLE = {
+        "stroke": "magenta",
+        "stroke-width" : "3px"
+    };
+    this.CARG_NODE_TEXT_ACTIVE_STYLE = {
     };
     
     // Sentence style
@@ -260,7 +309,7 @@ VisualKopasu.SentenceText = function(holder_id, text){
 }
 
 VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
-    var dmrs = dmrs;
+    var dmrs = dmrs; // DMRS data object contains text, nodes, links, node_map
     var nodes = dmrs.nodes;
     var links = dmrs.links;
     var sentence_text = dmrs.text;
@@ -299,8 +348,9 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
             a_link.to.linkFrom.push(a_link);
         });
         this.draw_nodes();
-        this.draw_tooltips();
         this.draw_links();
+        this.draw_tooltips();
+        this.add_node_hover_events();
         if(text_holder != undefined){
             text_holder.highlight();
         }
@@ -371,9 +421,38 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
             vflow.rearrange(theme.NODE_VERTICAL_SPACE);
         });
     }
+
+    this.add_node_hover_events = function() {
+        var _canvas = this;
+        var _dmrs = this.get_data();
+        var _theme = _canvas.getTheme();
+        $.each(_dmrs.nodes, function(idx, value){
+            value.visual_element.hover(
+                function(){  // in
+                    $.each(value.inlinks, function(idx2, link){
+                        link.visual_element.attr(theme.ACTIVE_INLINK_STYLE);
+                        _canvas.activate(link.from);
+                    });
+                    $.each(value.outlinks, function(idx2, link){
+                        link.visual_element.attr(theme.ACTIVE_OUTLINK_STYLE);
+                        _canvas.activate(link.to);
+                    });
+                },
+                function(){ // out
+                    $.each(value.inlinks, function(idx2, link){
+                        link.visual_element.attr(theme.DEFAULT_LINK_STYLE);
+                        _canvas.deactivate(link.from);
+                    });
+                    $.each(value.outlinks, function(idx2, link){
+                        link.visual_element.attr(theme.DEFAULT_LINK_STYLE);
+                        _canvas.deactivate(link.to);
+                    });
+                });
+        }); // end each
+    }
     
     this.draw_tooltips = function(){
-        
+        var _canvas = this;
         // Create tooltips & events
         $.each(nodes, function(idx, a_node){
             
@@ -418,7 +497,7 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
                         tooltip_arrow.attr(theme.TOOLTIP_ACTIVE_ARROW_STYLE);
                         tooltip_table.bound.attr(theme.TOOLTIP_ACTIVE_BORDER_STYLE);
                         tooltip.show();
-                        tooltip.toFront(); 
+                        tooltip.toFront();
                     }
                     ,function(){
                         tooltip_arrow.attr(theme.TOOLTIP_INACTIVE_ARROW_STYLE);
@@ -433,6 +512,42 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
         }); // End with each node ...
     }
     
+    this.deactivate = function(a_node) {
+        var theme = this.getTheme();
+        var vnode = a_node.visual_element;
+        if(a_node.type == "gpred"){
+            // Change node style
+            vnode.getElements()[0].attr(theme.GPRED_NODE_BOX_STYLE);  
+            vnode.getElements()[1].attr(theme.GPRED_NODE_TEXT_STYLE);             
+        }
+        else if(a_node.type == "gpred+carg"){
+            vnode.getElements()[0].attr(theme.CARG_NODE_BOX_STYLE);   
+            vnode.getElements()[1].attr(theme.CARG_NODE_TEXT_STYLE);
+        }
+        else {
+            vnode.getElements()[0].attr(theme.NODE_BOX_STYLE);
+            vnode.getElements()[1].attr(theme.NODE_TEXT_STYLE);   
+        }
+    }
+
+    this.activate = function(a_node) {
+        var theme = this.getTheme();
+        var vnode = a_node.visual_element;
+        if(a_node.type == "gpred"){
+            // Change node style
+            vnode.getElements()[0].attr(theme.GPRED_NODE_BOX_ACTIVE_STYLE);  
+            vnode.getElements()[1].attr(theme.GPRED_NODE_TEXT_ACTIVE_STYLE);             
+        }
+        else if(a_node.type == "gpred+carg"){
+            vnode.getElements()[0].attr(theme.CARG_NODE_BOX_ACTIVE_STYLE);   
+            vnode.getElements()[1].attr(theme.CARG_NODE_TEXT_ACTIVE_STYLE);
+        }
+        else {
+            vnode.getElements()[0].attr(theme.NODE_BOX_ACTIVE_STYLE);
+            vnode.getElements()[1].attr(theme.NODE_TEXT_ACTIVE_STYLE);   
+        }
+    }
+
     this.getTheme = function(){
         return theme;
     }
@@ -463,20 +578,24 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
             channel = allocator.allocate(from_x, to_x);
             from_y = from_node.visual_element.location.y;
             to_y = from_y - theme.LINK_SPACE * (channel + 1);
-            
+
+            // Visual link
+            var linkgroup = [];
             l = new Path().moveTo(from_x, from_y)
                 .lineTo(from_x, to_y)
                 .lineTo(to_x, to_y)
                 .lineTo(to_x, from_y).drawTo(layer_links, "link");
-            
+            linkgroup.push(l);
             // Set link style based on rargname
             if (rargname == 'RSTR') {
                 l.attr({'stroke-dasharray' : '- '});
             } else if (rargname == 'L-HNDL' || rargname == 'R-HNDL') {
                 l.attr({'stroke-dasharray' : '.'});
             } else if (rargname == '') {
-                c = layer_links.draw_circle(from_x, to_y, 3).attr({'fill' : 'black'});
-                c = layer_links.draw_circle(to_x, to_y, 3).attr({'fill' : 'black'});
+                c1 = layer_links.draw_circle(from_x, to_y, 3).attr({'fill' : 'black'});
+                c2 = layer_links.draw_circle(to_x, to_y, 3).attr({'fill' : 'black'});
+                // linkgroup.push(c1);
+                // linkgroup.push(c2);
             }
             l.attr(theme.DEFAULT_LINK_STYLE);
             
@@ -485,19 +604,23 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
             //- EQ: none,
             //- NEQ: dot,
             //- HEQ: box. */
+            var linkroot, linkhead;
             if (post == "H") {
-                draw_tee_tail(from_x, from_y);
+                linkroot = draw_tee_tail(from_x, from_y);
             } else if (post == 'NEQ') {
-                draw_circle_tail(from_x, from_y);
+                linkroot = draw_circle_tail(from_x, from_y);
             } else if (post == 'HEQ') {
-                draw_box_tail(from_x, from_y);
+                linkroot = draw_box_tail(from_x, from_y);
             } 
             if (['1', '2', '3', '4', 'A'].indexOf(rargname)){
-                draw_arrow(to_x, from_y)    
+                linkhead = draw_arrow(to_x, from_y)    
             }
+            // linkgroup.push(linkroot);
+            linkgroup.push(linkhead);
             
             // Draw link's label
             if(rargname.length > 0 && rargname != 'RSTR'){
+                var label_x, label_y, link_label;
                 if (to_x < from_x) {
                     label_x = to_x + Math.abs(to_x - from_x) / 2;
                 } else {
@@ -510,7 +633,11 @@ VisualKopasu.DMRSCanvas = function(dmrs, canvas, text_holder, theme){
                 // set link label style
                 link_label.getElements()[0].attr(theme.LINK_LABEL_BOX_STYLE);
                 link_label.getElements()[1].attr(theme.LINK_LABEL_TEXT_STYLE);
+                // linkgroup.push(link_label);
             }
+
+            link_visual = layer_links.group(linkgroup);
+            links[i].visual_element = link_visual;
         } // End for links
     }
     
@@ -585,7 +712,7 @@ function json2visko(json, synset_link_builder){
     $(json.nodes).each(function(idx, elem){
         var node_text = (elem.carg && elem.carg.length > 0) ? elem.carg : elem.predicate;
         var node_type = (elem.carg && elem.carg.length > 0) ? "gpred+carg" : elem.type;
-        var node = {'text': node_text, 'from': elem.lnk.from, 'to': elem.lnk.to, 'type': node_type, 'pos': elem.pos, linkcount: 0, 'nodeid': elem.nodeid, 'tooltip': [], 'senses': []};
+        var node = {'text': node_text, 'from': elem.lnk.from, 'to': elem.lnk.to, 'type': node_type, 'pos': elem.pos, linkcount: 0, 'nodeid': elem.nodeid, 'tooltip': [], 'senses': [], 'outlinks': [], 'inlinks': []};
         
         // build tooltip
         max_length = 3;
@@ -626,7 +753,7 @@ function json2visko(json, synset_link_builder){
         // create TOP node (id=0) if needed
         if (l.from == 0 || l.to == 0){
             if (node_map[0] == undefined){
-                node_map[0] = {'text': 'TOP', 'from': 0, 'to': 0, 'type': 'realpred', 'pos': 'TOP', linkcount: 0, 'nodeid': 0, 'tooltip': []};
+                node_map[0] = {'text': 'TOP', 'from': 0, 'to': 0, 'type': 'realpred', 'pos': 'TOP', linkcount: 0, 'nodeid': 0, 'tooltip': [], 'outlinks': [], 'inlinks': []};
                 nodes.unshift(node_map[0]);
             }
         }
@@ -635,7 +762,8 @@ function json2visko(json, synset_link_builder){
         var tonode = node_map[l.to];
         tonode.linkcount++;
         var lnk = {'from': fnode, 'to': tonode, 'post': l.post, 'rargname': (l.rargname != undefined) ? l.rargname : ''};
-        
+        fnode['outlinks'].push(lnk);
+        tonode['inlinks'].push(lnk);
         links.push(lnk);
     });
     
@@ -784,7 +912,7 @@ function visualise(response, visko_parse_header, dviz_parse_header){
             display_raw(parse, pid);
         });
         highlight('#raws');
-    }
+    }       
     // JSONs
     else if ($('#jsons').is(':empty') && active_tab() == '#json') {
         parses.each(function(idx, parse){
@@ -793,7 +921,7 @@ function visualise(response, visko_parse_header, dviz_parse_header){
         });
         highlight('#jsons');
     }
-   // LaTeX
+    // LaTeX
     else if ($('#latexes').is(':empty') && active_tab() == '#latex') {
         display_latex(response.latex);
         highlight('#latex');
