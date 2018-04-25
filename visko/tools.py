@@ -26,6 +26,7 @@ import argparse
 from lxml import etree
 
 from chirptext import confirm, header
+from coolisf.model import Document
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
@@ -69,8 +70,28 @@ def convert_document(collection_name, corpus_name, doc_name, answer=None, active
 
 
 def import_xml(args):
-    answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, use_raw=args.raw)
-    return answer
+    if not args.file:
+        answer = convert_document(args.biblioteca, args.corpus, args.doc, answer=args.yes, active_only=args.active, use_raw=args.raw)
+        return answer
+    else:
+        xml2db(args.biblioteca, args.corpus, args.doc, archive_file=args.file)
+
+
+def wipe_doc(args):
+    ''' Delete all sentences in a document '''
+    bib = Biblioteca(args.biblioteca, root=args.root)
+    dao = bib.sqldao
+    # corpus = dao.get_corpus(args.corpus)
+    doc = dao.get_doc(args.doc)
+    sents = dao.get_sents(doc.ID)
+    if not args.yes:
+        ans = confirm("Do you really want to wipe out {} sentences in document {} (yes/no)? ".format(len(sents), doc.name))
+        if not ans:
+            print("Program aborted")
+    with dao.ctx() as ctx:
+        for sent in sents:
+            dao.delete_sent(sent.ID, ctx=ctx)
+    print("Done!")
 
 
 def export_sqlite(args):
@@ -252,6 +273,15 @@ if __name__ == '__main__':
     import_task.add_argument('-R', '--raw', help='Import data in FCB format', action='store_true')
     import_task.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
     import_task.set_defaults(func=import_xml)
+
+    # Clear a document
+    wipe_task = tasks.add_parser("wipe", help="Delete all sentences in a document")
+    wipe_task.add_argument('biblioteca', help='Biblioteca name')
+    wipe_task.add_argument('corpus', help='Corpus name')
+    wipe_task.add_argument('doc', help='Document name')
+    wipe_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
+    wipe_task.add_argument('-y', '--yes', help='Say yes to everything', action='store_true')
+    wipe_task.set_defaults(func=wipe_doc)
 
     # archive document
     archive_task = tasks.add_parser("archive", help="Archive data")
