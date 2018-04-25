@@ -66,7 +66,7 @@ logger.setLevel(logging.DEBUG)
 # FUNCTIONS
 # -------------------------------------------------------------------------------
 
-def xml2db(collection_name, corpus_name, doc_name, archive_file=None, dbname=None):
+def xml2db(collection_name, corpus_name, doc_name, archive_file=None):
     '''
     Import an XML document into SQLite DB
     '''
@@ -102,7 +102,16 @@ def xml2db(collection_name, corpus_name, doc_name, archive_file=None, dbname=Non
 
     with sqliteDAO.ctx() as ctx:
         # if archive is available, import from there
-        if textDAO.is_archived():
+        if archive_file is not None:
+            # import from archive_file
+            ar_doc = Document.from_file(archive_file)
+            print("Importing {} sentences into {}/{}/{}".format(len(ar_doc), collection_name, corpus_name, doc_name))
+            for sent in ar_doc:
+                print("Importing sent #{}".format(sent.ident))
+                sent.docID = doc.ID
+                sqliteDAO.save_sent(sent, ctx=ctx)
+            print("Done!")
+        elif textDAO.is_archived():
             fsize = os.path.getsize(textDAO.archive_path)
             print("Importing from archive: {} (size={})".format(textDAO.archive_path, fsize))
             for sent in textDAO.iter_archive():
