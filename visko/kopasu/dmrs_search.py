@@ -338,7 +338,7 @@ class LiteSearchEngine:
         return -1
 
     def get_dmrs(self, dmrs_filter_query):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, corpus.name as corpus_name, corpus.ID as corpusID
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
                 LEFT JOIN sentence ON reading.sentID = sentence.ID
@@ -352,7 +352,7 @@ class LiteSearchEngine:
         return rows
 
     def search_by_ident(self, ident):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, corpus.name as corpus_name, corpus.ID as corpusID
+        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
                 LEFT JOIN sentence ON reading.sentID = sentence.ID
