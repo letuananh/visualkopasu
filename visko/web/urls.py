@@ -34,6 +34,7 @@ urlpatterns = [
 
     # REST APIs
     url(r'^rest/data/flag/all/?$', views.rest_data_flag_all, name='rest_data_flag_all'),
+    url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/title/text/edit/?$', views.rest_doc_title, name='rest_doc_title'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/?$', views.rest_fetch, name='rest_fetch_sent'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/comment/save/?$', views.rest_note_sentence, name='rest_note_sentence'),
     url(r'^rest/corpus/(?P<col>\w+)/(?P<cor>\w+)/(?P<did>\w+)/(?P<sid>\d+)/flag/save/?$', views.rest_flag_sentence, name='rest_flag_sentence'),

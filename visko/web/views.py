@@ -38,6 +38,7 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse
 
+from chirptext.cli import setup_logging
 from chirptext import texttaglib as ttl
 from coolisf import GrammarHub
 from coolisf.util import sent2json
@@ -70,6 +71,8 @@ SENT_FLAGS = [{'value': str(Sentence.NONE), 'text': 'None'},
               {'value': str(Sentence.ERROR), 'text': 'Error'},
               {'value': str(Sentence.WARNING), 'text': 'Warning'}]
 SENT_FLAG_MAP = {i['value']: i['text'] for i in SENT_FLAGS}
+# Setup logging
+setup_logging('logging.json', 'logs')
 
 
 def getLogger():
@@ -153,7 +156,6 @@ def isf(request, col=None, sid=None):
                   'input_parser': input_parser,
                   'input_tagger': input_tagger,
                   'input_results': input_results})
-    print(c)
     return render(request, "visko2/isf/index.html", c)
 
 
@@ -168,7 +170,6 @@ def isf_editor(request):
                   'input_parser': input_parser,
                   'input_tagger': input_tagger,
                   'input_results': input_results})
-    print(c)
     return render(request, "visko2/isf/editor.html", c)
 
 
@@ -221,9 +222,9 @@ def search(request, sid=None):
                 except:
                     getLogger().exception("Could not perform search with query: {}".format(query))
                     messages.error(request, "Could not process query (provided: `{}')".format(query))
-        if sentences:
-            for s in sentences:
-                print(s, [r.ID for r in s])
+        # if sentences:
+        #     for s in sentences:
+        #         print(s, [r.ID for r in s])
         else:
             messages.warning(request, "Found nothing for given query: `{}'".format(query))
     return render(request, "visko2/corpus/search.html", c)
@@ -342,9 +343,8 @@ def list_collection(request):
 def list_corpus(request, collection_name):
     bib = get_bib(collection_name)
     bib.get_corpuses()
-    print("BIB", bib)
-    for cor in bib.corpuses:
-        print(cor.documents)
+    # for cor in bib.corpuses:
+    #     print(cor.documents)
     c = get_context({'title': 'Corpus',
                               'collection_name': collection_name,
                               'corpuses': bib.corpuses})
@@ -377,9 +377,8 @@ def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_re
         if page > total:
             page = total
         pagination = pager.paginate(page, total)
-        sc = min(doc.sent_count - page * pager.pagesize, pager.pagesize)  # sentence count
         sentences = dao.get_sents(doc.ID, flag=flag, page=page, pagesize=pager.pagesize, ctx=ctx)
-        print("sentences: ", len(sentences))
+        sc = min(doc.sent_count - page * pager.pagesize, pager.pagesize, len(sentences))  # sentence count
     title = 'Document: {t} | Sentences: {total} (This page: {sc})'.format(t=doc.title if doc.title else doc.name, total=doc.sent_count, sc=sc)
     c = get_context({'col': collection_name,
                      'corpus': doc.corpus,
@@ -389,7 +388,6 @@ def list_sent(request, collection_name, corpus_name, doc_id, flag=None, input_re
                      'pagination': pagination if total > 1 else None},
                     title=title)
     c.update(ISF_DEFAULT)
-    print(doc)
     if doc.grammar and doc.grammar in PROCESSORS:
         c['input_parser'] = doc.grammar
     if doc.tagger and doc.tagger in TAGGERS:
@@ -431,9 +429,7 @@ def list_parse(request, collection_name, corpus_name, doc_id, sent_id, flag=None
     try:
         c.update({'sent': sent})
     except Exception as e:
-        print("Error: {}".format(e))
         raise
-        pass
     return render(request, "visko2/corpus/sentence.html", c)
 
 
@@ -484,6 +480,25 @@ def rest_note_sentence(request, col, cor, did, sid):
         raise Exception("Invalid sentence information was provided")
     else:
         dao.note_sentence(sent.ID, value)
+        return {}
+
+
+@csrf_protect
+@jsonp
+def rest_doc_title(request, col, cor, did):
+    print("Editing doc_title")
+    name = request.POST.get('name', '')  # should be doc_title
+    value = request.POST.get('value', '')  # value
+    pk = request.POST.get('pk', '')  # doc_name
+    dao = get_bib(col).sqldao
+    doc = dao.doc.by_id(did)
+    if name != 'doc_title' or not pk or pk != doc.name:
+        getLogger().warning("Name = {} | Value = {} | pk = {}".format(name, value, pk))
+        raise Exception("Invalid document information was provided")
+    else:
+        doc.title = value
+        getLogger().info("Updating title of document #{} from {} to {}".format(doc.ID, pk, value))
+        dao.save_doc(doc, 'title')
         return {}
 
 

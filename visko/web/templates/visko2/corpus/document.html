@@ -10,7 +10,7 @@
   <li class="breadcrumb-item active">{{ doc.name }}</li>
 </ol>
 
-<h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
+<h1 class="page-header"><a id="doc_title" data-url="{% url 'visko2:rest_doc_title' col=col cor=corpus.name did=doc.ID %}" data-pk="{{doc.name}}" data-type="text" data-placeholder="Document's title" data-title="Edit title" class="editable editable-pre-wrapped editable-click" data-emptytext="{{doc.name}}" href="#">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</a></h1>
 
 <div>
   {% if flag %}
@@ -174,13 +174,31 @@
 
 {% block script %}
 <script>
- $('#confirm-delete').on('show.bs.modal', function(e) {
-   var lnk = $(e.relatedTarget).data('href');
-   var idx = $(e.relatedTarget).data('idx');
-   var txt = $(e.relatedTarget).data('txt');
-   $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+ function initialise() {
+   // Make doc_title editable
+   $.fn.editable.defaults.mode = 'inline';
+   // Show comment
+   $("#doc_title").editable({
+     ajaxOptions: {
+       headers: { 'X-CSRFToken': "{{ csrf_token }}" }
+     },
+     error: function(){
+       return "Failed to save document's title";
+     }
+   });
    
-   $('.debug-url').html('Delete URL: <strong>' + lnk + '</strong><br/>' + ' (Sentence #' + idx + ': ' + txt + ')');
+   $('#confirm-delete').on('show.bs.modal', function(e) {
+     var lnk = $(e.relatedTarget).data('href');
+     var idx = $(e.relatedTarget).data('idx');
+     var txt = $(e.relatedTarget).data('txt');
+     $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+     
+     $('.debug-url').html('Delete URL: <strong>' + lnk + '</strong><br/>' + ' (Sentence #' + idx + ': ' + txt + ')');
+   });
+ } 
+ 
+ $(document).ready(function(){       
+   initialise();
  });
 </script>
 {% endblock %}
