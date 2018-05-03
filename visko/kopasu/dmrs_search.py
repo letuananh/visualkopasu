@@ -112,11 +112,12 @@ class QueryLink:
 
 
 class QueryNode:
-    def __init__(self, carg=None, lemma=None, gpred=None, mode="?"):
+    def __init__(self, carg=None, lemma=None, gpred=None, synsetID=None, mode="?"):
         self.carg = carg
         self.lemma = lemma
         self.gpred = gpred
         self.mode = mode
+        self.synsetID = synsetID.strip() if synsetID else synsetID
         self.count = 0
 
     def __lt__(self, other):
@@ -133,6 +134,8 @@ class QueryNode:
             return "Mode='%s' Text='%s'" % (self.mode, self.lemma)
         elif self.mode == 'U':
             return "Mode='%s' Lemma='%s' OR carg='%s'" % (self.mode, self.lemma, self.carg)
+        elif self.mode == 'S':
+            return "Mode='%s' SynsetID='%s'" % (self.mode, self.synsetID)
         else:
             return "Invalid node"
 
@@ -150,6 +153,9 @@ class QueryNode:
         elif self.mode == 'L':
             query = "{tn}rplemmaID = (SELECT ID FROM dmrs_node_realpred_lemma WHERE lemma = ?)".format(tn=table_name + "." if table_name is not None else '')
             params = [self.lemma]
+        elif self.mode == 'S':
+            query = "{tn}synsetid = ?".format(tn=table_name + "." if table_name is not None else '')
+            params = [self.synsetID]
         elif self.mode == 'U':
             query = "(lower({tn}carg)=? OR {tn}rplemmaID=(SELECT ID FROM dmrs_node_realpred_lemma WHERE lemma = ?))".format(tn=table_name + "." if table_name is not None else '')
             params = [self.carg.lower(), self.lemma]
@@ -288,6 +294,8 @@ class DMRSQueryParser:
             query_node = QueryNode(lemma=node[2:], mode="L")
         elif node.startswith("G:"):  # gpred
             query_node = QueryNode(gpred=node[2:], mode="G")
+        elif node.startswith("S:"):  # gpred
+            query_node = QueryNode(synsetID=node[2:], mode="S")
         elif len(node) > 0:          # carg or lemma
             query_node = QueryNode(lemma=node, carg=node, mode="U")
             pass
