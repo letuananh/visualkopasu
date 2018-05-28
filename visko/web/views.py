@@ -63,7 +63,7 @@ ghub = GrammarHub()
 PROCESSORS = ghub.available
 PROCESSORS.update({'': 'None'})
 ISF_DEFAULT = {'input_results': 5, 'RESULTS': RESULTS,
-               'PROCESSORS': PROCESSORS, 'input_parser': 'ERG',
+               'PROCESSORS': PROCESSORS, 'input_parser': 'ERG_ISF',
                'input_tagger': ttl.Tag.LELESK, 'TAGGERS': TAGGERS,
                'input_sentence': "Abrahams' dogs barked."}
 SENT_FLAGS = [{'value': str(Sentence.NONE), 'text': 'None'},
