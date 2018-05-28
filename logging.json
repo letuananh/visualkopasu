@@ -42,7 +42,9 @@
             "level": "INFO",
             "handlers": ["file_handler_verbose"],
             "propagate": "no"
-        }
+        },
+        "djangoisf": { "level": "INFO" },
+        "visko.kopasu.dmrs_search": { "level": "INFO" }
     },
 
     "root": {
