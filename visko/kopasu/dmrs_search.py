@@ -39,10 +39,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 
+def getLogger():
+    return logging.getLogger(__name__)
+
+
 class SQLiteQuery:
-    def __init__(self, query, params):
+    def __init__(self, query, params=None):
         self.query = query
-        self.params = params
+        self.params = params if params else []
 
     def __str__(self):
         return "Query: %s - Params: %s" % (self.query, self.params)
@@ -59,6 +63,23 @@ class SQLiteQuery:
 
     def select_scalar(self, ctx):
         return ctx.select_scalar(self.query, self.params)
+
+
+class QuerySurface:
+    def __init__(self, mode='^', text=''):
+        self.mode = mode
+        self.text = text
+
+    def __repr__(self):
+        return "QuerySurface(mode={}, text={})".format(repr(self.mode), repr(self.text))
+
+    def __str__(self):
+        return "{}:{}".format(self.mode, self.text)
+
+    def to_query(self):
+        query = '''SELECT sid FROM word WHERE (lemma like ?) OR (word like ?)'''
+        params = [self.text, self.text]
+        return SQLiteQuery(query=query, params=params)
 
 
 class QueryLink:
@@ -359,23 +380,35 @@ class LiteSearchEngine:
         rows = query.select(self.dao.ctx())
         return rows
 
+    def get_sent(self, sent_filter_query):
+        query_txt = '''SELECT sentence.ID AS 'sentID', NULL AS readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
+            FROM sentence
+            LEFT JOIN document ON sentence.docID = document.ID
+            LEFT JOIN corpus ON document.corpusID = corpus.ID
+            WHERE sentID IN ({})
+        LIMIT ?'''.format(sent_filter_query.query)
+        query = SQLiteQuery(query=query_txt, params=sent_filter_query.params + [self.limit])
+        logger.debug(query)
+        rows = query.select(self.dao.ctx())
+        return rows
+
     def search_by_ident(self, ident):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
+        q = '''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
                 LEFT JOIN sentence ON reading.sentID = sentence.ID
                 LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentence.ident = ?
-            LIMIT ?''',
-                            params=[ident, self.limit])
+            LIMIT ?'''
+        query = SQLiteQuery(query=q, params=[ident, self.limit])
         logger.debug(query)
         rows = query.select(self.dao.ctx())
         return rows
 
     def search(self, query_text):
+        getLogger().debug("Query: {}".format(query_text))
         clauses = DMRSQueryParser.parse(query_text)
-
         if clauses is None:
             raise Exception("Invalid query (%s)" % (query_text,))
             return None
@@ -383,17 +416,22 @@ class LiteSearchEngine:
             # search by SID
             rows = self.search_by_ident(clauses[0][0][1:])
             # Build search results
-            results = self.dao.build_search_result(rows, True)
+            results = self.dao.build_search_result(rows)
             for res in results:
                 setattr(res, "collection_name", self.dao.name)
             return results
 
         node_queries = []
         link_queries = []
+        surface_queries = []
 
         for clause in clauses:
             if len(clause) == 1:
-                node_queries.append(DMRSQueryParser.parse_node(clause[0]))
+                if clause[0].startswith('^:') or clause[0].startswith('＾：'):
+                    getLogger().debug("Surface search: {}".format(clause))
+                    surface_queries.append(QuerySurface(mode='^', text=clause[0][2:]))
+                else:
+                    node_queries.append(DMRSQueryParser.parse_node(clause[0]))
             elif len(clause) == 3:
                 link = DMRSQueryParser.parse_link(clause[1], clause[0], clause[2])
                 link_queries.append(link)
@@ -414,6 +452,7 @@ class LiteSearchEngine:
         # node_queries.sort()
         # final query
         query = None
+        rows = []
         for clause in node_queries + link_queries:
             if query is None:
                 query = clause.to_query()
@@ -421,10 +460,24 @@ class LiteSearchEngine:
                 next_query = clause.to_query()
                 query.query += " INTERSECT " + next_query.query
                 query.params += next_query.params
-        query.limit(self.limit)
-        rows = self.get_dmrs(query)
+        if query:
+            query.limit(self.limit)
+            rows += self.get_dmrs(query)
+        # query surfaces
+        squery = None
+        for clause in surface_queries:
+            if squery is None:
+                squery = clause.to_query()
+            else:
+                next_query = clause.to_query()
+                squery.query += " INTERSECT " + next_query.query
+                squery.params += next_query.params
+        if squery:
+            getLogger().debug("Surface query: {}".format(squery))
+            squery.limit(self.limit)
+            rows += self.get_sent(squery)
         # Build search results
-        results = self.dao.build_search_result(rows, True)
+        results = self.dao.build_search_result(rows)
         for res in results:
             setattr(res, "collection_name", self.dao.name)
         return results

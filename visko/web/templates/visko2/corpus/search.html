@@ -1,6 +1,6 @@
 {% extends 'visko2/base.html' %}
 {% load staticfiles %}
-
+{% load visko2_tags %}
 {% block content %}
 
 <h1 class="page-header">{% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}</h1>
@@ -14,14 +14,20 @@
       <option value="{{ bib.name}}" {% if bib.name == col %}selected="selected"{% endif %}>{{bib.name}}</option>
       {% endfor %}
       <option value="" {% if not col %}selected="selected"{% endif %}>.:: ALL ::.</option>
-        </select>
+    </select>
     <span class="input-group-addon">Query</span>
-    <input class="form-control input-lg" name="query" id="query" placeholder="C:Linus or L:happy or G:named_rel" value="{{ query|default:'' }}" type="text">
+    <input class="form-control input-lg" name="query" id="query" placeholder="C:Linus or L:happy or G:named_rel or or S:00636921-n ^:lemma or #10001" value="{{ query|default:'' }}" type="text" title="search box&#013;C:<pred_carg>&#013;L:<pred_lemma>&#013;G:<gpred>&#013;S:<synsetID>&#013;^:<surface's lemma>&#013;#<sentence's ident>">
     <span class="input-group-btn">
       <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Search</button>
     </span>
   </div>
 </form>
+
+{% if sentences %}
+Found {{ sentences | length }} sentences.
+{% else %}
+Found nothing.
+{% endif %}
 
 <div class="list-group">
   <table class="table table-striped">
@@ -38,7 +44,11 @@
       <td>{{ forloop.counter }}</td>
       <td>{{sentence.doc.name}}/{{ sentence.ident }}</td>
       <td>
-        <a target="search_results" href="{% url 'visko2:list_parse' collection_name=sentence.collection.name corpus_name=sentence.corpus.name doc_id=sentence.docID sent_id=sentence.ID %}">{{sentence.text}}</a><br/>
+        <a target="search_results" href="{% url 'visko2:list_parse' collection_name=sentence.collection.name corpus_name=sentence.corpus.name doc_id=sentence.docID sent_id=sentence.ID %}">{{sentence.text}}</a>
+        <br/>
+        {% if sentence.comment %}
+        <span class="label label-default">Note</span> <span class="sent_comment" style="font-style: italic; color: darkgray;">{{ sentence.comment|multilines }}</span>
+        {% endif %}
       </td>
       <td>
         {% for parse in sentence %}

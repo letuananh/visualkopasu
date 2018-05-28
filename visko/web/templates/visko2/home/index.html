@@ -45,7 +45,7 @@
       <option value="" {% if not col %}selected="selected"{% endif %}>.:: ALL ::.</option>
     </select>
     <span class="input-group-addon">Query</span>
-    <input class="form-control input-lg" name="query" id="query" placeholder="" value="{{ query|default:'' }}" type="text">
+    <input class="form-control input-lg" name="query" id="query" placeholder="C:Linus or L:happy or G:named_rel or S:00636921-n or ^:lemma or #10001" value="{{ query|default:'' }}" type="text" title="search box&#013;C:<pred_carg>&#013;L:<pred_lemma>&#013;G:<gpred>&#013;S:<synsetID>&#013;^:<surface's lemma>&#013;#<sentence's ident>">
     <span class="input-group-btn">
       <button class="btn btn-default btn-lg" name="action" type="submit" value="cached">Search</button>
     </span>

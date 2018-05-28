@@ -39,6 +39,7 @@
   <!-- Synset Information -->
   <div id="synsets"></div>
   <div id="ttl_sentences"></div>
+  <div class="concept_list" id="concept_list" style="overflow-y: auto; margin: 10px; padding: 10px;"></div>
 
   <ul id="alltabs" class="nav nav-tabs">
     <li class="active"><a data-toggle="tab" href="#visko">DMRS</a></li>
@@ -147,6 +148,7 @@
    $('#jsons').empty();
    $('#latexes').empty();
    $('#ttl_sentences').empty();
+   $('#concept_list').empty();
    $('#message_box').empty();
    response = undefined;
  }

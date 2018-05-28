@@ -927,7 +927,7 @@ function visualise(response, visko_parse_header, dviz_parse_header){
         highlight('#latex');
     }    
     // Visualize TTL
-    if ($("#sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
+    if ($("#ttl_sentences").is(':empty') && response.shallow && response.shallow.tokens && response.shallow.concepts) {
         Visko.Tagged.show(response.shallow).show_concepts($("#concept_list"));
     }
     // end if

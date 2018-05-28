@@ -5,6 +5,7 @@
 
 .TaggedSentence .MWE {
     color: darkgreen;
+    background-color: lightyellow;
     font-weight: bold;
 }
 
@@ -22,5 +23,5 @@
 }
 
 .concept_list .label {
-    margin-right: 5px;
+    margin: 5px;
 }
