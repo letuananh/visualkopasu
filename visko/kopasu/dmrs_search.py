@@ -394,9 +394,9 @@ class LiteSearchEngine:
 
     def search_by_ident(self, ident):
         q = '''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
-            FROM dmrs
-                LEFT JOIN reading ON dmrs.readingID = reading.ID
-                LEFT JOIN sentence ON reading.sentID = sentence.ID
+            FROM sentence
+                LEFT JOIN reading ON reading.ID = sentence.ID
+                LEFT JOIN dmrs ON reading.ID = dmrs.readingID
                 LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentence.ident = ?
