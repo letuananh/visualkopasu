@@ -45,8 +45,10 @@
       <div class="form-group">
         <textarea class="form-control" rows="10" name="dmrs_raw" id="dmrs_raw">{{parse.tostring}}</textarea>
       </div>
+      <div class="alert alert-success" role="alert" id="panelMessage"></div>
       <button type="button" id="btnReset" name="btnReset" class="btn btn-lg btn-warning">Reset</button>
       <button type="button" id="btnParse" name="btnParse" class="btn btn-lg btn-primary">Parse</button>
+      <button type="button" id="btnTransform" name="btnTransform" class="btn btn-lg btn-primary">Transform</button>
       <button type="button" id="btnGen" name="btnGen" class="btn btn-lg btn-primary">Generate</button>
       <button type="button" id="btnSave" name="btnSave" value="insert" class="btn btn-lg btn-default">Save As New DMRS</button>
       <button type="button" id="btnOverwrite" name="btnOverwrite" value="save" class="btn btn-lg btn-danger">Overwrite</button>
@@ -306,6 +308,41 @@
    });
  }
 
+ function transform_dmrs() {
+   var dmrs_str = $("#dmrs_raw").val();
+   var req_url = "{% url 'visko2:rest_dmrs_parse' col=col cor=corpus.name did=doc.ID sid=sid pid=pid %}";
+   console.writeline("Requesting URL: " + req_url);
+   $.ajaxSetup({
+     headers: { 'X-CSRFToken': "{{ csrf_token }}" }
+   });
+   $.ajax({url: req_url,
+           dataType: 'jsonp',
+           method: 'post',
+           data: {
+             'dmrs': dmrs_str, 'transform': 'True' },
+           success: function(json) {
+             clear_parses();
+             response = json;
+             visualise();
+             $("#panelMessage").text("Transformation was performed successfully");
+             $("#panelMessage").fadeIn(800).show().delay(4000).fadeOut(600);
+             // $("#panelMessage").hide();
+           },
+           fail: function(jqxhr){
+             if (console != undefined && console.writeline != undefined) {
+               console.writeline("Request Failed: " + jqxhr.statusText + " | code = " + jqxhr.status);
+               show_error("Cannot transform given DMRS");
+             }
+           },
+           error: function(jqxhr){
+             if (console != undefined && console.writeline != undefined) {
+               console.writeline("An error occurred. Message = " + jqxhr.statusText + " | code = " + jqxhr.status);
+               show_error("Cannot transform given DMRS");
+             }
+           }
+   });
+ }
+
  var restisf_root = '{% url "restisf:index" %}';
  function get_isf() {
    return new Restisf(restisf_root);
@@ -436,6 +473,7 @@
    $(window).on('resize', function() { console.resize(); });
    $('#consoletoggle').change(function(){ console.toggle(); });
    console.clear().resize();
+   $("#panelMessage").hide();
    
    // DMRS editing features
    // Reset DMRS textarea
@@ -445,6 +483,7 @@
      $('#dmrs_raw').val($('#dmrs_raw').prop('defaultValue'));
    });
    $('#btnParse').click(parse_dmrs);
+   $('#btnTransform').click(transform_dmrs);
    $('#btnGen').click(generate_text);
    $('#btnSave').click(function(){ store_dmrs('insert'); });
    $('#btnOverwrite').click(function(){ store_dmrs('replace'); });
