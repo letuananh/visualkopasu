@@ -104,10 +104,12 @@ def xml2db(collection_name, corpus_name, doc_name, archive_file=None):
         # if archive is available, import from there
         if archive_file is not None:
             # import from archive_file
+            print("Reading document from: {}".format(archive_file))
             ar_doc = Document.from_file(archive_file)
             print("Importing {} sentences into {}/{}/{}".format(len(ar_doc), collection_name, corpus_name, doc_name))
             for sent in ar_doc:
-                print("Importing sent #{}".format(sent.ident))
+                print("Importing sent #{} into doc #{} ({})".format(sent.ident, doc.ID, doc_name))
+                sent.ID = None  # reset sentence ID [TODO] or convert it to int if not None?
                 sent.docID = doc.ID
                 sqliteDAO.save_sent(sent, ctx=ctx)
             print("Done!")
