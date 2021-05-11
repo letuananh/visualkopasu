@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'visko.web',
-    'djangoisf',
+    'coolisf.rest',
     'yawlib.yawol.django'
 ]
 
@@ -55,7 +55,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'visko.web_site.urls'
+ROOT_URLCONF = 'visko_site.urls'
 
 TEMPLATES = [
     {
@@ -73,7 +73,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'visko.web_site.wsgi.application'
+WSGI_APPLICATION = 'visko_site.wsgi.application'
 
 
 # Database
@@ -130,7 +130,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, 'web_site', 'static'),
+    os.path.join(BASE_DIR, 'visko_site', 'static'),
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
