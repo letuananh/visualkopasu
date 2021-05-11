@@ -31,7 +31,7 @@ import os
 
 
 class ViskoConfig:
-    PROJECT_ROOT = os.path.expanduser('~/workspace/visualkopasu')
+    PROJECT_ROOT = os.path.expanduser('~/local/visko/')
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
 
