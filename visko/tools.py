@@ -21,19 +21,6 @@ from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
 from visko.merchant.morph import xml2db
 
-########################################################################
-
-__author__ = "Le Tuan Anh"
-__copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
-__license__ = "GPL"
-__version__ = "0.1"
-__maintainer__ = "Le Tuan Anh"
-__email__ = "tuananh.ke@gmail.com"
-__status__ = "Prototype"
-
-
-########################################################################
 
 def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
@@ -247,7 +234,7 @@ def archive_data(args):
             archive_collection(bib, ctx)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
     tasks = parser.add_subparsers(help='Task to be done')
@@ -314,3 +301,7 @@ if __name__ == '__main__':
         # Parse input arguments
         args = parser.parse_args()
         args.func(args)
+
+
+if __name__ == '__main__':
+    main()
