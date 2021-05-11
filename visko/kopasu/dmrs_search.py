@@ -1,39 +1,14 @@
-'''
+"""
 A simple DMRS search engine
-@author: Le Tuan Anh
-'''
+"""
 
-# Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
-# This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
-
-########################################################################
+# This code is a part of visualkopasu (visko): https://github.com/letuananh/visualkopasu
+# :copyright: (c) 2012 Le Tuan Anh <tuananh.ke@gmail.com>
+# :license: GPLv3, see LICENSE for more details.
 
 import logging
 from collections import deque
 import threading
-
-########################################################################
-
-__author__ = "Le Tuan Anh"
-__copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
-__license__ = "GPL"
-__version__ = "0.1"
-__maintainer__ = "Le Tuan Anh"
-__email__ = "tuananh.ke@gmail.com"
-__status__ = "Prototype"
-
-########################################################################
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -77,7 +52,7 @@ class QuerySurface:
         return "{}:{}".format(self.mode, self.text)
 
     def to_query(self):
-        query = '''SELECT sid FROM word WHERE (lemma like ?) OR (word like ?)'''
+        query = """SELECT sid FROM word WHERE (lemma like ?) OR (word like ?)"""
         params = [self.text, self.text]
         return SQLiteQuery(query=query, params=params)
 
@@ -367,40 +342,40 @@ class LiteSearchEngine:
         return -1
 
     def get_dmrs(self, dmrs_filter_query):
-        query = SQLiteQuery(query='''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
+        query = SQLiteQuery(query="""SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM dmrs
                 LEFT JOIN reading ON dmrs.readingID = reading.ID
                 LEFT JOIN sentence ON reading.sentID = sentence.ID
                 LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE dmrs.ID IN (%s)
-            LIMIT ?''' % dmrs_filter_query.query,
+            LIMIT ?""" % dmrs_filter_query.query,
                             params=dmrs_filter_query.params + [self.limit])
         logger.debug(query)
         rows = query.select(self.dao.ctx())
         return rows
 
     def get_sent(self, sent_filter_query):
-        query_txt = '''SELECT sentence.ID AS 'sentID', NULL AS readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
+        query_txt = """SELECT sentence.ID AS 'sentID', NULL AS readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM sentence
             LEFT JOIN document ON sentence.docID = document.ID
             LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentID IN ({})
-        LIMIT ?'''.format(sent_filter_query.query)
+        LIMIT ?""".format(sent_filter_query.query)
         query = SQLiteQuery(query=query_txt, params=sent_filter_query.params + [self.limit])
         logger.debug(query)
         rows = query.select(self.dao.ctx())
         return rows
 
     def search_by_ident(self, ident):
-        q = '''SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
+        q = """SELECT sentence.ID AS 'sentID', dmrs.readingID, sentence.text, sentence.ident AS 'sentence_ident', sentence.docID, document.name as doc_name, corpus.name as corpus_name, corpus.ID as corpusID
             FROM sentence
                 LEFT JOIN reading ON reading.ID = sentence.ID
                 LEFT JOIN dmrs ON reading.ID = dmrs.readingID
                 LEFT JOIN document ON sentence.docID = document.ID
                 LEFT JOIN corpus ON document.corpusID = corpus.ID
             WHERE sentence.ident = ?
-            LIMIT ?'''
+            LIMIT ?"""
         query = SQLiteQuery(query=q, params=[ident, self.limit])
         logger.debug(query)
         rows = query.select(self.dao.ctx())

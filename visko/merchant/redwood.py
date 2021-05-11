@@ -1,22 +1,10 @@
-'''
+"""
 Parse raw text document into XML-based format for VisualKopasu
-@author: Le Tuan Anh
-'''
+"""
 
-# Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
-# This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
-
-########################################################################
+# This code is a part of visualkopasu (visko): https://github.com/letuananh/visualkopasu
+# :copyright: (c) 2012 Le Tuan Anh <tuananh.ke@gmail.com>
+# :license: GPLv3, see LICENSE for more details.
 
 import time
 import os.path
@@ -29,18 +17,6 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 
 from visko.config import ViskoConfig as vkconfig
 
-########################################################################
-
-__author__ = "Le Tuan Anh"
-__copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
-__license__ = "GPL"
-__version__ = "0.1"
-__maintainer__ = "Le Tuan Anh"
-__email__ = "tuananh.ke@gmail.com"
-__status__ = "Prototype"
-
-########################################################################
 
 READING_TOKEN = chr(10) + chr(12) + chr(10)
 DRMS_TREE_TOKEN = chr(10) + chr(10) + chr(10)
@@ -119,7 +95,7 @@ def parse(source_file, destination, active_only=True):
 
 
 def parse_document(source_folder, collection_folder, corpus_name, doc_name, active_only=True):
-    ''' Convert FCB (redwood) format to XML format '''
+    """ Convert FCB (redwood) format to XML format """
     all_files = [f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f))]
     all_files.sort()
     destination_folder = os.path.join(collection_folder, corpus_name, doc_name)

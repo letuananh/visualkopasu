@@ -1,34 +1,13 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Visko 2.0 - Views
 @author: Le Tuan Anh
-'''
+"""
 
-# Copyright 2017, Le Tuan Anh (tuananh.ke@gmail.com)
-# This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with VisualKopasu. If not, see http://www.gnu.org/licenses/
-
-__author__ = "Le Tuan Anh"
-__copyright__ = "Copyright 2017, Visual Kopasu"
-__credits__ = ["Francis Bond"]
-__license__ = "GPL"
-__version__ = "0.1"
-__maintainer__ = "Le Tuan Anh"
-__email__ = "tuananh.ke@gmail.com"
-__status__ = "Prototype"
-
-########################################################################
-
+# This code is a part of visualkopasu (visko): https://github.com/letuananh/visualkopasu
+# :copyright: (c) 2012 Le Tuan Anh <tuananh.ke@gmail.com>
+# :license: GPLv3, see LICENSE for more details.
 
 import os
 import logging
@@ -46,6 +25,7 @@ from coolisf.morph import Transformer
 from coolisf.model import Document, Reading, Sentence
 
 from coolisf.rest.views import jsonp, TAGGERS
+from visko import __version__
 from visko.kopasu import Biblioteche, Biblioteca
 from visko.util import Paginator
 from visko.kopasu.dmrs_search import LiteSearchEngine
@@ -92,8 +72,8 @@ def get_bib(bibname):
 
 
 def get_context(extra=None, title=None):
-    c = {"title": "Visual Kopasu 2.0",
-         "header": "Visual Kopasu 2.0"}
+    c = {"title": f"Visual Kopasu {__version__}",
+         "header": f"Visual Kopasu {__version__}"}
     if extra:
         c.update(extra)
     if title:
@@ -114,7 +94,7 @@ def home(request):
 
 @csrf_protect
 def dev(request, mode=None):
-    c = get_context({"title": "Test Bed @ Visual Kopasu 2.0",
+    c = get_context({"title": f"Test Bed @ Visual Kopasu {__version__}",
                      "collections": getAllCollections()})
     if mode == 'isf':
         return render(request, "visko2/dev/isf.html", c)

@@ -1,20 +1,10 @@
-'''
+"""
 XML-based data access layer for VisualKopasu project.
-@author: Le Tuan Anh
-'''
+"""
 
-# Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
-# This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
+# This code is a part of visualkopasu (visko): https://github.com/letuananh/visualkopasu
+# :copyright: (c) 2012 Le Tuan Anh <tuananh.ke@gmail.com>
+# :license: GPLv3, see LICENSE for more details.
 
 import os.path
 import shutil
@@ -62,8 +52,8 @@ class XMLCorpusCollection:
         FileHelper.create_dir(os.path.join(self.path, corpus_name))
 
     def getCorpora(self):
-        ''' Get all available corpora
-        '''
+        """ Get all available corpora
+        """
         return getSubFolders(self.path)
 
 
@@ -115,7 +105,7 @@ class DocumentDAOXML(object):
             return self.path + ".gz"
 
     def archive(self, doc):
-        ''' Archive a doc to a gzip file in corpus folder '''
+        """ Archive a doc to a gzip file in corpus folder """
         with gzip.open(self.archive_path, 'wt') as archive_file:
             archive_file.write(doc.to_xml_str())
 
@@ -123,16 +113,16 @@ class DocumentDAOXML(object):
         return os.path.isfile(self.archive_path)
 
     def read_archive(self):
-        ''' Open archive file and return a document object '''
+        """ Open archive file and return a document object """
         if os.path.isfile(self.archive_path):
             with gzip.open(self.archive_path, 'rt') as archive_file:
                 return Document.from_xml_str(archive_file.read())
         return None
 
     def iter_archive(self, archive_path=None):
+        """ Read sentence one at a time (recommended for large file) """
         if archive_path is None:
             archive_path = self.archive_path
-        ''' Read sentence one at a time (recommended for large file) '''
         if os.path.isfile(archive_path):
             with gzip.open(archive_path, 'rb') as archive_file:
                 for event, node in etree.iterparse(archive_file):
