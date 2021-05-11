@@ -25,7 +25,7 @@ import os
 import argparse
 from lxml import etree
 
-from chirptext import confirm, header
+from texttaglib.chirptext import confirm, header
 from coolisf.model import Document
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca

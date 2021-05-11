@@ -20,7 +20,7 @@ Data access layer for VisualKopasu project.
 
 import logging
 
-from chirptext.leutile import FileHelper
+from texttaglib.chirptext.leutile import FileHelper
 from coolisf.util import is_valid_name
 
 from visko.config import ViskoConfig as vkconfig

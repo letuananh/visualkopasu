@@ -49,7 +49,7 @@ __credits__ = []
 
 import os
 import logging
-from chirptext import Timer
+from texttaglib.chirptext import Timer
 from coolisf.model import Document
 from visko.kopasu.bibman import Biblioteca
 

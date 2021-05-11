@@ -38,14 +38,14 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.urls import reverse
 
-from chirptext.cli import setup_logging
-from chirptext import texttaglib as ttl
+from texttaglib.chirptext.cli import setup_logging
+from texttaglib.chirptext import texttaglib as ttl
 from coolisf import GrammarHub
 from coolisf.util import sent2json
 from coolisf.morph import Transformer
 from coolisf.model import Document, Reading, Sentence
 
-from djangoisf.views import jsonp, TAGGERS
+from coolisf.rest.views import jsonp, TAGGERS
 from visko.kopasu import Biblioteche, Biblioteca
 from visko.util import Paginator
 from visko.kopasu.dmrs_search import LiteSearchEngine

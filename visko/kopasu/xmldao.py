@@ -22,7 +22,7 @@ import gzip
 import logging
 from lxml import etree
 
-from chirptext.leutile import FileHelper
+from texttaglib.chirptext.leutile import FileHelper
 from coolisf.util import is_valid_name
 from coolisf.model import Document, Sentence
 
