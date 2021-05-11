@@ -1,0 +1,3 @@
+fuzzywuzzy
+python-levenshtein
+numpy
