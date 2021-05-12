@@ -4,4 +4,11 @@ Visko (Visual-kopasu) is a Web-based software suite for Computational Linguistic
 
 ## Install
 
-To be updated for version 0.2.3
+`visko` is available on [PyPI](https://pypi.org/project/visko/) and can be installed with pip
+
+```bash
+pip install visko
+```
+
+Visko requires [coolisf](https://pypi.org/project/coolisf/) library.
+Please follow installation instructions at https://pypi.org/project/coolisf/
