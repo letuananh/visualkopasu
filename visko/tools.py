@@ -16,6 +16,7 @@ from lxml import etree
 
 from texttaglib.chirptext import confirm, header
 from coolisf.model import Document
+from visko import __version__
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
@@ -234,6 +235,10 @@ def archive_data(args):
             archive_collection(bib, ctx)
 
 
+def show_version(args):
+    print(f"Visual kopasu, version {__version__}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
@@ -293,6 +298,10 @@ def main():
     store_report_task.add_argument('--root', help="Biblioteche root", default=vkconfig.BIBLIOTECHE_ROOT)
     store_report_task.add_argument('--concise', help="Only report commented sentences", default=True, action='store_true')
     store_report_task.set_defaults(func=store_report)
+
+
+    version_task = tasks.add_parser("version", help="Show version")
+    version_task.set_defaults(func=show_version)
 
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
