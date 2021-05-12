@@ -25,7 +25,6 @@ except Exception:
         _PROJECT_ROOT = DEFAULT_ROOT
 
 
-print("_PROJECT_ROOT", _PROJECT_ROOT)
 class ViskoConfig:
     PROJECT_ROOT = _PROJECT_ROOT
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
