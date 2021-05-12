@@ -1,5 +1,9 @@
 # CHANGE LOG
 
+## 2021-05-12
+
+- Release Visko package
+
 ## 2021-05-11
 
 - Visko only depends on Django < 2.0 and coolisf 0.2.3 on PyPI
