@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 from django.contrib.messages import constants as message_constants
-from visko.config import ViskoConfig as vkconfig
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +29,10 @@ DEBUG = True
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
+# Where all Visko data is stored
+VISKO_ROOT = os.path.expanduser('~/local/visko/')
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'visko.web',
-    'djangoisf',
+    'coolisf.rest',
     'yawlib.yawol.django'
 ]
 
@@ -55,7 +58,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'visko.web_site.urls'
+ROOT_URLCONF = 'visko_site.urls'
 
 TEMPLATES = [
     {
@@ -73,7 +76,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'visko.web_site.wsgi.application'
+WSGI_APPLICATION = 'visko_site.wsgi.application'
 
 
 # Database
@@ -81,8 +84,6 @@ WSGI_APPLICATION = 'visko.web_site.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': vkconfig.DATABASES_default_ENGINE,  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': vkconfig.DATABASES_default_NAME,  # Or path to database file if using sqlite3.
         'USER': '',  # Not used with sqlite3.
         'PASSWORD': '',  # Not used with sqlite3.
         'HOST': '',  # Set to empty string for localhost. Not used with sqlite3.
@@ -130,7 +131,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, 'web_site', 'static'),
+    os.path.join(BASE_DIR, 'visko_site', 'static'),
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.

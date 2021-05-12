@@ -1,0 +1,6 @@
+include README.md
+include RELEASE_NOTES.txt
+include LICENSE.txt
+include CHANGES.md
+include requirements.txt
+recursive-include visko/web/templates *

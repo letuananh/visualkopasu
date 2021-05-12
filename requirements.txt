@@ -1,9 +1,2 @@
-django==1.11.29
-bs4
-numpy
-lxml
-pydelphin==0.6.0
-nltk >= 3.4.5
-fuzzywuzzy
-python-levenshtein
-
+django<2.0
+coolisf>=0.2.3b2, <0.3

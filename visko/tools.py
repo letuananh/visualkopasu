@@ -1,50 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+
+"""
 Database setup script for VisualKopasu
-@author: Le Tuan Anh
-'''
+"""
 
-# Copyright 2012, Le Tuan Anh (tuananh.ke@gmail.com)
-# This file is part of VisualKopasu.
-# VisualKopasu is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# VisualKopasu is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with VisualKopasu. If not, see http://www.gnu.org/licenses/.
-
-########################################################################
+# This code is a part of visualkopasu (visko): https://github.com/letuananh/visualkopasu
+# :copyright: (c) 2012 Le Tuan Anh <tuananh.ke@gmail.com>
+# :license: GPLv3, see LICENSE for more details.
 
 import sys
 import os
 import argparse
 from lxml import etree
 
-from chirptext import confirm, header
+from texttaglib.chirptext import confirm, header
 from coolisf.model import Document
+from visko import __version__
 from visko.config import ViskoConfig as vkconfig
 from visko.kopasu.bibman import Biblioteca
 from visko.merchant.redwood import parse_document
 from visko.merchant.morph import xml2db
 
-########################################################################
-
-__author__ = "Le Tuan Anh"
-__copyright__ = "Copyright 2012, Visual Kopasu"
-__credits__ = ["Fan Zhenzhen", "Francis Bond", "Le Tuan Anh", "Mathieu Morey", "Sun Ying"]
-__license__ = "GPL"
-__version__ = "0.1"
-__maintainer__ = "Le Tuan Anh"
-__email__ = "tuananh.ke@gmail.com"
-__status__ = "Prototype"
-
-
-########################################################################
 
 def get_raw_doc_folder(collection_name, corpus_name, doc_name):
     return os.path.join(vkconfig.DATA_FOLDER, "raw", collection_name, corpus_name, doc_name)
@@ -258,7 +235,11 @@ def archive_data(args):
             archive_collection(bib, ctx)
 
 
-if __name__ == '__main__':
+def show_version(args):
+    print(f"Visual kopasu, version {__version__}")
+
+
+def main():
     parser = argparse.ArgumentParser(description="Visko toolbox")
 
     tasks = parser.add_subparsers(help='Task to be done')
@@ -318,6 +299,10 @@ if __name__ == '__main__':
     store_report_task.add_argument('--concise', help="Only report commented sentences", default=True, action='store_true')
     store_report_task.set_defaults(func=store_report)
 
+
+    version_task = tasks.add_parser("version", help="Show version")
+    version_task.set_defaults(func=show_version)
+
     if len(sys.argv) == 1:
         # User didn't pass any value in, show help
         parser.print_help()
@@ -325,3 +310,7 @@ if __name__ == '__main__':
         # Parse input arguments
         args = parser.parse_args()
         args.func(args)
+
+
+if __name__ == '__main__':
+    main()

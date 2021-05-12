@@ -1,45 +1,26 @@
-Prerequisite
-===========
-* GNU/Linux Fedora
-* Django version 1.9.6
-* Python 3.4.2
-* SQLite 3.11.0
-* beautifulsoup
-* numpy
-* lxml
-* pyDelphin 0.5.1 (https://github.com/delph-in/pydelphin)
-* fuzzywuzzy (required by coolisf)
-* python-levenshtein (optional for fuzzywuzzy)
-* nltk (Use this version instead of NLTK's trunk: https://github.com/letuananh/nltk)
-  + WordNet data should be downloaded (nltk.download() => `book` package)
-* The Integrated Semantic Framework - CoolISF (https://github.com/letuananh/intsem.fx)
-  + lelesk library (requires WordNet data - see LeLesk README file for more information)
-* The LinGO English Resource Grammar (http://www.delph-in.net/erg/)
-  + Generate grammar file (erg.dat) and copy it to data folder
+# Visual Kopasu
 
+Visko (Visual-kopasu) is a web-based software suite for Computational Linguistic Analysis based on deep parsing with construction grammars and ontologies (HPSG, SBCG, xMRS, Wordnet, texttaglib).
 
-Installation guide
-===============
+## Install
 
-* Installed required packages using pip3
-pip3 install django==1.9.6 numpy lxml pydelphin==0.5.1 nltk==3.2.1 fuzzywuzzy python-levenshtein
+`visko` is available on [PyPI](https://pypi.org/project/visko/) and can be installed with pip
 
-* Extract the visual_kopasu.tar.gz to a folder (e.g. /home/user/visualkopasu)
-* Download sample dataset ("the Cathedral and the Bazaar") from: http://letuananh.dakside.org/home/download/test_minicb_cb100.tar.gz and extract to data folder. You should have something like this: /home/user/visualkopasu/data/raw/test/minicb/cb100/*.gz
-* Modify file config.py to point to actual project root
-	```PROJECT_ROOT = '/home/user/visualkopasu'```
-* From terminal run the following command:
-	```cd ~/visualkopasu
-	chmod +x manage.py```
-	(The command below may take very long time to run!)
-	```./manage.py```
-	(OR ```python manage.py```)
-	Make sure you have backed up old database before run setup script.
-* Create django database (important!!!)
-	```python manage.py migrate```
-* Now, everytime we want to run the project, just type
-	```cd ~/visualkopasu
-	./manage.py runserver```
-	(OR ```python manage.py runserver```)
-	After the server is started, access the server from the URL:
-	http://localhost:8000/
+```bash
+pip install visko
+```
+
+1. Visko requires [coolisf](https://pypi.org/project/coolisf/) library in order to function.
+   Please follow installation instructions at https://pypi.org/project/coolisf/
+2. Visko is a Django site. To run Visko locally, please download the pre-packaged `visko_site.tar.gz` from a [compatible release here](https://github.com/letuananh/visualkopasu/releases) and unzip it to a local folder. To start the development server use:
+   ```bash
+   python manage.py runserver
+   ```
+   and Visko should be ready at http://localhost:8000
+
+## Useful link
+
+- Open Science Framework project page: https://osf.io/9udjk/
+- Visko documentation: https://visko.readthedocs.io/
+- Source code: https://github.com/letuananh/visualkopasu
+- PyPI: https://pypi.org/project/visko/
