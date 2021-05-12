@@ -7,13 +7,26 @@ Global config file for VisualKopasu
 # :license: GPLv3, see LICENSE for more details.
 
 import os
+from texttaglib.chirptext import AppConfig
+
+# Fall back to this project root if necessary
+DEFAULT_ROOT = os.path.expanduser('~/local/visko/')
+
+# try to read from django setting
+try:
+    from django.conf import settings
+    _PROJECT_ROOT = getattr(settings, "VISKO_ROOT", DEFAULT_ROOT)
+except Exception:
+    # try to reaf from config file
+    cfg = AppConfig("visko", mode=AppConfig.JSON)
+    if cfg.config and "VISKO_ROOT" in cfg.config:
+        _PROJECT_ROOT = cfg.config["VISKO_ROOT"]
+    else:
+        _PROJECT_ROOT = DEFAULT_ROOT
 
 
+print("_PROJECT_ROOT", _PROJECT_ROOT)
 class ViskoConfig:
-    PROJECT_ROOT = os.path.expanduser('~/local/visko/')
+    PROJECT_ROOT = _PROJECT_ROOT
     DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
     BIBLIOTECHE_ROOT = os.path.join(DATA_FOLDER, 'biblioteche')
-
-    # Django database - DO NOT CHANGE THIS!
-    DATABASES_default_ENGINE = 'django.db.backends.sqlite3'
-    DATABASES_default_NAME = os.path.join(PROJECT_ROOT, 'data/visko.db')

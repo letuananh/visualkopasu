@@ -17,6 +17,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from visko.web import views as visko2_views
 
+
 urlpatterns = [
     url(r'^$', visko2_views.home, name='visko2_home'),
     url(r'^visko2/', include('visko.web.urls', namespace="visko2"),),
