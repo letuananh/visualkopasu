@@ -3,6 +3,7 @@
 
 {% block content %}
 
+<a id="all_cols"></a>
 <h2 class="sub-header">Available Collections</h2>
 
 {% if collections %}
@@ -28,15 +29,21 @@
       <div class="panel-body">
         <div class="list-group">
           {% for doc in corpus.documents %}
-          <a href="{% url 'visko2:list_sent' collection_name=collection.name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
-            {% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}
-            {% if doc.sent_count %}({{doc.sent_count}}){% endif %}
+              <a href="{% url 'visko2:list_sent' collection_name=collection.name corpus_name=corpus.name doc_id=doc.ID %}" class="list-group-item">
+                {% if doc.title%}{{ doc.title }}{%else%}{{doc.name}}{%endif %}
+                {% if doc.sent_count %}({{doc.sent_count}}){% endif %}
           </a>
-          {% endfor %}
+              {% endfor %}
         </div>
       </div>
     </div>
-    {% endfor %}
+        {% endfor %}
+      </div>
+  <div class="panel-footer">
+    <a href="#all_cols">
+      <span class="glyphicon glyphicon-triangle-top" aria-hidden="true"></span>
+      To the top
+    </a>
   </div>
 </div>
 {% endfor %}
