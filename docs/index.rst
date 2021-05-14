@@ -10,11 +10,12 @@ Visko (Visual-kopasu) is a web-based software suite for Computational
 Linguistic Analysis based on deep parsing with construction grammars and
 ontologies (HPSG, SBCG, xMRS, Wordnet, texttaglib).
 
+.. image:: _static/visko_greentea.png
+
 Install
 -------
 
 Visko is a Django site. To run Visko locally, please follow the instruction at the :ref:`install` page.
-   
 
 .. toctree::
    :maxdepth: 2
