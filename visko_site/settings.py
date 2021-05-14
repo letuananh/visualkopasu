@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # Where all Visko data is stored
 VISKO_ROOT = os.path.expanduser('~/local/visko/')
+VISKO_DB = os.path.expanduser('~/local/visko/data/visko.server.db')
 
 
 # Application definition
@@ -84,6 +85,8 @@ WSGI_APPLICATION = 'visko_site.wsgi.application'
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': VISKO_DB,
         'USER': '',  # Not used with sqlite3.
         'PASSWORD': '',  # Not used with sqlite3.
         'HOST': '',  # Set to empty string for localhost. Not used with sqlite3.

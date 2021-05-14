@@ -1,2 +1,2 @@
 django<2.0
-coolisf>=0.2.3b2, <0.3
+coolisf>=0.2.3, <0.3
