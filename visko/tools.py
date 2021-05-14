@@ -236,7 +236,10 @@ def archive_data(args):
 
 
 def show_version(args):
-    print(f"Visual kopasu, version {__version__}")
+    if args.short:
+        print(__version__)
+    else:
+        print(f"Visual kopasu, version {__version__}")
 
 
 def main():
@@ -299,8 +302,8 @@ def main():
     store_report_task.add_argument('--concise', help="Only report commented sentences", default=True, action='store_true')
     store_report_task.set_defaults(func=store_report)
 
-
     version_task = tasks.add_parser("version", help="Show version")
+    version_task.add_argument('-s', '--short', help="Show version only (e.g. '0.3.2')", default=False, action='store_true')
     version_task.set_defaults(func=show_version)
 
     if len(sys.argv) == 1:
