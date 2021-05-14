@@ -4,21 +4,12 @@ Visko (Visual-kopasu) is a web-based software suite for Computational Linguistic
 
 ## Install
 
-`visko` is available on [PyPI](https://pypi.org/project/visko/) and can be installed with pip
+Visko is a [Django site](https://docs.djangoproject.com/en/1.11/intro/tutorial01/#the-development-server). To run Visko locally, please download a pre-packaged `visko_site.tar.gz` from the official [Visko release page](https://github.com/letuananh/visualkopasu/releases) and follow the instructions in the [documentation](https://visko.readthedocs.io/en/latest/install.html).
 
-```bash
-pip install visko
-```
+If you encounter any problems or difficulties please submit a ticket for support at: https://github.com/letuananh/intsem.fx/issues
 
-1. Visko requires [coolisf](https://pypi.org/project/coolisf/) library in order to function.
-   Please follow installation instructions at https://pypi.org/project/coolisf/
-2. Visko is a Django site. To run Visko locally, please download the pre-packaged `visko_site.tar.gz` from a [compatible release here](https://github.com/letuananh/visualkopasu/releases) and unzip it to a local folder. To start the development server use:
-   ```bash
-   python manage.py runserver
-   ```
-   and Visko should be ready at http://localhost:8000
 
-## Useful link
+## Useful links
 
 - Open Science Framework project page: https://osf.io/9udjk/
 - Visko documentation: https://visko.readthedocs.io/
